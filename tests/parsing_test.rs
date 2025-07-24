@@ -1,4 +1,4 @@
-use implement::parsing;
+use code_commit::parsing;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -22,15 +22,24 @@ pub fn new() {}
 "#;
     let result = parsing::parse(input).unwrap();
 
-    assert_eq!(result.user_thoughts, vec!["This is a thought for the user."]);
+    assert_eq!(
+        result.user_thoughts,
+        vec!["This is a thought for the user."]
+    );
     assert_eq!(result.debug_thoughts, vec!["This is a debug thought."]);
     assert_eq!(result.file_changes.len(), 2);
     assert_eq!(
-        result.file_changes.get(&PathBuf::from("src/main.rs")).unwrap(),
+        result
+            .file_changes
+            .get(&PathBuf::from("src/main.rs"))
+            .unwrap(),
         "fn main() {\n    println!(\"hello\");\n}"
     );
     assert_eq!(
-        result.file_changes.get(&PathBuf::from("src/lib.rs")).unwrap(),
+        result
+            .file_changes
+            .get(&PathBuf::from("src/lib.rs"))
+            .unwrap(),
         "pub fn new() {}"
     );
     assert!(result.success_message.is_none());
@@ -118,7 +127,44 @@ fn test_parse_error_on_git_directory_access() {
 "#;
     let result = parsing::parse(input);
     assert!(result.is_err());
-    assert_eq!(result.err().unwrap(), "Access to the .git directory is forbidden");
+    assert_eq!(
+        result.err().unwrap(),
+        "Access to the .git directory is forbidden"
+    );
+}
+
+#[test]
+fn test_parse_error_on_build_script_modification() {
+    let input = r#"
+^^^build.sh
+echo "pwned"
+^^^end
+"#;
+    let result = parsing::parse(input);
+    assert!(result.is_err());
+    assert_eq!(
+        result.err().unwrap(),
+        "Modification of the 'build.sh' script is forbidden."
+    );
+}
+
+#[test]
+fn test_parse_handles_whitespace_in_header() {
+    // Note the trailing space after the filename and start tag
+    let input = r#"
+^^^src/main.rs 
+fn main() {}
+^^^end
+%%%start 
+This is a debug thought.
+%%%end
+"#;
+    let result = parsing::parse(input).unwrap();
+    assert_eq!(result.file_changes.len(), 1);
+    assert!(result
+        .file_changes
+        .contains_key(&PathBuf::from("src/main.rs")));
+    assert_eq!(result.debug_thoughts, vec!["This is a debug thought."]);
 }
 
 #[test]
@@ -149,7 +195,10 @@ fn main() {
 "#; // Missing ^^^end
     let result = parsing::parse(input);
     assert!(result.is_err());
-    assert!(result.err().unwrap().contains("Malformed response: Unparsed content remains."));
+    assert!(result
+        .err()
+        .unwrap()
+        .contains("Malformed response: Unparsed content remains."));
 }
 
 #[test]

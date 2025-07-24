@@ -1,4 +1,7 @@
-use implement::{config::Config, state::{History, Interaction}};
+use code_commit::{
+    config::Config,
+    state::{History, Interaction},
+};
 
 #[test]
 fn test_history_build_prompt() {

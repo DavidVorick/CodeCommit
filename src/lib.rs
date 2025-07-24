@@ -1,4 +1,4 @@
-//! implement: An agentic coding workflow implementation loop.
+//! code-commit: An agentic coding workflow implementation loop.
 
 pub mod config;
 pub mod error;
@@ -33,8 +33,11 @@ pub async fn run() -> Result<ExitCode> {
     logger.log_prompt(1, &initial_prompt).await?;
 
     println!("Round 1: Calling LLM...");
-    let mut llm_response_text = llm::call_gemini(&config.api_key, &initial_prompt).await?;
-    logger.log_llm_response(1, &llm_response_text).await?;
+    let llm_response = llm::call_gemini(&config.api_key, &initial_prompt).await?;
+    logger
+        .log_llm_response(1, &llm_response.full_json, &llm_response.extracted_text)
+        .await?;
+    let mut llm_response_text = llm_response.extracted_text;
 
     // 3. Start the implementation loop.
     for i in 1..=MAX_ITERATIONS {
@@ -93,9 +96,7 @@ pub async fn run() -> Result<ExitCode> {
 
                     interaction = Interaction {
                         debug_thoughts: parsed.debug_thoughts.join("\n\n"),
-                        file_changes: parsing::format_file_changes_for_prompt(
-                            &parsed.file_changes,
-                        ),
+                        file_changes: parsing::format_file_changes_for_prompt(&parsed.file_changes),
                         build_output: build_result.output,
                     };
                 }
@@ -113,8 +114,11 @@ pub async fn run() -> Result<ExitCode> {
         logger.log_prompt(i + 1, &next_prompt).await?;
 
         println!("Round {}: Calling LLM with build feedback...", i + 1);
-        llm_response_text = llm::call_gemini(&config.api_key, &next_prompt).await?;
-        logger.log_llm_response(i + 1, &llm_response_text).await?;
+        let llm_response = llm::call_gemini(&config.api_key, &next_prompt).await?;
+        logger
+            .log_llm_response(i + 1, &llm_response.full_json, &llm_response.extracted_text)
+            .await?;
+        llm_response_text = llm_response.extracted_text;
     }
 
     eprintln!(

@@ -51,7 +51,7 @@ All LLM outputs **must** use the following non‑overlapping blocks:
 
 | Marker | Usage | Parsed action |
 |--------|-------|---------------|
-| `&&&start … &&&end` | Narration for the human operator | Printed to `stdout` and appended to `implement-user-output.txt` |
+| `&&&start … &&&end` | Narration for the human operator | Printed to `stdout` and appended to `llm-user-output.txt` |
 | `%%%start … %%%end` | Internal debug thoughts | Held in memory, embedded in next prompt |
 | `^^^<path> … ^^^end` | Full replacement of a file | Safely written to disk (no path traversal, `.git` forbidden) |
 | `$$$start … $$$end` | Signal that **no further changes** are required | Terminates the loop if the build already passes |

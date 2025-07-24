@@ -49,7 +49,9 @@ impl History {
         prompt.push_str(&first_interaction.build_output);
 
         for interaction in self.interactions.iter().skip(1) {
-            prompt.push_str("\n\nYou then provided the following data in your subsequent response:\n");
+            prompt.push_str(
+                "\n\nYou then provided the following data in your subsequent response:\n",
+            );
             prompt.push_str(&interaction.debug_thoughts);
             prompt.push('\n');
             prompt.push_str(&interaction.file_changes);

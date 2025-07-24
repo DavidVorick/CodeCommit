@@ -25,7 +25,7 @@ impl Config {
 
         let system_prompt = Self::load_file("gemini-system-prompt.txt").await?;
         let basic_query = Self::load_file("query.txt").await?;
-        let codebase_context = Self::load_file("context.txt").await?;
+        let codebase_context = Self::load_file("codeRollup.txt").await?;
 
         Ok(Self {
             api_key,

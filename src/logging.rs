@@ -22,12 +22,20 @@ impl Logger {
     }
 
     pub async fn log_prompt(&self, number: usize, content: &str) -> Result<()> {
-        let path = self.log_dir.join(format!("query-{}-prompt.txt", number));
+        let path = self.log_dir.join(format!("query-{}.txt", number));
         fs::write(&path, content).await?;
         Ok(())
     }
 
-    pub async fn log_llm_response(&self, number: usize, text_content: &str) -> Result<()> {
+    pub async fn log_llm_response(
+        &self,
+        number: usize,
+        full_response: &str,
+        text_content: &str,
+    ) -> Result<()> {
+        let json_path = self.log_dir.join(format!("query-{}-response.json", number));
+        fs::write(&json_path, full_response).await?;
+
         let txt_path = self.log_dir.join(format!("query-{}-response.txt", number));
         fs::write(&txt_path, text_content).await?;
         Ok(())
@@ -43,7 +51,7 @@ impl Logger {
         let mut file = OpenOptions::new()
             .create(true)
             .append(true)
-            .open("implement-user-output.txt")
+            .open("llm-user-output.txt")
             .await?;
 
         let formatted_thought = format!("{}\n---\n", thought);

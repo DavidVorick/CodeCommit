@@ -17,8 +17,13 @@ fn extract_blocks(mut text: String, tag: &str) -> (Vec<(String, String)>, String
 
     while let Some(start_index) = text.find(&start_tag_generic) {
         let header_start = start_index + tag.len();
-        let Some(header_end) = text[header_start..].find('\n') else { break; };
-        let header = text[header_start..header_start + header_end].to_string();
+        let Some(header_end) = text[header_start..].find('\n') else {
+            break;
+        };
+        // Trim the header to be robust against extra whitespace from the LLM
+        let header = text[header_start..header_start + header_end]
+            .trim()
+            .to_string();
 
         let content_start = header_start + header_end + 1;
 
@@ -37,6 +42,11 @@ fn extract_blocks(mut text: String, tag: &str) -> (Vec<(String, String)>, String
 fn validate_path(path_str: &str) -> Result<PathBuf, String> {
     let path = PathBuf::from(path_str);
     let cleaned_path = path.clean();
+
+    // Security: Forbid modification of the build script itself.
+    if cleaned_path == PathBuf::from("build.sh") {
+        return Err("Modification of the 'build.sh' script is forbidden.".to_string());
+    }
 
     for component in cleaned_path.components() {
         match component {
@@ -65,14 +75,18 @@ pub fn parse(text: &str) -> Result<ParsedResponse, String> {
     let (blocks, new_text) = extract_blocks(remaining_text, "&&&");
     remaining_text = new_text;
     for (header, content) in blocks {
-        if header != "start" { return Err(format!("Invalid header for &&& block: {}", header)); }
+        if header != "start" {
+            return Err(format!("Invalid header for &&& block: {}", header));
+        }
         response.user_thoughts.push(content);
     }
 
     let (blocks, new_text) = extract_blocks(remaining_text, "%%%");
     remaining_text = new_text;
     for (header, content) in blocks {
-         if header != "start" { return Err(format!("Invalid header for %%% block: {}", header)); }
+        if header != "start" {
+            return Err(format!("Invalid header for %%% block: {}", header));
+        }
         response.debug_thoughts.push(content);
     }
 
@@ -81,7 +95,10 @@ pub fn parse(text: &str) -> Result<ParsedResponse, String> {
     for (filename, content) in blocks {
         let path = validate_path(&filename)?;
         if temp_file_changes.insert(path, content).is_some() {
-            return Err(format!("Duplicate file modification detected for: {}", filename));
+            return Err(format!(
+                "Duplicate file modification detected for: {}",
+                filename
+            ));
         }
     }
     response.file_changes = temp_file_changes;
@@ -89,10 +106,14 @@ pub fn parse(text: &str) -> Result<ParsedResponse, String> {
     let (blocks, new_text) = extract_blocks(remaining_text, "$$$");
     remaining_text = new_text;
     if !blocks.is_empty() {
-         if blocks.len() > 1 { return Err("Multiple $$$ blocks found, only one is allowed.".to_string()); }
-         let (header, content) = blocks.into_iter().next().unwrap();
-         if header != "start" { return Err(format!("Invalid header for $$$ block: {}", header)); }
-         response.success_message = Some(content);
+        if blocks.len() > 1 {
+            return Err("Multiple $$$ blocks found, only one is allowed.".to_string());
+        }
+        let (header, content) = blocks.into_iter().next().unwrap();
+        if header != "start" {
+            return Err(format!("Invalid header for $$$ block: {}", header));
+        }
+        response.success_message = Some(content);
     }
 
     if !remaining_text.trim().is_empty() {

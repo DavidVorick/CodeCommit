@@ -38,6 +38,8 @@ print_file_with_header() {
 root_files=(
     "Cargo.toml"
     "UserSpecification.md"
+    "codeRollup.sh"
+    "README.md"
 )
 for file in "${root_files[@]}"; do
     print_file_with_header "$file"

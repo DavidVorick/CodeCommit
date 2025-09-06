@@ -6,15 +6,16 @@ use std::path::{Component, Path};
 
 pub fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
     for update in updates {
-        let path = &update.path;
+        // Security checks on the original, un-normalized path
+        validate_path(&update.path)?;
 
-        // Security checks
-        validate_path(path)?;
+        // Use the cleaned path for all filesystem operations for safety
+        let path = update.path.clean();
 
         if update.content.is_empty() {
             // Delete the file
             if path.exists() {
-                fs::remove_file(path).map_err(|e| {
+                fs::remove_file(&path).map_err(|e| {
                     AppError::FileUpdate(format!("Failed to delete file {}: {}", path.display(), e))
                 })?;
             }
@@ -29,7 +30,7 @@ pub fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
                     ))
                 })?;
             }
-            fs::write(path, &update.content).map_err(|e| {
+            fs::write(&path, &update.content).map_err(|e| {
                 AppError::FileUpdate(format!("Failed to write to file {}: {}", path.display(), e))
             })?;
         }
@@ -37,12 +38,11 @@ pub fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
     Ok(())
 }
 
-fn validate_path(path: &Path) -> Result<(), AppError> {
-    // 1. Normalize path to prevent trivial traversals
-    let clean_path = path.clean();
-
-    // 2. Check for forbidden components
-    for component in clean_path.components() {
+// Make this function visible within the crate for testing
+pub(crate) fn validate_path(path: &Path) -> Result<(), AppError> {
+    // Check for forbidden components on the original, uncleaned path.
+    // This prevents traversal attacks that might be normalized away by path-clean.
+    for component in path.components() {
         match component {
             Component::RootDir => {
                 return Err(AppError::FileUpdate(

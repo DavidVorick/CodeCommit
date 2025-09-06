@@ -57,10 +57,21 @@ impl GeminiClient {
 }
 
 pub fn extract_text_from_response(response: &Value) -> Result<String, AppError> {
-    let text = response["candidates"][0]["content"]["parts"][0]["text"]
-        .as_str()
+    let text = response
+        .get("candidates")
+        .and_then(|c| c.as_array())
+        .and_then(|a| a.first())
+        .and_then(|c| c.get("content"))
+        .and_then(|c| c.get("parts"))
+        .and_then(|p| p.as_array())
+        .and_then(|a| a.first())
+        .and_then(|p| p.get("text"))
+        .and_then(|t| t.as_str())
         .ok_or_else(|| {
-            AppError::ResponseParsing("Could not find text in Gemini response JSON.".to_string())
+            AppError::ResponseParsing(
+                "Could not find text in Gemini response JSON. The structure might be unexpected."
+                    .to_string(),
+            )
         })?;
     Ok(text.to_string())
 }

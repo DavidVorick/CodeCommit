@@ -1,64 +1,97 @@
 #!/bin/bash
 
-# A script to aggregate specified project files into a single text file
-# named 'codeRollup.txt' for easy copy-pasting as context for an LLM.
+# A script to aggregate specified project files into a single text file named
+# 'codeRollup.txt' that can be provided as context to an LLM.
+#
+# Usage:
+#   ./codeRollup.sh
+#   ./codeRollup.sh [component1] [component2] ...
+#   ./codeRollup.sh --all
+#
+# A "component" is a subdirectory within the 'src/' directory.
 
-# --- Configuration ---
-# The final output file. This file will be overwritten on each run.
 OUTPUT_FILE="codeRollup.txt"
-
-# --- Main Script ---
-
-# Redirect all standard output from this point forward to the output file.
-# Standard error is not redirected, so warnings will still appear in the terminal.
+components=()
+process_all=false
 exec > "$OUTPUT_FILE"
 
-# Function to print a file's content with a standardized header
+for arg in "$@"; do
+    if [[ "$arg" == "--all" ]]; then
+        process_all=true
+    else
+        # Assuming any other argument is a component name
+        components+=("$arg")
+    fi
+done
+
+# If --all is specified and there are also components, exit with an error.
+if [[ "$process_all" == true && ${#components[@]} -gt 0 ]]; then
+    echo "Error: --all flag is present. Please do not also provide components: ${components[*]}" >&2
+    rm "$OUTPUT_FILE"
+    exit 1
+fi
+
 print_file_with_header() {
     local file_path="$1"
     
-    # Check if the file exists and is a regular file
     if [ -f "$file_path" ]; then
-        echo "=================================================="
-        echo "--- File: $file_path"
-        echo "=================================================="
+        echo "--- $file_path ---"
         cat "$file_path"
         echo
-        echo
     else
-        # Print a warning to standard error if a file is not found.
-        # This will appear in the terminal, not in the rollup file.
-        echo "Warning: File '$file_path' not found, skipping." >&2
+        echo "Error: File '$file_path' not found, exiting." >&2
+        rm "$OUTPUT_FILE"
+        exit 1
     fi
 }
 
-# --- File Processing ---
+process_directory() {
+    local dir_path="$1"
+    if [ -d "$dir_path" ]; then
+        find "$dir_path" -maxdepth 1 -type f | sort | while read -r file; do
+            print_file_with_header "$file"
+        done
+    fi
+}
 
-# 1. Process specific files in the root directory
+process_directory_recursive() {
+    local dir_path="$1"
+    if [ -d "$dir_path" ]; then
+        find "$dir_path" -type f | sort | while read -r file; do
+            print_file_with_header "$file"
+        done
+    fi
+}
+
 root_files=(
     "Cargo.toml"
     "UserSpecification.md"
-    "codeRollup.sh"
+    "LLMInstructions.md"
     "README.md"
+    "build.sh"
+    "codeRollup.sh"
 )
 for file in "${root_files[@]}"; do
     print_file_with_header "$file"
 done
 
-# 2. Process all files in specified subdirectories
-scan_dirs=(
-    "src"
-    "tests"
-)
-for dir in "${scan_dirs[@]}"; do
-    if [ -d "$dir" ]; then
-        find "$dir" -type f | sort | while read -r file; do
-            print_file_with_header "$file"
-        done
-    fi
-done
+if [[ "$process_all" == true ]]; then
+    process_directory_recursive "src"
+else
+    process_directory "src"
+    for component in "${components[@]}"; do
+        component_path="src/$component"
+        if [ -d "$component_path" ]; then
+            process_directory "$component_path"
+        else
+            echo "Error: Component directory '$component_path' not found. Exiting." >&2
+            rm "$OUTPUT_FILE"
+            exit 1
+        fi
+    done
+fi
+if [ -d "tests" ]; then
+    process_directory_recursive "tests"
+fi
 
-# --- Finalization ---
-
-# Print a success message to standard error so the user sees it in the terminal.
-echo "Rollup complete. Output written to $OUTPUT_FILE." >&2
+echo "Code rollup complete. Output is in '$OUTPUT_FILE'" >&2

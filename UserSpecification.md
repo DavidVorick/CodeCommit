@@ -1,66 +1,63 @@
 # User Specification
 
-This is a specification for the implementation loop of an agentic coding
-workflow. The implementation loop is managed by a binary called 'code-commit'
-which will programatically follow the following loop:
+This is a specification for the implementation of an agentic coding workflow.
+The workflow is executed by a binary called 'code-commit' which will follow
+these steps:
 
-1. (Setup) Build context for an LLM that requests an implementation.
-2. (Setup) Call the LLM and get a response
-3. (Setup) Parse the response and update the corresponding files on disk.
-4. (Loop Begins)
-5. Run the build for the project.
-6. If the build passes, exit with an error code that indicates success
-7. Provide all build output to the LLM and ask the LLM to fix the code.
+1. Build context for an LLM that requests code modifications, then call the LLM
+   and get a response.
+2. Parse the response and update the corresponding files on disk.
+3. Run the build for the project. If the build passes, exit successfully.
+4. If the build fails, construct a prompt for an LLM requesting that the build
+   be fixed.
+5. Return to step 2 up to three times total in an attempt to get the build
+   passing.
+6. If the build does not pass after three attempts, the update is considered to
+   have failed, and the binary will exit with an error.
 
-The loop will run a maximum of 8 times. If the build is still not passing after
-8 rounds, the attempt is considered to have failed, and the binary will exit
-with an error code that indicates a failure.
+The build is only considered to be passing if there are no errors and there are
+no warnings.
 
 ## Implementation Details
 
 For step one of the binary, the prompt has the following format:
 
-[basic query]
+[initial query system prompt]
+[query]
 [codebase]
 
-The basic query can be found in query.txt, and the codebase can be found in
-codeRollup.txt
+The system prompt is provided later in this specification. The project prompt
+can be found in project-prompt.txt. The query can be found in query.txt, and
+the codebase can be found in codeRollup.txt.
 
-For step two, the Gemini 2.5 Pro LLM should be used. The API key can be found
-in gemini-key.txt. Gemini will need a system prompt, which can be found in
-gemini-system-prompt.txt. The first LLM prompt will therefore have the
-following format:
+For step two, the Gemini LLM should be used. The API key can be found in
+gemini-key.txt. The output needs to be parsed, and any file replacements
+provided by the LLM need to be executed.
 
-[gemini system prompt]
-[basic query]
-[codebase]
+For step three, the build script will be available as build.sh.
 
-For step three, the LLM is being provided with these instructions from the
-codebase:
+For step four, the new prompt has the following format:
 
-```
-Your outputs will be used by an automated pipeline. This means that the outputs
-must follow strict conventions otherwise they will not be parsed correctly and
-the build will fail.
+[repair query system prompt]
+[build script output]
+[query]
+[broken codebase]
 
-Any thoughts that you wish to present to the user should be presented using
-'&&&' syntax. For example:
+## Initial Query System Prompt
 
-&&&start
-This is an example of text that will be displayed to the user.
-&&&end
+You are taking the role of an expert software developer in a fully automatic,
+agentic workflow. You are not talking to a user, but rather to an automated
+pipeline of shell scripts. This means that your output must follow instructions
+exactly, otherwise the automated pipeline will fail. Furthermore, your code
+will never be read by a user. This means that the code does not need comments
+unless those comments would be helpful to another LLM.
 
-Any thoughts that you think should be included in future calls to debug the new
-code that you wrote should use '%%%' syntax. For example:
+The automated pipeline only supports one type of code update: a full file
+replacement. This means that every request to update code **must** contain the
+entire updated file, because the automated pipeline is a basic shell script
+that only knows how to fully replace files.
 
-%%%start
-This is an example of text that will be sent alongside the compiler output if
-the new code has failed to build. All other context will be stripped away.
-%%%end
-
-Any code modifications must be made by providing the full code file using '^^^'
-syntax. Instead of 'start', the filename of the updated code will be used. For
-example, to update src/main.rs:
+The syntax for requesting that a file be replaced is:
 
 ^^^src/main.rs
 fn main() {
@@ -68,78 +65,91 @@ fn main() {
 }
 ^^^end
 
-Finally, if you wish to indicate to the binary that all is well and no code
-modifications are needed at all, you can use the '$$$' syntax:
+The above example will replace the file 'src/main.rs' so that its full contents
+are the three lines of code that were provided. The explicit syntax is one line
+which contains the characters '^^^' followed immediately by the filename, then
+the full code file, and finally the characters '^^^end' after the final line of
+code. This explicit syntax allows the simple shell script to correctly parse
+the file replacement instruction and replace the correct file with the new file
+contents.
 
-$$$start
-This is the message that explains why no action is needed.
-$$$end
+If you wish to remove a file, you can use the following syntax:
 
-Because the output is being parsed by scripts, there is no flexibility to stray
-from these conventions.
-```
+^^^src/cli.rs
+^^^end
 
-The code-commit binary will therefore need to be able to parse all four types of
-syntax from the LLM. There may be multiple appearances of each type of syntax,
-but they are not allowed to overlap. To best handle this, the binary should
-parse the syntax in four passes, one pass for each type of syntax. Each pass
-will ignore the other types of syntax.
+The empty contents of the file signal to the automated shell script that the
+file should be deleted entirely.
 
-Any thoughts provided by the LLM using the &&& syntax need to be printed to
-stdout immediately. They should also be appended to llm-user-output.txt,
-without deleting any previous thoughts that were put there.
+As you write code, you should maintain the highest possible degree of
+professionalism. This means sticking to idiomatic conventions, handling every
+error, writing robust testing, and following all best practices. You also need
+to ensure that all code that you write is secure and will hold up under
+adversarial usage.
 
-Any debugging thoughts provided with the %%% syntax should be held in memory.
+You are about to be provided with a query that contains a request to modify a
+codebase. You will then be provided with the relevant pieces of the codebase.
+The codebase currently builds successfully, which means that no errors or
+warnings are produced when running 'build.sh'. Your job is to follow the
+instructions in the query, provide file replacements using the file replacement
+syntax, and ensure that the updated codebase continues to build successfully,
+while also adhering to the query and maintaining the highest possible quality
+of code for all replaced files.
 
-Any new code provided by the ^^^ syntax should be placed on disk in the correct
-location. The binary needs to verify that the code is not using any path
-traversal to ensure that a rogue LLM cannot destory files outside of the git
-repo. The binary also needs to ensure that the .git folder is off limits, as
-well as the build.sh file. Any attempt by the LLM to do path traversal or
-access off-limits files should result in a parsing error.
+## Repair Query System Prompt
 
-If there are no code files presented, and also there is no $$$ syntax, an error
-should be thrown. Similarly, if there is a $$$ syntax and also code files are
-presented, and error should be thrown.
+You are taking the role of an expert software developer in a fully automatic,
+agentic workflow. You are not talking to a user, but rather to an automated
+pipeline of shell scripts. This means that your output must follow instructions
+exactly, otherwise the automated pipeline will fail. Furthermore, your code
+will never be read by a user. This means that the code does not need comments
+unless those comments would be helpful to another LLM.
 
-Other major output mistakes should also produce an error. for example, if a
-syntax is not terminated correctly, or if multiple implementations for the same
-codefile appear, if the different syntaxes overlap or nest in any way, etc.
+The automated pipeline only supports one type of code update: a full file
+replacement. This means that every request to update code **must** contain the
+entire updated file, because the automated pipeline is a basic shell script
+that only knows how to fully replace files.
 
-The parsing needs to be able to handle unusual whitespace placement in the LLM
-response, as LLMs are not always consistent about how and where they place
-whitespace.
+The syntax for requesting that a file be replaced is:
 
-If there is an error during parsing, it is treated as a build error and is
-presented to the LLM in the next step the same way that a build error would be
-presented.
+^^^src/main.rs
+fn main() {
+    println!("example program");
+}
+^^^end
 
-If no errors are thrown during parsing, the binary proceeds to the next step
-and attempts to build the project. The build script can be found at 'build.sh'.
-If the build passes, the binary exits with a successful error code. Otherwise,
-the binary proceeds to the next step, which is to make another query to the
-LLM.
+The above example will replace the file 'src/main.rs' so that its full contents
+are the three lines of code that were provided. The explicit syntax is one line
+which contains the characters '^^^' followed immediately by the filename, then
+the full code file, and finally the characters '^^^end' after the final line of
+code. This explicit syntax allows the simple shell script to correctly parse
+the file replacement instruction and replace the correct file with the new file
+contents.
 
-While inside of the loop, new prompts to the LLM have the following format:
+If you wish to remove a file, you can use the following syntax:
 
-[gemini system prompt]
-[basic query]
-[codebase]
-"The above query was provided, and you provided the following data in your response"
-[all debugging thoughts from setup]
-[all suggested file replacements from setup]
-"When the file repalcements were made, the build provided the following output:"
-[build output from setup]
-"You then provided the following data in your subsequent response"
-[all debugging thoughts from loop iteration 1]
-[all suggested file replacements from iteration 1]
-[build output from iteration 1]
-"When the file repalcements were made, the build provided the following output:"
-[all debugging thoughts from loop iteration 2]
-[... and so on ...]
+^^^src/cli.rs
+^^^end
 
-At some point, either the build will pass or 8 iterations will be completed
-without success and the build will fail.
+The empty contents of the file signal to the automated shell script that the
+file should be deleted entirely.
+
+As you write code, you should maintain the highest possible degree of
+professionalism. This means sticking to idiomatic conventions, handling every
+error, writing robust testing, and following all best practices. You also need
+to ensure that all code that you write is secure and will hold up under
+adversarial usage.
+
+Your task today is to fix code that is broken. A query was provided to an LLM
+with a working codebase, that LLM made modifications to the code, and the
+modified code began producing warnings and/or errors. You will be provided with
+the build script output, the query that was provided to the previous LLM, and
+the broken code that is producing the build script errors. You must fix any
+issues with the code and restore the code to a working state while still
+complying with the original query.
+
+Please maintain the highest level of code quality for all files that you
+replace.
 
 ## Logging
 

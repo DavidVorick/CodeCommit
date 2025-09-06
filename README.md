@@ -1,9 +1,10 @@
 # CodeCommit
 
-CodeCommit is a rust-based CLI tool that automates using LLMs to create new
-code commits for projects. It automatically runs a loop for developers that
-asks an LLM to write code, then builds the code, then feeds the output of the
-build script back into the LLM to have any issues repaired.
+CodeCommit is a rust-based CLI tool that manages an automated workflow for
+using LLMs to create new code commits for rust projects. It automatically runs
+a loop that asks an LLM to write code based on a provided query, then it
+updates the codebase and runs the build. If the build fails, it feeds the build
+output back into the LLM to get any issues fixed, and then tries again.
 
 ---
 
@@ -20,49 +21,48 @@ cargo nextest run -- --ignored
 cargo clippy -- -D warnings
 ```
 
-To use this tool in another repository, you will need a gemini API key as well.
-
 ### Configuration
 
 To run this tool in another project, you will need the following text files:
 
 | File | Purpose |
 |------|---------|
-| `gemini-key.txt` | One‑line Google Generative Language API key |
-| `gemini-system-prompt.txt` | System prompt sent to Gemini |
-| `query.txt` | “Basic query” framing every request |
-| `context.txt` | Codebase context (e.g. output of `codeRollup.sh`) |
+| `gemini-key.txt` | A Gemini API Key |
+| `project-prompt.txt` | A project specific prompt to be included in all queries |
+| `query.txt` | The specific query for the current code commit |
+| `codeRollup.txt` | The rolled up codebase |
+| `build.sh` | The build script for the project |
 
 ### Execution
 
-After running the binary, it will:
+The binary takes the following steps:
 
-1. Builds the initial prompt from the four config files.  
-2. Calls Gemini and **parses the response** (see syntax below).  
-3. Applies file replacements, then runs `./build.sh`.  
-4. On failure, feeds the compiler output back to Gemini and repeats.
-5. It will ask the LLM to repair the code up to 8 times total.
+1. Build an initial prompt from the config files
+2. Call Gemini and parse the response
+3. Apply any file replacements provided by Gemini
+4. Run the build
+5. If the build fails, ask Gemini to fix the build, repeating a small number of times.
 
 Logs are written to `logs/<TIMESTAMP>/`.
 
 ## LLM response syntax
 
-All LLM outputs **must** use the following non‑overlapping blocks:
+The LLM is instructed to follow very strict syntax in its response. If the LLM
+response does not perfectly match the requested formatting, it is treated as an
+error and will cause the binary to exit.
 
-| Marker | Usage | Parsed action |
-|--------|-------|---------------|
-| `&&&start … &&&end` | Narration for the human operator | Printed to `stdout` and appended to `llm-user-output.txt` |
-| `%%%start … %%%end` | Internal debug thoughts | Held in memory, embedded in next prompt |
-| `^^^<path> … ^^^end` | Full replacement of a file | Safely written to disk (no path traversal, `.git` forbidden) |
-| `$$$start … $$$end` | Signal that **no further changes** are required | Terminates the loop if the build already passes |
+If the LLM wishes to replace a file in the codebase, it must use the following
+syntax:
 
-Violations (overlap, duplicate files, missing end tags, both `^^^` and `$$$`,
-etc.) are treated as build failures and included verbatim in the next prompt.
+```
+^^^<filepath>
+// example file contents
+^^^end
+```
 
 ## Security notes
 
 * Paths are normalised with [`path-clean`](https://docs.rs/path-clean) and **must not**
   contain `..`, absolute roots, or reference `.git`.
-* LLM API errors, malformed blocks, or filesystem I/O issues surface as
-  `AppError` and break the current iteration.
+* LLM API errors, malformed blocks, or filesystem I/O issues surface as `AppError`
 * All outbound traffic is restricted to a single HTTPS request per iteration.

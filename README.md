@@ -28,7 +28,6 @@ To run this tool in another project, you will need the following text files:
 | File | Purpose |
 |------|---------|
 | `gemini-key.txt` | A Gemini API Key |
-| `project-prompt.txt` | A project specific prompt to be included in all queries |
 | `query.txt` | The specific query for the current code commit |
 | `codeRollup.txt` | The rolled up codebase |
 | `build.sh` | The build script for the project |
@@ -51,12 +50,19 @@ The LLM is instructed to follow very strict syntax in its response. If the LLM
 response does not perfectly match the requested formatting, it is treated as an
 error and will cause the binary to exit.
 
-If the LLM wishes to replace a file in the codebase, it must use the following
-syntax:
+If the LLM wishes to create a new file or replace a file in the codebase, it
+must use the following syntax:
 
 ```
 ^^^<filepath>
 // example file contents
+^^^end
+```
+
+File deletions can be specified with the following syntax:
+
+```
+^^^<filepath>
 ^^^end
 ```
 

@@ -1,4 +1,4 @@
-use crate::app_error::{AppError, BuildFailure};
+use crate::app_error::BuildFailure;
 use std::process::Command;
 
 pub fn run() -> Result<String, BuildFailure> {
@@ -18,19 +18,4 @@ pub fn run() -> Result<String, BuildFailure> {
             output: combined_output,
         })
     }
-}
-
-pub fn get_codebase_rollup() -> Result<String, AppError> {
-    let output = Command::new("bash")
-        .arg("codeRollup.sh")
-        .arg("--all")
-        .output()?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(AppError::Config(format!("codeRollup.sh failed: {stderr}")));
-    }
-
-    // The rollup script writes to codeRollup.txt, so we read that file
-    std::fs::read_to_string("codeRollup.txt").map_err(AppError::from)
 }

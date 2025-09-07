@@ -1,9 +1,13 @@
 use crate::app_error::AppError;
-use crate::file_updater::{apply_updates, validate_path};
+use crate::file_updater::{apply_updates, PathProtection};
 use crate::response_parser::FileUpdate;
 use std::fs;
 use std::path::PathBuf;
 use tempfile::tempdir;
+
+// --- Tests for apply_updates (File System Operations) ---
+// These tests remain largely the same, as the core file writing/deleting
+// logic hasn't changed.
 
 #[test]
 fn test_apply_updates_create_new_file() {
@@ -89,15 +93,21 @@ fn test_apply_updates_create_nested_directory() {
     std::env::set_current_dir(original_cwd).unwrap();
 }
 
+// --- Tests for PathProtection (Validation Logic) ---
+// These tests are updated to use the new `PathProtection` struct and
+// cover the new validation rules.
+
 #[test]
 fn test_validate_path_valid() {
-    assert!(validate_path(&PathBuf::from("src/main.rs")).is_ok());
-    assert!(validate_path(&PathBuf::from("a/b/c.txt")).is_ok());
+    let protection = PathProtection::new().unwrap();
+    assert!(protection.validate(&PathBuf::from("src/main.rs")).is_ok());
+    assert!(protection.validate(&PathBuf::from("a/b/c.txt")).is_ok());
 }
 
 #[test]
 fn test_validate_path_absolute() {
-    let result = validate_path(&PathBuf::from("/etc/passwd"));
+    let protection = PathProtection::new().unwrap();
+    let result = protection.validate(&PathBuf::from("/etc/passwd"));
     assert!(matches!(result, Err(AppError::FileUpdate(_))));
     assert!(result
         .unwrap_err()
@@ -107,7 +117,8 @@ fn test_validate_path_absolute() {
 
 #[test]
 fn test_validate_path_traversal() {
-    let result = validate_path(&PathBuf::from("../secrets.txt"));
+    let protection = PathProtection::new().unwrap();
+    let result = protection.validate(&PathBuf::from("../secrets.txt"));
     assert!(matches!(result, Err(AppError::FileUpdate(_))));
     assert!(result
         .unwrap_err()
@@ -116,9 +127,9 @@ fn test_validate_path_traversal() {
 }
 
 #[test]
-fn test_validate_path_traversal_after_clean() {
-    // This path contains traversal components that should be caught.
-    let result = validate_path(&PathBuf::from("src/app/../../main.rs"));
+fn test_validate_path_traversal_in_middle() {
+    let protection = PathProtection::new().unwrap();
+    let result = protection.validate(&PathBuf::from("src/app/../../main.rs"));
     assert!(matches!(result, Err(AppError::FileUpdate(_))));
     assert!(result
         .unwrap_err()
@@ -127,11 +138,67 @@ fn test_validate_path_traversal_after_clean() {
 }
 
 #[test]
-fn test_validate_path_git_dir() {
-    let result = validate_path(&PathBuf::from(".git/config"));
+fn test_validate_path_forbidden_dir() {
+    let protection = PathProtection::new().unwrap();
+    let result_git = protection.validate(&PathBuf::from(".git/config"));
+    assert!(matches!(result_git, Err(AppError::FileUpdate(_))));
+    assert!(result_git
+        .unwrap_err()
+        .to_string()
+        .contains("Modification of '.git/' directory is not allowed."));
+
+    let result_logs = protection.validate(&PathBuf::from("logs/2023-01-01/query.txt"));
+    assert!(matches!(result_logs, Err(AppError::FileUpdate(_))));
+    assert!(result_logs
+        .unwrap_err()
+        .to_string()
+        .contains("Modification of 'logs/' directory is not allowed."));
+}
+
+#[test]
+fn test_validate_path_forbidden_file() {
+    let protection = PathProtection::new().unwrap();
+    let result = protection.validate(&PathBuf::from("build.sh"));
     assert!(matches!(result, Err(AppError::FileUpdate(_))));
     assert!(result
         .unwrap_err()
         .to_string()
-        .contains("Modification of '.git' directory is not allowed."));
+        .contains("Modification of critical file 'build.sh' is not allowed."));
+
+    let result2 = protection.validate(&PathBuf::from("query.txt"));
+    assert!(matches!(result2, Err(AppError::FileUpdate(_))));
+    assert!(result2
+        .unwrap_err()
+        .to_string()
+        .contains("Modification of critical file 'query.txt' is not allowed."));
+}
+
+#[test]
+fn test_validate_path_with_gitignore() {
+    let dir = tempdir().unwrap();
+    let original_cwd = std::env::current_dir().unwrap();
+    std::env::set_current_dir(dir.path()).unwrap();
+
+    // Create a temporary .gitignore file
+    let gitignore_content = "# Ignore secrets\nsecrets.txt\n\n# Ignore temp files\n*.tmp\n";
+    fs::write(".gitignore", gitignore_content).unwrap();
+
+    // Now, PathProtection will read this .gitignore
+    let protection = PathProtection::new().unwrap();
+
+    // Test a file that is explicitly ignored
+    let result1 = protection.validate(&PathBuf::from("secrets.txt"));
+    assert!(matches!(result1, Err(AppError::FileUpdate(_))));
+    assert!(result1.unwrap_err().to_string().contains("secrets.txt"));
+
+    // Test a file that matches a pattern
+    let result2 = protection.validate(&PathBuf::from("data/user.tmp"));
+    assert!(matches!(result2, Err(AppError::FileUpdate(_))));
+    assert!(result2.unwrap_err().to_string().contains(".tmp"));
+
+    // Test a file that is not ignored
+    assert!(protection.validate(&PathBuf::from("src/main.rs")).is_ok());
+
+    // Cleanup: change back to original directory
+    std::env::set_current_dir(original_cwd).unwrap();
 }

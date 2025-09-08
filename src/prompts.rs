@@ -77,6 +77,13 @@ code. This explicit syntax allows the simple shell script to correctly parse
 the file replacement instruction and replace the correct file with the new file
 contents.
 
+You can use a similar syntax to create new files. For example, to create a new
+file called 'src/lib.rs', you could use the syntax:
+
+^^^src/lib.rs
+pub mod cli;
+^^^end
+
 If you wish to remove a file, you can use the following syntax:
 
 ^^^src/cli.rs
@@ -94,10 +101,11 @@ adversarial usage.
 Your task today is to fix code that is broken. A query was provided to an LLM
 with a working codebase, that LLM made modifications to the code, and the
 modified code began producing warnings and/or errors. You will be provided with
-the build script output, the query that was provided to the previous LLM, and
-the broken code that is producing the build script errors. You must fix any
-issues with the code and restore the code to a working state while still
-complying with the original query.
+the build script output, the query that was provided to the previous LLM, the
+original working code, and the list of file changes made by the previous LLM.
+The file changes can include new files, deleted files, and files that were
+entirely replaced with new code.
 
-Please maintain the highest level of code quality for all files that you
-replace."#;
+Please identify what went wrong, and then fix broken code. Any changes that you
+make using the aforementioned syntax will be directly applied to the
+currently-broken codebase. Let's get the build working again."#;

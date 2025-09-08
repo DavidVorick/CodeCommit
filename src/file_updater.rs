@@ -1,5 +1,6 @@
 use crate::app_error::AppError;
 use crate::response_parser::FileUpdate;
+use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use path_clean::PathClean;
 use std::collections::HashSet;
 use std::fs;
@@ -40,7 +41,7 @@ pub fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
 
 pub(crate) struct PathProtection {
     forbidden_files: HashSet<PathBuf>,
-    gitignore_patterns: Vec<String>,
+    gitignore_matcher: Gitignore,
 }
 
 impl PathProtection {
@@ -59,19 +60,17 @@ impl PathProtection {
         .map(PathBuf::from)
         .collect();
 
-        let gitignore_patterns = if Path::new(".gitignore").exists() {
-            fs::read_to_string(".gitignore")?
-                .lines()
-                .filter(|line| !line.trim().is_empty() && !line.starts_with('#'))
-                .map(String::from)
-                .collect()
-        } else {
-            Vec::new()
-        };
+        let mut builder = GitignoreBuilder::new(".");
+        // Add the local .gitignore file if it exists.
+        // The `ignore` crate handles the case where the file doesn't exist gracefully.
+        builder.add(".gitignore");
+        let gitignore_matcher = builder
+            .build()
+            .map_err(|e| AppError::Config(format!("Failed to build .gitignore matcher: {e}")))?;
 
         Ok(Self {
             forbidden_files,
-            gitignore_patterns,
+            gitignore_matcher,
         })
     }
 
@@ -99,27 +98,32 @@ impl PathProtection {
             )));
         }
 
-        let forbidden_dirs = [".git/", "logs/", "target/"];
-        for dir in forbidden_dirs {
-            if path.starts_with(dir) {
-                // Inlined variable to fix clippy warning.
-                return Err(AppError::FileUpdate(format!(
-                    "Modification of '{dir}' directory is not allowed."
-                )));
+        // Check for modification of forbidden root directories like .git/, logs/, target/
+        // This structure is refactored to satisfy clippy's `collapsible_match` lint.
+        if let Some(Component::Normal(first_comp)) = path.components().next() {
+            if let Some(name) = first_comp.to_str() {
+                if matches!(name, ".git" | "logs" | "target") {
+                    return Err(AppError::FileUpdate(format!(
+                        "Modification of directory '{name}/' is not allowed."
+                    )));
+                }
             }
         }
 
-        let path_str = path.to_string_lossy();
-        for pattern in &self.gitignore_patterns {
-            // Improved logic to handle simple wildcards like `*.tmp`
-            let simple_pattern = pattern.trim_end_matches('/').trim_start_matches('*');
-            if path_str.contains(simple_pattern) {
+        // Check against .gitignore rules
+        match self
+            .gitignore_matcher
+            .matched_path_or_any_parents(path, false)
+        {
+            ignore::Match::Ignore(_) => {
                 return Err(AppError::FileUpdate(format!(
-                    "File '{}' may match a .gitignore pattern ('{}') and cannot be modified.",
-                    path.display(),
-                    pattern
+                    "File '{}' matches a rule in .gitignore and cannot be modified.",
+                    path.display()
                 )));
             }
+            // Match::Whitelist means it's explicitly un-ignored, which is fine.
+            // Match::None means it's not mentioned, which is also fine.
+            ignore::Match::Whitelist(_) | ignore::Match::None => {}
         }
 
         Ok(())

@@ -8,6 +8,8 @@ mod prompts;
 mod response_parser;
 
 #[cfg(test)]
+mod file_updater_gitignore_tests;
+#[cfg(test)]
 mod file_updater_test;
 #[cfg(test)]
 mod llm_api_test;

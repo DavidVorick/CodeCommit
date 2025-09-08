@@ -67,9 +67,9 @@ root_files=(
     "Cargo.toml"
     "UserSpecification.md"
     "LLMInstructions.md"
-    "README.md"
     "build.sh"
     "codeRollup.sh"
+    ".gitignore"
 )
 for file in "${root_files[@]}"; do
     print_file_with_header "$file"

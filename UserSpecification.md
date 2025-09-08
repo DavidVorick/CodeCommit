@@ -11,9 +11,9 @@ these steps:
 4. If the build fails, construct a prompt for an LLM requesting that the build
    be fixed.
 5. Return to step 2 up to three times total in an attempt to get the build
-   passing.
-6. If the build does not pass after three attempts, the update is considered to
-   have failed, and the binary will exit with an error.
+   passing, for a total of 1 initial attempt and three repair attempts.
+6. If the build does not pass after three repair attempts, the update is
+   considered to have failed, and the binary will exit with an error.
 
 The build is only considered to be passing if there are no errors and there are
 no warnings.

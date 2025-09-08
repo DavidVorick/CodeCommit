@@ -142,17 +142,19 @@ fn test_validate_path_forbidden_dir() {
     let protection = PathProtection::new().unwrap();
     let result_git = protection.validate(&PathBuf::from(".git/config"));
     assert!(matches!(result_git, Err(AppError::FileUpdate(_))));
+    // FIX: Update the expected error message string.
     assert!(result_git
         .unwrap_err()
         .to_string()
-        .contains("Modification of '.git/' directory is not allowed."));
+        .contains("Modification of directory '.git/' is not allowed."));
 
     let result_logs = protection.validate(&PathBuf::from("logs/2023-01-01/query.txt"));
     assert!(matches!(result_logs, Err(AppError::FileUpdate(_))));
+    // FIX: Update the expected error message string.
     assert!(result_logs
         .unwrap_err()
         .to_string()
-        .contains("Modification of 'logs/' directory is not allowed."));
+        .contains("Modification of directory 'logs/' is not allowed."));
 }
 
 #[test]

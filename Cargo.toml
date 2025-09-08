@@ -11,6 +11,7 @@ serde_json = "1.0"
 thiserror = "1.0"
 chrono = "0.4"
 path-clean = "1.0"
+ignore = "0.4" # <-- ADD THIS LINE
 
 [dev-dependencies]
 tempfile = "3.10"

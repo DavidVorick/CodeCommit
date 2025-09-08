@@ -1,2 +1,5 @@
 /target
 /codeRollup.txt
+
+*.swp
+*.swo

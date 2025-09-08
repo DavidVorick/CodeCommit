@@ -1,25 +1,9 @@
 use crate::app_error::AppError;
 use reqwest::Client;
-use serde::Serialize;
-use serde_json::Value;
+use serde_json::{json, Value};
 
 const GEMINI_API_URL_BASE: &str =
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent";
-
-#[derive(Serialize)]
-struct GeminiRequest<'a> {
-    contents: Vec<Content<'a>>,
-}
-
-#[derive(Serialize)]
-struct Content<'a> {
-    parts: Vec<Part<'a>>,
-}
-
-#[derive(Serialize)]
-struct Part<'a> {
-    text: &'a str,
-}
 
 pub struct GeminiClient {
     client: Client,
@@ -37,11 +21,14 @@ impl GeminiClient {
     pub async fn query(&self, prompt: &str) -> Result<Value, AppError> {
         let url = format!("{}?key={}", GEMINI_API_URL_BASE, self.api_key);
 
-        let request_body = GeminiRequest {
-            contents: vec![Content {
-                parts: vec![Part { text: prompt }],
+        let request_body = json!({
+            "contents": [{
+                "parts": [{ "text": prompt }]
             }],
-        };
+            "generationConfig": {
+                "temperature": 0.7
+            }
+        });
 
         let response = self
             .client
@@ -57,7 +44,6 @@ impl GeminiClient {
 }
 
 pub fn extract_text_from_response(response: &Value) -> Result<String, AppError> {
-    // Get the array of candidates, and take the first one.
     let parts_array = response
         .get("candidates")
         .and_then(|c| c.as_array())
@@ -71,8 +57,6 @@ pub fn extract_text_from_response(response: &Value) -> Result<String, AppError> 
             )
         })?;
 
-    // Iterate over the parts array, extract the text from each part,
-    // and collect them into a Vec<String>.
     let text_segments: Vec<String> = parts_array
         .iter()
         .filter_map(|part| part.get("text"))
@@ -86,6 +70,5 @@ pub fn extract_text_from_response(response: &Value) -> Result<String, AppError> 
         ));
     }
 
-    // Join all the text segments into a single string.
     Ok(text_segments.join(""))
 }

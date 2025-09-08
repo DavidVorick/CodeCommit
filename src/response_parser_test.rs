@@ -25,13 +25,29 @@ pub fn add(a: i32, b: i32) -> i32 {
     let expected = vec![
         FileUpdate {
             path: PathBuf::from("src/main.rs"),
-            content: "fn main() {\n    println!(\"Hello, world!\");\n}".to_string(),
+            content: Some("fn main() {\n    println!(\"Hello, world!\");\n}".to_string()),
         },
         FileUpdate {
             path: PathBuf::from("src/lib.rs"),
-            content: "pub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}".to_string(),
+            content: Some("pub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}".to_string()),
         },
     ];
+
+    let result = parse_llm_response(response_text).unwrap();
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_parse_llm_response_create_empty_file() {
+    let response_text = r#"
+^^^src/empty.rs
+^^^end
+"#;
+
+    let expected = vec![FileUpdate {
+        path: PathBuf::from("src/empty.rs"),
+        content: Some("".to_string()),
+    }];
 
     let result = parse_llm_response(response_text).unwrap();
     assert_eq!(result, expected);
@@ -41,14 +57,12 @@ pub fn add(a: i32, b: i32) -> i32 {
 fn test_parse_llm_response_with_deletion() {
     let response_text = r#"
 ^^^src/obsolete.rs
-^^^end
+^^^delete
 "#;
-
     let expected = vec![FileUpdate {
         path: PathBuf::from("src/obsolete.rs"),
-        content: "".to_string(),
+        content: None,
     }];
-
     let result = parse_llm_response(response_text).unwrap();
     assert_eq!(result, expected);
 }
@@ -75,7 +89,7 @@ fn main() {
 "#;
     let expected = vec![FileUpdate {
         path: PathBuf::from("src/main.rs"),
-        content: "fn main() {\n    // This file is not terminated correctly".to_string(),
+        content: Some("fn main() {\n    // This file is not terminated correctly".to_string()),
     }];
     let result = parse_llm_response(response_text).unwrap();
     assert_eq!(result, expected);
@@ -97,23 +111,30 @@ fn main() {}
 }
 
 #[test]
-fn test_mixed_create_and_delete() {
+fn test_mixed_create_delete_and_empty() {
     let response_text = r#"
 ^^^src/new.rs
 pub const VALUE: i32 = 42;
 ^^^end
 
 ^^^src/old.rs
+^^^delete
+
+^^^src/empty.rs
 ^^^end
 "#;
     let expected = vec![
         FileUpdate {
             path: PathBuf::from("src/new.rs"),
-            content: "pub const VALUE: i32 = 42;".to_string(),
+            content: Some("pub const VALUE: i32 = 42;".to_string()),
         },
         FileUpdate {
             path: PathBuf::from("src/old.rs"),
-            content: "".to_string(),
+            content: None,
+        },
+        FileUpdate {
+            path: PathBuf::from("src/empty.rs"),
+            content: Some("".to_string()),
         },
     ];
     let result = parse_llm_response(response_text).unwrap();

@@ -41,7 +41,12 @@ impl Logger {
     }
 
     pub fn log_build_output(&self, name: &str, content: &str) -> Result<(), AppError> {
-        let path = self.path_for(&format!("{name}-build-output.txt"));
+        let filename = if name == "initial-query" {
+            "initial-build.txt".to_string()
+        } else {
+            format!("{name}-build.txt")
+        };
+        let path = self.path_for(&filename);
         fs::write(path, content)?;
         Ok(())
     }

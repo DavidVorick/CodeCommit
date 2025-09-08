@@ -4,7 +4,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 const GEMINI_API_URL_BASE: &str =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent";
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent";
 
 #[derive(Serialize)]
 struct GeminiRequest<'a> {
@@ -57,21 +57,35 @@ impl GeminiClient {
 }
 
 pub fn extract_text_from_response(response: &Value) -> Result<String, AppError> {
-    let text = response
+    // Get the array of candidates, and take the first one.
+    let parts_array = response
         .get("candidates")
         .and_then(|c| c.as_array())
         .and_then(|a| a.first())
         .and_then(|c| c.get("content"))
         .and_then(|c| c.get("parts"))
         .and_then(|p| p.as_array())
-        .and_then(|a| a.first())
-        .and_then(|p| p.get("text"))
-        .and_then(|t| t.as_str())
         .ok_or_else(|| {
             AppError::ResponseParsing(
-                "Could not find text in Gemini response JSON. The structure might be unexpected."
-                    .to_string(),
+                "Could not find 'parts' array in Gemini response JSON.".to_string(),
             )
         })?;
-    Ok(text.to_string())
+
+    // Iterate over the parts array, extract the text from each part,
+    // and collect them into a Vec<String>.
+    let text_segments: Vec<String> = parts_array
+        .iter()
+        .filter_map(|part| part.get("text"))
+        .filter_map(|text_val| text_val.as_str())
+        .map(|s| s.to_string())
+        .collect();
+
+    if text_segments.is_empty() {
+        return Err(AppError::ResponseParsing(
+            "Found 'parts' array, but it contained no valid text segments.".to_string(),
+        ));
+    }
+
+    // Join all the text segments into a single string.
+    Ok(text_segments.join(""))
 }

@@ -62,3 +62,31 @@ fn test_extract_text_missing_text() {
     let result = extract_text_from_response(&response);
     assert!(matches!(result, Err(AppError::ResponseParsing(_))));
 }
+
+#[test]
+fn test_extract_text_multiple_parts() {
+    let response = json!({
+        "candidates": [
+            {
+                "content": {
+                    "parts": [
+                        {
+                            "text": "This is the first part. "
+                        },
+                        {
+                            "text": "This is the second part. "
+                        },
+                        {
+                            "text": "And this is the third."
+                        }
+                    ]
+                }
+            }
+        ]
+    });
+    let result = extract_text_from_response(&response).unwrap();
+    assert_eq!(
+        result,
+        "This is the first part. This is the second part. And this is the third."
+    );
+}

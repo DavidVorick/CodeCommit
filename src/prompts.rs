@@ -26,19 +26,37 @@ code. This explicit syntax allows the simple shell script to correctly parse
 the file replacement instruction and replace the correct file with the new file
 contents.
 
+You can use a similar syntax to create new files, including empty files. For example, to create a new empty file called 'src/lib.rs', you could use the syntax:
+
+^^^src/lib.rs
+^^^end
+
 If you wish to remove a file, you can use the following syntax:
 
 ^^^src/cli.rs
-^^^end
-
-The empty contents of the file signal to the automated shell script that the
-file should be deleted entirely.
+^^^delete
 
 As you write code, you should maintain the highest possible degree of
 professionalism. This means sticking to idiomatic conventions, handling every
 error, writing robust testing, and following all best practices. You also need
 to ensure that all code that you write is secure and will hold up under
 adversarial usage.
+
+The following files are not allowed to be modified, attempting to modify them
+will result in an error:
+
++ Cargo.lock
++ build.sh
++ codeRollup.sh
++ codeRollup.txt
++ query.txt
++ gemini-key.txt
++ LLMInstructions.md
++ UserSpecification.md
++ anything in the .git folder
++ anything in the logs folder
++ anything in the target folder
++ anything specified in the .gitignore file
 
 You are about to be provided with a query that contains a request to modify a
 codebase. You will then be provided with the relevant pieces of the codebase.
@@ -77,20 +95,31 @@ code. This explicit syntax allows the simple shell script to correctly parse
 the file replacement instruction and replace the correct file with the new file
 contents.
 
-You can use a similar syntax to create new files. For example, to create a new
-file called 'src/lib.rs', you could use the syntax:
+You can use a similar syntax to create new files, including empty files. For example, to create a new empty file called 'src/lib.rs', you could use the syntax:
 
 ^^^src/lib.rs
-pub mod cli;
 ^^^end
 
 If you wish to remove a file, you can use the following syntax:
 
 ^^^src/cli.rs
-^^^end
+^^^delete
 
-The empty contents of the file signal to the automated shell script that the
-file should be deleted entirely.
+The following files are not allowed to be modified, attempting to modify them
+will result in an error:
+
++ Cargo.lock
++ build.sh
++ codeRollup.sh
++ codeRollup.txt
++ query.txt
++ gemini-key.txt
++ LLMInstructions.md
++ UserSpecification.md
++ anything in the .git folder
++ anything in the logs folder
++ anything in the target folder
++ anything specified in the .gitignore file
 
 As you write code, you should maintain the highest possible degree of
 professionalism. This means sticking to idiomatic conventions, handling every

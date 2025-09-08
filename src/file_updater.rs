@@ -13,27 +13,42 @@ pub fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
         protection_rules.validate(&update.path)?;
         let path = update.path.clean();
 
-        if update.content.is_empty() {
-            if path.exists() {
-                fs::remove_file(&path).map_err(|e| {
-                    AppError::FileUpdate(format!("Failed to delete file {}: {}", path.display(), e))
+        match &update.content {
+            Some(content_str) => {
+                // This handles both creating new files and replacing existing ones.
+                // An empty `content_str` correctly creates an empty file.
+                if let Some(parent) = path.parent() {
+                    if !parent.exists() {
+                        fs::create_dir_all(parent).map_err(|e| {
+                            AppError::FileUpdate(format!(
+                                "Failed to create parent directory for {}: {}",
+                                path.display(),
+                                e
+                            ))
+                        })?;
+                    }
+                }
+                fs::write(&path, content_str).map_err(|e| {
+                    AppError::FileUpdate(format!(
+                        "Failed to write to file {}: {}",
+                        path.display(),
+                        e
+                    ))
                 })?;
             }
-        } else {
-            if let Some(parent) = path.parent() {
-                if !parent.exists() {
-                    fs::create_dir_all(parent).map_err(|e| {
+            None => {
+                // This handles file deletion.
+                if path.exists() {
+                    fs::remove_file(&path).map_err(|e| {
                         AppError::FileUpdate(format!(
-                            "Failed to create parent directory for {}: {}",
+                            "Failed to delete file {}: {}",
                             path.display(),
                             e
                         ))
                     })?;
                 }
+                // If the file doesn't exist, it's not an error. The goal is achieved.
             }
-            fs::write(&path, &update.content).map_err(|e| {
-                AppError::FileUpdate(format!("Failed to write to file {}: {}", path.display(), e))
-            })?;
         }
     }
     Ok(())

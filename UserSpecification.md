@@ -70,7 +70,11 @@ response. The full JSON response should be stored at
 If the response is not an error, then the response needs to be parsed for
 directions to update the code files. The parser will look for the '^^^[file]'
 syntax that indicates a file should be updated, followed by the '^^^end' syntax
-that indicates the end of the replacement data for the file.
+that indicates the end of the replacement data for the file. This syntax can
+also be used to create new files, including empty files.
+
+To delete a file, the parser will look for '^^^[file]' folowed by '^^^delete',
+which signals that the file is supposed to be removed.
 
 The parser needs to make sure that the [file] specified by the response does
 not do any path traversal, and also that the filepath points to some file
@@ -88,7 +92,7 @@ not being modified, which means that it cannot modify:
 + anything in the .git folder
 + anything in the logs folder
 + anything in the target folder
-+ anything specified in the .gitignore folder
++ anything specified in the .gitignore file
 
 The syntax can be used to create new files, so it is okay if the syntax points
 to a file that does not exist. Whatever filepath is specified by the syntax,
@@ -104,11 +108,14 @@ and/or committing them.
 
 After parsing the response and making local changes, the code-commit binary
 will attempt to build the project. This means running 'build.sh' and checking
-that it exits successfully. If it exits sucessfully, 'code-commit' stops there.
+that it exits successfully. The output of the build - both stdout and stderr as
+well as the exit code - needs to be logged in 'logs/[date]/initial-build.txt'.
 
-If there are errors, 'code-commit' needs to make a series of up to three repair
-queries to attempt to repair the file. Each repair query has the following
-format:
+If the build script exits sucessfully, 'code-commit' stops there. The build is
+considered to have exited successfully if the exit code is 0, even if there is
+output to stderr. If the build did not exit successfully, 'code-commit' needs
+to make a series of up to three repair queries to attempt to repair the file.
+Each repair query has the following format:
 
 [repair query system prompt]
 [build.sh output]
@@ -149,7 +156,8 @@ same strategy. The filenames should be
 
 Then the response needs to be parsed, any code needs to be updated, and the
 build needs to be run again, repeating the cycle as necessary until up to three
-repair queries total have been attempted.
+repair queries total have been attempted. The build script outputs should be
+logged at 'logs/[date]/repair-query-[n]-build.txt'.
 
 Each time that a new repair query is attempted, only the latest file
 replacements are presented. That means if a subsequent response replaces a file
@@ -187,19 +195,39 @@ code. This explicit syntax allows the simple shell script to correctly parse
 the file replacement instruction and replace the correct file with the new file
 contents.
 
+You can use a similar syntax to create new files. For example, to create a new
+file called 'src/lib.rs', you could use the syntax:
+
+^^^src/lib.rs
+pub mod cli;
+^^^end
+
 If you wish to remove a file, you can use the following syntax:
 
 ^^^src/cli.rs
-^^^end
-
-The empty contents of the file signal to the automated shell script that the
-file should be deleted entirely.
+^^^delete
 
 As you write code, you should maintain the highest possible degree of
 professionalism. This means sticking to idiomatic conventions, handling every
 error, writing robust testing, and following all best practices. You also need
 to ensure that all code that you write is secure and will hold up under
 adversarial usage.
+
+The following files are not allowed to be modified, attempting to modify them
+will result in an error:
+
++ Cargo.lock
++ build.sh
++ codeRollup.sh
++ codeRollup.txt
++ query.txt
++ gemini-key.txt
++ LLMInstructions.md
++ UserSpecification.md
++ anything in the .git folder
++ anything in the logs folder
++ anything in the target folder
++ anything specified in the .gitignore file
 
 You are about to be provided with a query that contains a request to modify a
 codebase. You will then be provided with the relevant pieces of the codebase.
@@ -250,16 +278,29 @@ pub mod cli;
 If you wish to remove a file, you can use the following syntax:
 
 ^^^src/cli.rs
-^^^end
-
-The empty contents of the file signal to the automated shell script that the
-file should be deleted entirely.
+^^^delete
 
 As you write code, you should maintain the highest possible degree of
 professionalism. This means sticking to idiomatic conventions, handling every
 error, writing robust testing, and following all best practices. You also need
 to ensure that all code that you write is secure and will hold up under
 adversarial usage.
+
+The following files are not allowed to be modified, attempting to modify them
+will result in an error:
+
++ Cargo.lock
++ build.sh
++ codeRollup.sh
++ codeRollup.txt
++ query.txt
++ gemini-key.txt
++ LLMInstructions.md
++ UserSpecification.md
++ anything in the .git folder
++ anything in the logs folder
++ anything in the target folder
++ anything specified in the .gitignore file
 
 Your task today is to fix code that is broken. A query was provided to an LLM
 with a working codebase, that LLM made modifications to the code, and the

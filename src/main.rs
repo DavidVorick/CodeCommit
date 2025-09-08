@@ -20,6 +20,7 @@ use crate::app_error::AppError;
 use crate::config::Config;
 use crate::llm_api::GeminiClient;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::process::exit;
 
 // 1 initial attempt + 3 repair attempts
@@ -61,7 +62,7 @@ async fn run_internal(logger: &logger::Logger) -> Result<(), AppError> {
 
     let mut last_build_output: Option<String> = None;
     // Track the cumulative file updates across all attempts.
-    let mut cumulative_updates = HashMap::new();
+    let mut cumulative_updates: HashMap<PathBuf, Option<String>> = HashMap::new();
 
     for attempt in 1..=MAX_ATTEMPTS {
         println!("Starting attempt {attempt}/{MAX_ATTEMPTS}...");

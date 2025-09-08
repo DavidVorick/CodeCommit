@@ -33,7 +33,7 @@ impl Config {
     pub fn build_repair_prompt(
         &self,
         build_output: &str,
-        file_replacements: &HashMap<PathBuf, String>,
+        file_replacements: &HashMap<PathBuf, Option<String>>,
     ) -> String {
         let replacements_str = format_file_replacements(file_replacements);
         format!(
@@ -47,22 +47,26 @@ impl Config {
     }
 }
 
-fn format_file_replacements(replacements: &HashMap<PathBuf, String>) -> String {
+fn format_file_replacements(replacements: &HashMap<PathBuf, Option<String>>) -> String {
     let mut result = String::new();
     let mut sorted_replacements: Vec<_> = replacements.iter().collect();
-    // Correctly dereference `path` before cloning to fix the clippy warning.
     sorted_replacements.sort_by_key(|(path, _)| (*path).clone());
 
-    for (path, content) in sorted_replacements {
+    for (path, content_opt) in sorted_replacements {
         let path_str = path.to_string_lossy();
-        if content.is_empty() {
-            result.push_str(&format!("--- FILE REMOVED {path_str} ---\n\n"));
-        } else {
-            result.push_str(&format!("--- FILE REPLACEMENT {path_str} ---\n"));
-            result.push_str(content);
-            // Use `push` for single characters to fix the clippy warning.
-            result.push('\n');
-            result.push('\n');
+        match content_opt {
+            Some(content) => {
+                result.push_str(&format!("--- FILE REPLACEMENT {path_str} ---\n"));
+                result.push_str(content);
+                // Ensure a newline separates the content from the next header
+                if !content.ends_with('\n') {
+                    result.push('\n');
+                }
+                result.push('\n');
+            }
+            None => {
+                result.push_str(&format!("--- FILE REMOVED {path_str} ---\n\n"));
+            }
         }
     }
     result

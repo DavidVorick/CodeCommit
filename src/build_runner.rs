@@ -9,9 +9,15 @@ pub fn run() -> Result<String, BuildFailure> {
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    let combined_output = format!("STDOUT:\n{stdout}\n\nSTDERR:\n{stderr}");
+    let exit_code_str = match output.status.code() {
+        Some(code) => code.to_string(),
+        None => "Signal terminated".to_string(),
+    };
 
-    if output.status.success() && stderr.trim().is_empty() {
+    let combined_output =
+        format!("EXIT CODE: {exit_code_str}\n\nSTDOUT:\n{stdout}\n\nSTDERR:\n{stderr}");
+
+    if output.status.success() {
         Ok(combined_output)
     } else {
         Err(BuildFailure {

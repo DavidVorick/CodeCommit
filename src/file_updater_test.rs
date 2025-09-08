@@ -6,8 +6,6 @@ use std::path::PathBuf;
 use tempfile::tempdir;
 
 // --- Tests for apply_updates (File System Operations) ---
-// These tests remain largely the same, as the core file writing/deleting
-// logic hasn't changed.
 
 #[test]
 fn test_apply_updates_create_new_file() {
@@ -18,7 +16,7 @@ fn test_apply_updates_create_new_file() {
     let file_path = PathBuf::from("new_file.txt");
     let updates = vec![FileUpdate {
         path: file_path.clone(),
-        content: "Hello, world!".to_string(),
+        content: Some("Hello, world!".to_string()),
     }];
 
     apply_updates(&updates).unwrap();
@@ -41,13 +39,34 @@ fn test_apply_updates_overwrite_existing_file() {
 
     let updates = vec![FileUpdate {
         path: file_path.clone(),
-        content: "new content".to_string(),
+        content: Some("new content".to_string()),
     }];
 
     apply_updates(&updates).unwrap();
 
     let content = fs::read_to_string(file_path).unwrap();
     assert_eq!(content, "new content");
+
+    std::env::set_current_dir(original_cwd).unwrap();
+}
+
+#[test]
+fn test_apply_updates_create_empty_file() {
+    let dir = tempdir().unwrap();
+    let original_cwd = std::env::current_dir().unwrap();
+    std::env::set_current_dir(dir.path()).unwrap();
+
+    let file_path = PathBuf::from("empty_file.txt");
+    let updates = vec![FileUpdate {
+        path: file_path.clone(),
+        content: Some("".to_string()),
+    }];
+
+    apply_updates(&updates).unwrap();
+
+    assert!(file_path.exists());
+    let content = fs::read_to_string(file_path).unwrap();
+    assert_eq!(content, "");
 
     std::env::set_current_dir(original_cwd).unwrap();
 }
@@ -64,7 +83,7 @@ fn test_apply_updates_delete_file() {
 
     let updates = vec![FileUpdate {
         path: file_path.clone(),
-        content: "".to_string(),
+        content: None,
     }];
 
     apply_updates(&updates).unwrap();
@@ -84,7 +103,7 @@ fn test_apply_updates_create_nested_directory() {
 
     let updates = vec![FileUpdate {
         path: file_path.clone(),
-        content: "fn main() {}".to_string(),
+        content: Some("fn main() {}".to_string()),
     }];
 
     apply_updates(&updates).unwrap();
@@ -94,8 +113,6 @@ fn test_apply_updates_create_nested_directory() {
 }
 
 // --- Tests for PathProtection (Validation Logic) ---
-// These tests are updated to use the new `PathProtection` struct and
-// cover the new validation rules.
 
 #[test]
 fn test_validate_path_valid() {
@@ -142,7 +159,6 @@ fn test_validate_path_forbidden_dir() {
     let protection = PathProtection::new().unwrap();
     let result_git = protection.validate(&PathBuf::from(".git/config"));
     assert!(matches!(result_git, Err(AppError::FileUpdate(_))));
-    // FIX: Update the expected error message string.
     assert!(result_git
         .unwrap_err()
         .to_string()
@@ -150,7 +166,6 @@ fn test_validate_path_forbidden_dir() {
 
     let result_logs = protection.validate(&PathBuf::from("logs/2023-01-01/query.txt"));
     assert!(matches!(result_logs, Err(AppError::FileUpdate(_))));
-    // FIX: Update the expected error message string.
     assert!(result_logs
         .unwrap_err()
         .to_string()

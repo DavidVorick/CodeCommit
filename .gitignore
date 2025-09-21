@@ -1,5 +1,11 @@
 /target
-/codeRollup.txt
 
 *.swp
 *.swo
+
+/codeRollup.txt
+/gemini-key.txt
+/logs
+/query.txt
+
+/code-commit

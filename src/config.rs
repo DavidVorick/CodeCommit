@@ -12,6 +12,8 @@ pub struct Config {
 
 impl Config {
     pub fn load() -> Result<Self, AppError> {
+        check_gitignore()?;
+
         let gemini_api_key = read_file_to_string("gemini-key.txt")?;
         let query = read_file_to_string("query.txt")?;
         let code_rollup = read_file_to_string("codeRollup.txt")?;
@@ -76,4 +78,34 @@ fn read_file_to_string(path: impl AsRef<Path>) -> Result<String, AppError> {
     let path = path.as_ref();
     fs::read_to_string(path)
         .map_err(|e| AppError::Config(format!("Failed to read file '{}': {}", path.display(), e)))
+}
+
+fn check_gitignore() -> Result<(), AppError> {
+    let gitignore_path = Path::new(".gitignore");
+    let gitignore_content = match fs::read_to_string(gitignore_path) {
+        Ok(content) => content,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            return Err(AppError::Config(
+                "'.gitignore' file not found. Please ensure '/gemini-key.txt' is listed in it to protect your API key.".to_string()
+            ));
+        }
+        Err(e) => {
+            return Err(AppError::Config(format!(
+                "Failed to read file '{}': {}",
+                gitignore_path.display(),
+                e
+            )));
+        }
+    };
+
+    if gitignore_content
+        .lines()
+        .any(|line| line.trim() == "/gemini-key.txt")
+    {
+        Ok(())
+    } else {
+        Err(AppError::Config(
+            "Security check failed: Your .gitignore file must contain the line '/gemini-key.txt' to prevent accidental exposure of your API key.".to_string()
+        ))
+    }
 }

@@ -10,7 +10,7 @@ pub enum AppError {
     Io(#[from] std::io::Error),
 
     #[error("HTTP Request Error: {0}")]
-    Network(#[from] reqwest::Error),
+    Network(String),
 
     #[error("JSON Serialization/Deserialization Error: {0}")]
     Json(#[from] serde_json::Error),

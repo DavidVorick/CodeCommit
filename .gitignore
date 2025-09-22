@@ -2,6 +2,7 @@
 
 *.swp
 *.swo
+/out.txt
 
 /codeRollup.txt
 /gemini-key.txt

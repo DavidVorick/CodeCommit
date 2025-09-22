@@ -35,12 +35,32 @@ impl GeminiClient {
             .post(&url)
             .json(&request_body)
             .send()
-            .await?
-            .error_for_status()?;
+            .await
+            .map_err(|e| AppError::Network(censor_api_key_in_error_string(e, &self.api_key)))?
+            .error_for_status()
+            .map_err(|e| AppError::Network(censor_api_key_in_error_string(e, &self.api_key)))?;
 
-        let response_json: Value = response.json().await?;
+        let response_json: Value = response
+            .json()
+            .await
+            .map_err(|e| AppError::Network(censor_api_key_in_error_string(e, &self.api_key)))?;
         Ok(response_json)
     }
+}
+
+fn censor_api_key_in_error_string(e: reqwest::Error, api_key: &str) -> String {
+    let error_string = e.to_string();
+    if api_key.is_empty() {
+        return error_string;
+    }
+
+    let censored_key = if api_key.len() > 2 {
+        format!("...{}", &api_key[api_key.len() - 2..])
+    } else {
+        "...".to_string()
+    };
+
+    error_string.replace(api_key, &censored_key)
 }
 
 pub fn extract_text_from_response(response: &Value) -> Result<String, AppError> {

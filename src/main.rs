@@ -1,5 +1,6 @@
 mod app_error;
 mod build_runner;
+mod cli;
 mod config;
 mod file_updater;
 mod llm_api;
@@ -17,8 +18,9 @@ mod llm_api_test;
 mod response_parser_test;
 
 use crate::app_error::AppError;
+use crate::cli::Model;
 use crate::config::Config;
-use crate::llm_api::GeminiClient;
+use crate::llm_api::{GeminiClient, GptClient, LlmApiClient};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::exit;
@@ -58,7 +60,10 @@ async fn run() -> Result<(), AppError> {
 
 async fn run_internal(logger: &logger::Logger) -> Result<(), AppError> {
     let config = Config::load()?;
-    let gemini_client = GeminiClient::new(config.gemini_api_key.clone());
+    let llm_client = match config.model {
+        Model::Gemini2_5Pro => LlmApiClient::Gemini(GeminiClient::new(config.api_key.clone())),
+        Model::Gpt5 => LlmApiClient::Gpt(GptClient::new(config.api_key.clone())),
+    };
 
     let mut last_build_output: Option<String> = None;
     // Track the cumulative file updates across all attempts.
@@ -80,7 +85,7 @@ async fn run_internal(logger: &logger::Logger) -> Result<(), AppError> {
         };
         logger.log_prompt(&log_name, &prompt)?;
 
-        let response_json = match gemini_client.query(&prompt).await {
+        let response_json = match llm_client.query(&prompt).await {
             Ok(json) => json,
             Err(e) => {
                 let error_msg = format!("ERROR\n{e}");
@@ -90,7 +95,7 @@ async fn run_internal(logger: &logger::Logger) -> Result<(), AppError> {
         };
         logger.log_response_json(&log_name, &response_json)?;
 
-        let response_text = match llm_api::extract_text_from_response(&response_json) {
+        let response_text = match llm_client.extract_text_from_response(&response_json) {
             Ok(text) => text,
             Err(e) => {
                 let error_msg = format!("ERROR\n{e}");

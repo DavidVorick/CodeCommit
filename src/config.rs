@@ -1,11 +1,13 @@
 use crate::app_error::AppError;
+use crate::cli::{parse_cli_args, Model};
 use crate::prompts::{INITIAL_QUERY_SYSTEM_PROMPT, REPAIR_QUERY_SYSTEM_PROMPT};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 pub struct Config {
-    pub gemini_api_key: String,
+    pub model: Model,
+    pub api_key: String,
     pub query: String,
     pub code_rollup: String,
 }
@@ -14,12 +16,19 @@ impl Config {
     pub fn load() -> Result<Self, AppError> {
         check_gitignore()?;
 
-        let gemini_api_key = read_file_to_string("gemini-key.txt")?;
+        let args = parse_cli_args()?;
+        let api_key_path = match args.model {
+            Model::Gemini2_5Pro => "gemini-key.txt",
+            Model::Gpt5 => "openai-key.txt",
+        };
+        let api_key = read_file_to_string(api_key_path)?;
+
         let query = read_file_to_string("query.txt")?;
         let code_rollup = read_file_to_string("codeRollup.txt")?;
 
         Ok(Self {
-            gemini_api_key: gemini_api_key.trim().to_string(),
+            model: args.model,
+            api_key: api_key.trim().to_string(),
             query,
             code_rollup,
         })
@@ -86,7 +95,7 @@ fn check_gitignore() -> Result<(), AppError> {
         Ok(content) => content,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             return Err(AppError::Config(
-                "'.gitignore' file not found. Please ensure '/gemini-key.txt' is listed in it to protect your API key.".to_string()
+                "'.gitignore' file not found. Please ensure '/gemini-key.txt' and '/openai-key.txt' are listed in it to protect your API keys.".to_string()
             ));
         }
         Err(e) => {
@@ -98,14 +107,14 @@ fn check_gitignore() -> Result<(), AppError> {
         }
     };
 
-    if gitignore_content
-        .lines()
-        .any(|line| line.trim() == "/gemini-key.txt")
-    {
-        Ok(())
-    } else {
-        Err(AppError::Config(
-            "Security check failed: Your .gitignore file must contain the line '/gemini-key.txt' to prevent accidental exposure of your API key.".to_string()
-        ))
+    let required_entries = ["/gemini-key.txt", "/openai-key.txt"];
+    for entry in required_entries {
+        if !gitignore_content.lines().any(|line| line.trim() == entry) {
+            return Err(AppError::Config(
+                format!("Security check failed: Your .gitignore file must contain the line '{entry}' to prevent accidental exposure of your API key.")
+            ));
+        }
     }
+
+    Ok(())
 }

@@ -1,9 +1,9 @@
 use crate::app_error::AppError;
-use crate::llm_api::extract_text_from_response;
+use crate::llm_api::{extract_text_from_gemini_response, extract_text_from_gpt_response};
 use serde_json::json;
 
 #[test]
-fn test_extract_text_happy_path() {
+fn test_extract_gemini_text_happy_path() {
     let response = json!({
         "candidates": [
             {
@@ -17,26 +17,26 @@ fn test_extract_text_happy_path() {
             }
         ]
     });
-    let result = extract_text_from_response(&response).unwrap();
+    let result = extract_text_from_gemini_response(&response).unwrap();
     assert_eq!(result, "This is the LLM response.");
 }
 
 #[test]
-fn test_extract_text_no_candidates() {
+fn test_extract_gemini_text_no_candidates() {
     let response = json!({ "candidates": [] });
-    let result = extract_text_from_response(&response);
+    let result = extract_text_from_gemini_response(&response);
     assert!(matches!(result, Err(AppError::ResponseParsing(_))));
 }
 
 #[test]
-fn test_extract_text_missing_candidates_key() {
+fn test_extract_gemini_text_missing_candidates_key() {
     let response = json!({ "other_key": "value" });
-    let result = extract_text_from_response(&response);
+    let result = extract_text_from_gemini_response(&response);
     assert!(matches!(result, Err(AppError::ResponseParsing(_))));
 }
 
 #[test]
-fn test_extract_text_missing_parts() {
+fn test_extract_gemini_text_missing_parts() {
     let response = json!({
         "candidates": [
             {
@@ -44,12 +44,12 @@ fn test_extract_text_missing_parts() {
             }
         ]
     });
-    let result = extract_text_from_response(&response);
+    let result = extract_text_from_gemini_response(&response);
     assert!(matches!(result, Err(AppError::ResponseParsing(_))));
 }
 
 #[test]
-fn test_extract_text_missing_text() {
+fn test_extract_gemini_text_missing_text() {
     let response = json!({
         "candidates": [
             {
@@ -59,12 +59,12 @@ fn test_extract_text_missing_text() {
             }
         ]
     });
-    let result = extract_text_from_response(&response);
+    let result = extract_text_from_gemini_response(&response);
     assert!(matches!(result, Err(AppError::ResponseParsing(_))));
 }
 
 #[test]
-fn test_extract_text_multiple_parts() {
+fn test_extract_gemini_text_multiple_parts() {
     let response = json!({
         "candidates": [
             {
@@ -84,9 +84,63 @@ fn test_extract_text_multiple_parts() {
             }
         ]
     });
-    let result = extract_text_from_response(&response).unwrap();
+    let result = extract_text_from_gemini_response(&response).unwrap();
     assert_eq!(
         result,
         "This is the first part. This is the second part. And this is the third."
     );
+}
+
+#[test]
+fn test_extract_gpt_text_happy_path() {
+    let response = json!({
+        "choices": [
+            {
+                "message": {
+                    "content": "This is the GPT response."
+                }
+            }
+        ]
+    });
+    let result = extract_text_from_gpt_response(&response).unwrap();
+    assert_eq!(result, "This is the GPT response.");
+}
+
+#[test]
+fn test_extract_gpt_text_no_choices() {
+    let response = json!({"choices": []});
+    let result = extract_text_from_gpt_response(&response);
+    assert!(matches!(result, Err(AppError::ResponseParsing(_))));
+    assert!(result
+        .unwrap_err()
+        .to_string()
+        .contains("Could not find 'content' in GPT response JSON."));
+}
+
+#[test]
+fn test_extract_gpt_text_missing_content() {
+    let response = json!({
+        "choices": [
+            {
+                "message": {
+                    "role": "assistant"
+                }
+            }
+        ]
+    });
+    let result = extract_text_from_gpt_response(&response);
+    assert!(matches!(result, Err(AppError::ResponseParsing(_))));
+}
+
+#[test]
+fn test_extract_gpt_text_missing_message() {
+    let response = json!({
+        "choices": [
+            {
+                "finish_reason": "stop"
+            }
+        ]
+    });
+    let result = extract_text_from_gpt_response(&response);
+    assert!(matches!(result, Err(AppError::ResponseParsing(_))));
 }

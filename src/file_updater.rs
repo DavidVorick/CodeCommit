@@ -68,6 +68,7 @@ impl PathProtection {
             "codeRollup.txt",
             "query.txt",
             "gemini-key.txt",
+            "openai-key.txt",
             "LLMInstructions.md",
             "UserSpecification.md",
         ]

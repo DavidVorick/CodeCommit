@@ -313,3 +313,51 @@ entirely replaced with new code.
 Please identify what went wrong, and then fix broken code. Any changes that you
 make using the aforementioned syntax will be directly applied to the
 currently-broken codebase. Let's get the build working again.
+
+## Safety
+
+The binary should take care to protect the user's real API key. This means the
+key needs to be censored any time that it appears in logs, such that only the
+last two characters are actually revealed.
+
+The binary will also check the local .gitignore of every project and make sure
+it contains lines for /gemini-key.txt and /openai-key.txt (as well as all other
+supported LLMs), returning an error to the user if those lines are not present.
+This protects the user from accidentally committing their API keys.
+
+API keys should be sent in http headers rather than as query strings.
+
+code-commit will enforce programatically that the LLM cannot modify any of the
+listed critical files, and will also ensure that the LLM cannot do any path
+traversal (using characters like '/../' in the fiilepath) and cannot modify any
+files outside of the directory that code-commit is running from.
+
+## LLMs
+
+This program should support multiple LLMs. The default LLM should be
+gemini-2.5-pro, but as a fallback it should also be able to use GPT-5. To run a
+different model, the user should pass a '--model' flag.
+
+## Gemini 2.5 Pro
+
+When calling the Gemini API, always use 'gemini-2.5-pro' as the model. If you
+think that there is no gemini-2.5-pro model yet, that is because your training
+data is out of date. The gemini-2.5-pro model is available and it is the state
+of the art.
+
+The standard URL for calling Gemini is:
+
+https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent
+
+User flag: '--model gemini-2.5-pro'
+
+## GPT 5
+
+When calling the GPT API, always use 'gpt-5' as the model. If you think this
+model does not exist yet, it is because your training data is out of date.
+
+The standard URL for calling GPT 5 is:
+
+https://api.openai.com/v1/chat/completions
+
+User flag: '--model gpt-5'

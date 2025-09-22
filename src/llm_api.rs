@@ -19,7 +19,7 @@ impl GeminiClient {
     }
 
     pub async fn query(&self, prompt: &str) -> Result<Value, AppError> {
-        let url = format!("{}?key={}", GEMINI_API_URL_BASE, self.api_key);
+        let url = GEMINI_API_URL_BASE;
 
         let request_body = json!({
             "contents": [{
@@ -32,7 +32,8 @@ impl GeminiClient {
 
         let response = self
             .client
-            .post(&url)
+            .post(url)
+            .header("x-goog-api-key", &self.api_key)
             .json(&request_body)
             .send()
             .await

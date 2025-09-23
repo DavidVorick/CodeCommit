@@ -1,5 +1,5 @@
 use crate::app_error::AppError;
-use reqwest::Client;
+use reqwest::{Client, StatusCode};
 use serde_json::{json, Value};
 
 const GEMINI_API_URL_BASE: &str =
@@ -13,6 +13,7 @@ pub struct GeminiClient {
 }
 
 impl GeminiClient {
+    /// Construct a new Gemini client with the given API key.
     pub fn new(api_key: String) -> Self {
         Self {
             client: Client::new(),
@@ -32,22 +33,17 @@ impl GeminiClient {
             }
         });
 
-        let response = self
+        let resp = self
             .client
             .post(url)
             .header("x-goog-api-key", &self.api_key)
+            .header("Content-Type", "application/json")
             .json(&request_body)
             .send()
             .await
-            .map_err(|e| AppError::Network(censor_api_key_in_error_string(e, &self.api_key)))?
-            .error_for_status()
             .map_err(|e| AppError::Network(censor_api_key_in_error_string(e, &self.api_key)))?;
 
-        let response_json: Value = response
-            .json()
-            .await
-            .map_err(|e| AppError::Network(censor_api_key_in_error_string(e, &self.api_key)))?;
-        Ok(response_json)
+        handle_json_response(resp, &self.api_key).await
     }
 }
 
@@ -73,25 +69,19 @@ impl GptClient {
                     "content": prompt
                 }
             ],
-            "temperature": 0.7
         });
 
-        let response = self
+        let resp = self
             .client
             .post(GPT_API_URL)
             .bearer_auth(&self.api_key)
+            .header("Content-Type", "application/json")
             .json(&request_body)
             .send()
             .await
-            .map_err(|e| AppError::Network(censor_api_key_in_error_string(e, &self.api_key)))?
-            .error_for_status()
             .map_err(|e| AppError::Network(censor_api_key_in_error_string(e, &self.api_key)))?;
 
-        let response_json: Value = response
-            .json()
-            .await
-            .map_err(|e| AppError::Network(censor_api_key_in_error_string(e, &self.api_key)))?;
-        Ok(response_json)
+        handle_json_response(resp, &self.api_key).await
     }
 }
 
@@ -129,6 +119,36 @@ fn censor_api_key_in_error_string(e: reqwest::Error, api_key: &str) -> String {
     };
 
     error_string.replace(api_key, &censored_key)
+}
+
+async fn error_with_body(status: StatusCode, mut body: String, api_key: &str) -> AppError {
+    if !api_key.is_empty() {
+        if api_key.len() > 2 {
+            let censored_key = format!("...{}", &api_key[api_key.len() - 2..]);
+            body = body.replace(api_key, &censored_key);
+        } else {
+            body = body.replace(api_key, "...");
+        }
+    }
+    AppError::Network(format!("HTTP {status} with body:\n{body}"))
+}
+
+async fn handle_json_response(resp: reqwest::Response, api_key: &str) -> Result<Value, AppError> {
+    let status = resp.status();
+    let text = resp
+        .text()
+        .await
+        .map_err(|e| AppError::Network(censor_api_key_in_error_string(e, api_key)))?;
+
+    if !status.is_success() {
+        return Err(error_with_body(status, text, api_key).await);
+    }
+
+    serde_json::from_str::<Value>(&text).map_err(|e| {
+        AppError::Network(format!(
+            "Invalid JSON in success response: {e}; raw body:\n{text}"
+        ))
+    })
 }
 
 pub fn extract_text_from_gemini_response(response: &Value) -> Result<String, AppError> {

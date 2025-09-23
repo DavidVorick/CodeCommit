@@ -15,8 +15,6 @@ pub fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
 
         match &update.content {
             Some(content_str) => {
-                // This handles both creating new files and replacing existing ones.
-                // An empty `content_str` correctly creates an empty file.
                 if let Some(parent) = path.parent() {
                     if !parent.exists() {
                         fs::create_dir_all(parent).map_err(|e| {
@@ -37,7 +35,6 @@ pub fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
                 })?;
             }
             None => {
-                // This handles file deletion.
                 if path.exists() {
                     fs::remove_file(&path).map_err(|e| {
                         AppError::FileUpdate(format!(
@@ -47,7 +44,6 @@ pub fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
                         ))
                     })?;
                 }
-                // If the file doesn't exist, it's not an error. The goal is achieved.
             }
         }
     }
@@ -62,6 +58,7 @@ pub(crate) struct PathProtection {
 impl PathProtection {
     pub(crate) fn new() -> Result<Self, AppError> {
         let forbidden_files = [
+            ".gitignore",
             "Cargo.lock",
             "build.sh",
             "codeRollup.sh",
@@ -77,8 +74,6 @@ impl PathProtection {
         .collect();
 
         let mut builder = GitignoreBuilder::new(".");
-        // Add the local .gitignore file if it exists.
-        // The `ignore` crate handles the case where the file doesn't exist gracefully.
         builder.add(".gitignore");
         let gitignore_matcher = builder
             .build()
@@ -114,11 +109,9 @@ impl PathProtection {
             )));
         }
 
-        // Check for modification of forbidden root directories like .git/, logs/, target/
-        // This structure is refactored to satisfy clippy's `collapsible_match` lint.
         if let Some(Component::Normal(first_comp)) = path.components().next() {
             if let Some(name) = first_comp.to_str() {
-                if matches!(name, ".git" | "logs" | "target") {
+                if matches!(name, ".git" | "logs" | "target" | "config") {
                     return Err(AppError::FileUpdate(format!(
                         "Modification of directory '{name}/' is not allowed."
                     )));
@@ -126,7 +119,6 @@ impl PathProtection {
             }
         }
 
-        // Check against .gitignore rules
         match self
             .gitignore_matcher
             .matched_path_or_any_parents(path, false)
@@ -137,8 +129,6 @@ impl PathProtection {
                     path.display()
                 )));
             }
-            // Match::Whitelist means it's explicitly un-ignored, which is fine.
-            // Match::None means it's not mentioned, which is also fine.
             ignore::Match::Whitelist(_) | ignore::Match::None => {}
         }
 

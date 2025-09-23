@@ -219,3 +219,27 @@ fn test_validate_path_with_gitignore() {
     // Cleanup: change back to original directory
     std::env::set_current_dir(original_cwd).unwrap();
 }
+
+#[test]
+fn test_forbid_modifying_gitignore_and_config_dir() {
+    let protection = PathProtection::new().unwrap();
+
+    // .gitignore must not be modifiable
+    let result_gitignore = protection.validate(&PathBuf::from(".gitignore"));
+    assert!(matches!(result_gitignore, Err(AppError::FileUpdate(_))));
+    assert!(result_gitignore
+        .unwrap_err()
+        .to_string()
+        .contains("Modification of critical file '.gitignore' is not allowed."));
+
+    // Root-level config directory must be protected
+    let result_config_dir = protection.validate(&PathBuf::from("config/settings.yaml"));
+    assert!(matches!(result_config_dir, Err(AppError::FileUpdate(_))));
+    assert!(result_config_dir
+        .unwrap_err()
+        .to_string()
+        .contains("Modification of directory 'config/' is not allowed."));
+
+    // A similarly-named path nested elsewhere should be allowed
+    assert!(protection.validate(&PathBuf::from("src/config.rs")).is_ok());
+}

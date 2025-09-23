@@ -81,6 +81,7 @@ not do any path traversal, and also that the filepath points to some file
 inside the current directory. It needs to make sure that the critical files are
 not being modified, which means that it cannot modify:
 
++ .gitignore
 + Cargo.lock
 + build.sh
 + codeRollup.sh
@@ -90,6 +91,7 @@ not being modified, which means that it cannot modify:
 + LLMInstructions.md
 + UserSpecification.md
 + anything in the .git folder
++ anything in the config folder
 + anything in the logs folder
 + anything in the target folder
 + anything specified in the .gitignore file
@@ -216,6 +218,7 @@ adversarial usage.
 The following files are not allowed to be modified, attempting to modify them
 will result in an error:
 
++ .gitignore
 + Cargo.lock
 + build.sh
 + codeRollup.sh
@@ -225,6 +228,7 @@ will result in an error:
 + LLMInstructions.md
 + UserSpecification.md
 + anything in the .git folder
++ anything in the config folder
 + anything in the logs folder
 + anything in the target folder
 + anything specified in the .gitignore file
@@ -289,6 +293,7 @@ adversarial usage.
 The following files are not allowed to be modified, attempting to modify them
 will result in an error:
 
++ .gitignore
 + Cargo.lock
 + build.sh
 + codeRollup.sh
@@ -298,6 +303,7 @@ will result in an error:
 + LLMInstructions.md
 + UserSpecification.md
 + anything in the .git folder
++ anything in the config folder
 + anything in the logs folder
 + anything in the target folder
 + anything specified in the .gitignore file
@@ -336,7 +342,8 @@ files outside of the directory that code-commit is running from.
 
 This program should support multiple LLMs. The default LLM should be
 gemini-2.5-pro, but as a fallback it should also be able to use GPT-5. To run a
-different model, the user should pass a '--model' flag.
+different model, the user should pass a '--model' flag. Unrecognized models and
+unrecognized flags should produce an error.
 
 ## Gemini 2.5 Pro
 

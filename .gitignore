@@ -4,9 +4,12 @@
 *.swo
 /out.txt
 
-/codeRollup.txt
-/gemini-key.txt
 /logs
-/query.txt
-
 /code-commit
+/config
+
+/gemini-key.txt
+/openai-key.txt
+
+/codeRollup.txt
+/query.txt

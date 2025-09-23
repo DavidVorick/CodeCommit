@@ -45,6 +45,7 @@ adversarial usage.
 The following files are not allowed to be modified, attempting to modify them
 will result in an error:
 
++ .gitignore
 + Cargo.lock
 + build.sh
 + codeRollup.sh
@@ -54,6 +55,7 @@ will result in an error:
 + LLMInstructions.md
 + UserSpecification.md
 + anything in the .git folder
++ anything in the config folder
 + anything in the logs folder
 + anything in the target folder
 + anything specified in the .gitignore file
@@ -108,6 +110,7 @@ If you wish to remove a file, you can use the following syntax:
 The following files are not allowed to be modified, attempting to modify them
 will result in an error:
 
++ .gitignore
 + Cargo.lock
 + build.sh
 + codeRollup.sh
@@ -117,6 +120,7 @@ will result in an error:
 + LLMInstructions.md
 + UserSpecification.md
 + anything in the .git folder
++ anything in the config folder
 + anything in the logs folder
 + anything in the target folder
 + anything specified in the .gitignore file

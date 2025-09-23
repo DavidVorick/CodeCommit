@@ -17,13 +17,22 @@ impl Model {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Workflow {
+    #[default]
+    CommitCode,
+    ConsistencyCheck,
+}
+
 pub struct CliArgs {
     pub model: Model,
+    pub workflow: Workflow,
 }
 
 pub fn parse_cli_args() -> Result<CliArgs, AppError> {
     let mut args = std::env::args().skip(1);
     let mut model = Model::default();
+    let mut workflow = Workflow::default();
 
     while let Some(arg) = args.next() {
         if arg == "--model" {
@@ -31,10 +40,12 @@ pub fn parse_cli_args() -> Result<CliArgs, AppError> {
                 AppError::Config("Missing value for --model argument".to_string())
             })?;
             model = Model::from_str(&model_str)?;
+        } else if arg == "--consistency-check" || arg == "--consistency" || arg == "--cc" {
+            workflow = Workflow::ConsistencyCheck;
         } else {
             return Err(AppError::Config(format!("Unknown argument: {arg}")));
         }
     }
 
-    Ok(CliArgs { model })
+    Ok(CliArgs { model, workflow })
 }

@@ -3,7 +3,9 @@
 *.swp
 *.swo
 /out.txt
+/notes
 
+/agent-config
 /logs
 /code-commit
 /config

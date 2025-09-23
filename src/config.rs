@@ -1,6 +1,7 @@
 use crate::app_error::AppError;
-use crate::cli::{parse_cli_args, Model};
+use crate::cli::{CliArgs, Model};
 use crate::prompts::{INITIAL_QUERY_SYSTEM_PROMPT, REPAIR_QUERY_SYSTEM_PROMPT};
+use crate::prompts_consistency::CONSISTENCY_CHECK_SYSTEM_PROMPT;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -13,10 +14,9 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn load() -> Result<Self, AppError> {
+    pub fn load(args: CliArgs) -> Result<Self, AppError> {
         check_gitignore()?;
 
-        let args = parse_cli_args()?;
         let api_key_path = match args.model {
             Model::Gemini2_5Pro => "gemini-key.txt",
             Model::Gpt5 => "openai-key.txt",
@@ -54,6 +54,13 @@ impl Config {
             self.query,
             self.code_rollup,
             replacements_str
+        )
+    }
+
+    pub fn build_consistency_prompt(&self) -> String {
+        format!(
+            "{}\n[query]\n{}\n[codebase]\n{}",
+            CONSISTENCY_CHECK_SYSTEM_PROMPT, self.query, self.code_rollup
         )
     }
 }

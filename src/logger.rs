@@ -10,9 +10,14 @@ pub struct Logger {
 }
 
 impl Logger {
-    pub fn new() -> Result<Self, AppError> {
+    pub fn new(suffix: &str) -> Result<Self, AppError> {
         let timestamp = Utc::now().format("%Y-%m-%d-%H-%M-%S").to_string();
-        let log_dir = PathBuf::from("logs").join(timestamp);
+        let dir_name = if suffix.is_empty() {
+            timestamp
+        } else {
+            format!("{timestamp}-{suffix}")
+        };
+        let log_dir = PathBuf::from("logs").join(dir_name);
         fs::create_dir_all(&log_dir)?;
         Ok(Self { log_dir })
     }

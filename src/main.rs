@@ -6,6 +6,7 @@ mod file_updater;
 mod llm_api;
 mod logger;
 mod prompts;
+mod prompts_consistency;
 mod response_parser;
 
 #[cfg(test)]
@@ -18,10 +19,11 @@ mod llm_api_test;
 mod response_parser_test;
 
 use crate::app_error::AppError;
-use crate::cli::Model;
+use crate::cli::{CliArgs, Model, Workflow};
 use crate::config::Config;
 use crate::llm_api::{GeminiClient, GptClient, LlmApiClient};
 use std::collections::HashMap;
+use std::fs;
 use std::path::PathBuf;
 use std::process::exit;
 
@@ -45,10 +47,18 @@ async fn main() {
 }
 
 async fn run() -> Result<(), AppError> {
-    // Create logger early. If this fails, we can't log, so we just propagate the error.
-    let logger = logger::Logger::new()?;
+    let cli_args = cli::parse_cli_args()?;
 
-    let result = run_internal(&logger).await;
+    let logger_suffix = match cli_args.workflow {
+        Workflow::CommitCode => "",
+        Workflow::ConsistencyCheck => "consistency-report",
+    };
+    let logger = logger::Logger::new(logger_suffix)?;
+
+    let result = match cli_args.workflow {
+        Workflow::CommitCode => run_commit_code(&logger, cli_args).await,
+        Workflow::ConsistencyCheck => run_consistency_check(&logger, cli_args).await,
+    };
 
     if let Err(e) = &result {
         // If the main loop fails, log the final error.
@@ -58,8 +68,8 @@ async fn run() -> Result<(), AppError> {
     result
 }
 
-async fn run_internal(logger: &logger::Logger) -> Result<(), AppError> {
-    let config = Config::load()?;
+async fn run_commit_code(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppError> {
+    let config = Config::load(cli_args)?;
     let llm_client = match config.model {
         Model::Gemini2_5Pro => LlmApiClient::Gemini(GeminiClient::new(config.api_key.clone())),
         Model::Gpt5 => LlmApiClient::Gpt(GptClient::new(config.api_key.clone())),
@@ -132,4 +142,47 @@ async fn run_internal(logger: &logger::Logger) -> Result<(), AppError> {
 
     println!("Build did not pass after {MAX_ATTEMPTS} attempts. Aborting.");
     Err(AppError::MaxAttemptsReached)
+}
+
+async fn run_consistency_check(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppError> {
+    println!("Starting consistency check workflow...");
+    let config = Config::load(cli_args)?;
+    let llm_client = match config.model {
+        Model::Gemini2_5Pro => LlmApiClient::Gemini(GeminiClient::new(config.api_key.clone())),
+        Model::Gpt5 => LlmApiClient::Gpt(GptClient::new(config.api_key.clone())),
+    };
+
+    let prompt = config.build_consistency_prompt();
+    let log_name = "query";
+    logger.log_prompt(log_name, &prompt)?;
+
+    let response_json = match llm_client.query(&prompt).await {
+        Ok(json) => json,
+        Err(e) => {
+            let error_msg = format!("ERROR\n{e}");
+            logger.log_response_text(log_name, &error_msg)?;
+            return Err(e);
+        }
+    };
+    logger.log_response_json(log_name, &response_json)?;
+
+    let response_text = match llm_client.extract_text_from_response(&response_json) {
+        Ok(text) => text,
+        Err(e) => {
+            let error_msg = format!("ERROR\n{e}");
+            logger.log_response_text(log_name, &error_msg)?;
+            return Err(e);
+        }
+    };
+    logger.log_response_text(log_name, &response_text)?;
+
+    println!("Writing consistency report...");
+    let report_dir = PathBuf::from("agent-config");
+    fs::create_dir_all(&report_dir)?;
+    let report_path = report_dir.join("consistency-report.txt");
+    fs::write(&report_path, response_text)?;
+
+    println!("Consistency report written to {}", report_path.display());
+
+    Ok(())
 }

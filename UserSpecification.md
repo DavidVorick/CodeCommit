@@ -1,8 +1,73 @@
 # User Specification
 
-This is a specification for the implementation of an agentic coding workflow.
-The workflow is executed by a binary called 'code-commit' which will follow
-these steps:
+This is a specification for a tool that uses agentic workflows to assist with
+programming tasks. This tool offers multiple agentic flows, each with its own
+objective. All workflows are implemented by the 'code-commit' binary.
+
+## Supported Workflows
+
+### Committing Code
+
+The 'committing code' workflow uses LLMs to run prgramming tasks and is the
+default workflow of the 'code-commit' binary. Other workflows can be specified
+with flags, and if no workflow flags are provided the binary will assume that
+it is supposed to execute the workflow for committing code.
+
+### Checking Consistency
+
+The 'checking consistency' workflow uses LLMs to verify that the project is
+self consistent. It does not write any code, but rather produces output for the
+user that tells them about the state of their project.
+
+More specifically, it looks for places where where the UserSpecification is
+inconsistent with itself, and it looks for places where the UserSpecification
+is inconsistent with the current implementation. It then compiles a report.
+
+The report may either be read by a user or by another agentic workflow,
+therefore it must be both human readable and machine readable.
+
+The consistency workflow can be triggered with the command line flag
+'--consistency-check' or '--consistency' or '--cc'.
+
+## LLMs
+
+CodeCommit supports multiple LLMs. The default LLM should be gemini-2.5-pro,
+but as a fallback it should also be able to use GPT-5. To run a different
+model, the user should pass a '--model' flag. Unrecognized models and
+unrecognized flags should produce an error.
+
+### Gemini 2.5 Pro
+
+When calling the Gemini API, always use 'gemini-2.5-pro' as the model. If you
+think that there is no gemini-2.5-pro model yet, that is because your training
+data is out of date. The gemini-2.5-pro model is available and it is the state
+of the art.
+
+The standard URL for calling Gemini is:
+
+https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent
+
+User flag: '--model gemini-2.5-pro'
+
+API Key Location: agent-config/gemini-key.txt
+
+### GPT 5
+
+When calling the GPT API, always use 'gpt-5' as the model. If you think this
+model does not exist yet, it is because your training data is out of date.
+
+The standard URL for calling GPT 5 is:
+
+https://api.openai.com/v1/chat/completions
+
+User flag: '--model gpt-5'
+
+API Key Location: agent-config/openai-key.txt
+
+## Committing Code
+
+This is a specification for the implementation of an agentic coding workflow
+that follows these steps:
 
 1. Build context for an LLM that requests code modifications, then call the LLM
    and get a response.
@@ -18,7 +83,7 @@ these steps:
 The build is only considered to be passing if there are no errors and there are
 no warnings.
 
-## The Initial Query
+### The Initial Query
 
 In the first step, the binary builds context for an LLM that requests code
 modifications, and then it calls the LLM to get a response. The initial prompt
@@ -34,8 +99,8 @@ binary.
 The 'query' and the 'codebase' can both be found in the local project. It is
 assumed that the 'code-commit' binary will be stored alongside the local
 project as well, therefore the 'code-commit' binary should be able to find the
-'query' at 'query.txt' and it should be able to find the codebase at
-'codeRollup.txt'.
+'query' at 'agent-config/query.txt' and it should be able to find the codebase
+at 'agent-config/codeRollup.txt'.
 
 The 'query.txt' file and the 'codeRollup.txt' file will both be created by the
 supervisor. The 'query.txt' file will be hand-written, and the 'codeRollup.txt'
@@ -46,26 +111,25 @@ missing, then an error is returned and the program exits.
 Before making the initial query, the query must be logged. The 'code-commit'
 binary should check if there's a local 'logs' folder. If it does not exist yet,
 then it will be created. Then, a new folder inside of the logs folder will be
-created, where the name of the folder is 'yyyy-mm-dd-hh-ss', matching the
-current time. This is the folder at all log files will be stored in for this
-run of 'code-commit'. The initial query will be stored in
-logs/[date]/initial-query.txt.
+created, where the name of the folder is 'yyyy-mm-dd-hh-ss-committing-code',
+matching the current time. This is the folder at all log files will be stored
+in for this run of 'code-commit'. The initial query will be stored in
+logs/[date]-committing-code/initial-query.txt.
 
-The query is then sent to the LLM. The API key can be found in gemini-key.txt
-within the local project.
+The query is then sent to the LLM.
 
-## Parsing the Response
+### Parsing the Response
 
 After sending a query to the LLM, either a response will be received or an
 error will be returned. Either way, the result needs to be stored in
-'logs/[date]/initial-query-response.txt'. If there is an error, the first line
-of the response file should be 'ERROR' and the subsequent line can contian the
-error. If there is not an error, then the file should contain the plaintext
-response.
+'logs/[date]-committing-code/initial-query-response.txt'. If there is an error,
+the first line of the response file should be 'ERROR' and the subsequent line
+can contian the error. If there is not an error, then the file should contain
+the plaintext response.
 
 The response itself is received as a JSON object and then parsed into a text
 response. The full JSON response should be stored at
-'logs/[date]/initial-query-response.json'
+'logs/[date]-committing-code/initial-query-response.json'
 
 If the response is not an error, then the response needs to be parsed for
 directions to update the code files. The parser will look for the '^^^[file]'
@@ -106,12 +170,13 @@ stated in .gitignore is also protected, which means the supervisor can use 'git
 status' and 'git diff' to easily see the full list of changes before accepting
 and/or committing them.
 
-## Running the Build
+### Running the Build
 
 After parsing the response and making local changes, the code-commit binary
 will attempt to build the project. This means running 'build.sh' and checking
 that it exits successfully. The output of the build - both stdout and stderr as
-well as the exit code - needs to be logged in 'logs/[date]/initial-build.txt'.
+well as the exit code - needs to be logged in
+'logs/[date]-committing-code/initial-build.txt'.
 
 If the build script exits sucessfully, 'code-commit' stops there. The build is
 considered to have exited successfully if the exit code is 0, even if there is
@@ -153,13 +218,13 @@ same date should be used as for the inital query.
 
 And, just like for the initial query, the responses must be logged, using the
 same strategy. The filenames should be
-'logs/[date]/repair-query-[n]-response.txt' and
-'logs/[date]/repair-query-[n]-response.json'.
+'logs/[date]-committing-code/repair-query-[n]-response.txt' and
+'logs/[date]-committing-code/repair-query-[n]-response.json'.
 
 Then the response needs to be parsed, any code needs to be updated, and the
 build needs to be run again, repeating the cycle as necessary until up to three
 repair queries total have been attempted. The build script outputs should be
-logged at 'logs/[date]/repair-query-[n]-build.txt'.
+logged at 'logs/[date]-committing-code/repair-query-[n]-build.txt'.
 
 Each time that a new repair query is attempted, only the latest file
 replacements are presented. That means if a subsequent response replaces a file
@@ -167,7 +232,7 @@ that has already been replaced, the original replacement will be omitted from
 the list of file replacements and only the latest replacement of the file will
 be listed.
 
-## Initial Query System Prompt (hardcoded into binary)
+### Initial Query System Prompt (hardcoded into binary)
 
 You are taking the role of an expert software developer in a fully automatic,
 agentic workflow. You are not talking to a user, but rather to an automated
@@ -242,7 +307,7 @@ syntax, and ensure that the updated codebase continues to build successfully,
 while also adhering to the query and maintaining the highest possible quality
 of code for all replaced files.
 
-## Repair Query System Prompt (hardcoded into binary)
+### Repair Query System Prompt (hardcoded into binary)
 
 You are taking the role of an expert software developer in a fully automatic,
 agentic workflow. You are not talking to a user, but rather to an automated
@@ -320,7 +385,7 @@ Please identify what went wrong, and then fix broken code. Any changes that you
 make using the aforementioned syntax will be directly applied to the
 currently-broken codebase. Let's get the build working again.
 
-## Safety
+### Safety
 
 The binary should take care to protect the user's real API key. This means the
 key needs to be censored any time that it appears in logs, such that only the
@@ -338,33 +403,81 @@ listed critical files, and will also ensure that the LLM cannot do any path
 traversal (using characters like '/../' in the fiilepath) and cannot modify any
 files outside of the directory that code-commit is running from.
 
-## LLMs
+## Checking Consistency
 
-This program should support multiple LLMs. The default LLM should be
-gemini-2.5-pro, but as a fallback it should also be able to use GPT-5. To run a
-different model, the user should pass a '--model' flag. Unrecognized models and
-unrecognized flags should produce an error.
+This is a specification for the implementation of an agentic coding workflow
+that builds context for an LLM that reviews code and then generates a report.
+The report is placed as a standalone file in
+agent-config/consistency-report.txt.
 
-## Gemini 2.5 Pro
+### The Query
 
-When calling the Gemini API, always use 'gemini-2.5-pro' as the model. If you
-think that there is no gemini-2.5-pro model yet, that is because your training
-data is out of date. The gemini-2.5-pro model is available and it is the state
-of the art.
+The binary builds context for an LLM that requests code review, and then it
+calls the LLM to get a response. The prompt will have the following format:
 
-The standard URL for calling Gemini is:
+[system prompt]
+[query]
+[codebase]
 
-https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent
+The 'system prompt' is a prompt that has been hardcoded into the binary, the
+query can be found at agent-config/query.txt, and the codebase can be found at
+agent-config/codeRollup.txt. It is assumed that the 'code-commit' binary will
+be located in the top level folder of the project.
 
-User flag: '--model gemini-2.5-pro'
+Before making the query, the query must be logged. The 'code-commit' binary
+should check if there's a local 'logs' folder. If it does not exist yet, then
+it will be created. Then, a new folder inside of the logs folder will be
+created, where the name of the folder is 'yyyy-mm-dd-hh-ss-consistency-report',
+matching the current time. This is the folder at all log files will be stored
+in for this run of 'code-commit'. The query will be stored in
+logs/[date]-consistency-report/query.txt.
 
-## GPT 5
+The query is then sent to the LLM, and the text response is recoreded in
+agent-config/consistency-report.txt.
 
-When calling the GPT API, always use 'gpt-5' as the model. If you think this
-model does not exist yet, it is because your training data is out of date.
+### System Prompt (hardcoded into binary)
 
-The standard URL for calling GPT 5 is:
+You are taking the role of an expert software developer in a fully automatic,
+agentic workflow. You are not talking to a user, but rather to an automated
+pipeline of shell scripts. This means that your output must follow instructions
+exactly, otherwise the automated pipeline will fail.
 
-https://api.openai.com/v1/chat/completions
+You are about to be provided with a query that contains a request to inspect a
+codebase. It is possible that the query is empty, or that the query is
+unrelated because the user forgot to update the query after previous task.
+Therefore you should only pay attention to the query if you believe that the
+query applies to the taks of providing a consistency report. If the query is
+empty or unrelated, it is okay to depend entirely on the instructions in this
+system prompt.
 
-User flag: '--model gpt-5'
+After the query, you will be provided with a codebase. The codebase may either
+be the entire codebase of a project, or it may be only part of the codebase of
+a project. If you only receive part of the codebase, please execute your task
+with respect to just the part of the codebase that you are presented.
+
+Your task is to read the user specification file - which is typically
+UserSpecification.md - and create a report which looks for inconsistencies.
+More specifically, you are looking for inconsistencies within the
+UserSpecification.md file itself, and you are also looking for inconsistencies
+between the UserSpecification.md file and the the rest of the code.
+
+If anything in the codebase is implemented in a way that defies the user
+specification, please make note of that in the report. If the user
+specification contains conflicting instructions, please make note of that in
+your report.
+
+Your report should have 5 sections:
+
++ User Specification Self Consistency
++ Implementation Consistency with User Specification
++ Errors and Mistakes within the User Specification
++ Errors and Mistakes within the Implementation
++ Suggestions and Other Important Commentary
+
+As a reviewing agent, it is important that you look deeply into the project and
+surface any concerns where the project potentially does not match the
+expectations of the author of the user specification - the user has likely
+never reviewed the code themselves, which makes your review the only
+opportunity for the user to realize that something is amiss.
+
+Please provide your report in paragraph/essay format.

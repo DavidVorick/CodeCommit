@@ -32,7 +32,7 @@ The consistency workflow can be triggered with the command line flag
 ## LLMs
 
 CodeCommit supports multiple LLMs. The default LLM should be gemini-2.5-pro,
-but as a fallback it should also be able to use GPT-5. To run a different
+but as an alternative it should also be able to use GPT-5. To run a different
 model, the user should pass a '--model' flag. Unrecognized models and
 unrecognized flags should produce an error.
 
@@ -80,8 +80,8 @@ that follows these steps:
 6. If the build does not pass after three repair attempts, the update is
    considered to have failed, and the binary will exit with an error.
 
-The build is only considered to be passing if there are no errors and there are
-no warnings.
+The build is only considered to be passing if build.sh exits with an error code
+of 0.
 
 ### The Initial Query
 
@@ -102,11 +102,11 @@ project as well, therefore the 'code-commit' binary should be able to find the
 'query' at 'agent-config/query.txt' and it should be able to find the codebase
 at 'agent-config/codeRollup.txt'.
 
-The 'query.txt' file and the 'codeRollup.txt' file will both be created by the
-supervisor. The 'query.txt' file will be hand-written, and the 'codeRollup.txt'
-file will be created by running 'codeRollup.sh' - but the supervisor will
-handle that. If either the query.txt file or the codeRollup.txt file are
-missing, then an error is returned and the program exits.
+The query file and the code rollup file will both be created by the supervisor.
+The query file will be hand-written, and the code rollup file will be created
+by running 'codeRollup.sh' - but the supervisor will handle that. If either the
+query file or the code rollup file are missing, then an error is returned and
+the program exits.
 
 Before making the initial query, the query must be logged. The 'code-commit'
 binary should check if there's a local 'logs' folder. If it does not exist yet,
@@ -149,13 +149,10 @@ not being modified, which means that it cannot modify:
 + Cargo.lock
 + build.sh
 + codeRollup.sh
-+ codeRollup.txt
-+ query.txt
-+ gemini-key.txt
 + LLMInstructions.md
 + UserSpecification.md
 + anything in the .git folder
-+ anything in the config folder
++ anything in the agent-config folder
 + anything in the logs folder
 + anything in the target folder
 + anything specified in the .gitignore file
@@ -184,9 +181,10 @@ well as the exit code - needs to be logged in
 
 If the build script exits sucessfully, 'code-commit' stops there. The build is
 considered to have exited successfully if the exit code is 0, even if there is
-output to stderr. If the build did not exit successfully, 'code-commit' needs
-to make a series of up to three repair queries to attempt to repair the file.
-Each repair query has the following format:
+output to stderr (some build processes provide non-warning informational output
+to stderr). If the build did not exit successfully, 'code-commit' needs to make
+a series of up to three repair queries to attempt to repair the file.  Each
+repair query has the following format:
 
 [repair query system prompt]
 [build.sh output]
@@ -291,13 +289,10 @@ will result in an error:
 + Cargo.lock
 + build.sh
 + codeRollup.sh
-+ codeRollup.txt
-+ query.txt
-+ gemini-key.txt
 + LLMInstructions.md
 + UserSpecification.md
 + anything in the .git folder
-+ anything in the config folder
++ anything in the agent-config folder
 + anything in the logs folder
 + anything in the target folder
 + anything specified in the .gitignore file
@@ -366,13 +361,10 @@ will result in an error:
 + Cargo.lock
 + build.sh
 + codeRollup.sh
-+ codeRollup.txt
-+ query.txt
-+ gemini-key.txt
 + LLMInstructions.md
 + UserSpecification.md
 + anything in the .git folder
-+ anything in the config folder
++ anything in the agent-config folder
 + anything in the logs folder
 + anything in the target folder
 + anything specified in the .gitignore file
@@ -396,9 +388,9 @@ key needs to be censored any time that it appears in logs, such that only the
 last two characters are actually revealed.
 
 The binary will also check the local .gitignore of every project and make sure
-it contains lines for /gemini-key.txt and /openai-key.txt (as well as all other
-supported LLMs), returning an error to the user if those lines are not present.
-This protects the user from accidentally committing their API keys.
+it contains lines for /agent-config to ensure that API keys are not going to be
+accidentally committed a repo. An error will be returned if the /agent-config
+line is not present in the .gitignore.
 
 API keys should be sent in http headers rather than as query strings.
 

@@ -1,6 +1,6 @@
 # code-commit
 
-## Overview
+## Overview (outdated)
 
 `code-commit` is an agentic software development tool that automates the process of modifying a codebase based on natural language instructions. It integrates with a Large Language Model (LLM) to interpret a user's request, generate the corresponding code changes, and verify them against a build script. If the initial changes fail to build or pass tests, `code-commit` will automatically attempt to repair the code, iterating until the build is successful or a maximum number of attempts has been reached. This tool is designed to be part of a fully automatic, agentic workflow, streamlining development and enabling rapid iteration.
 

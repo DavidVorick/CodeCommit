@@ -18,13 +18,13 @@ impl Config {
         check_gitignore()?;
 
         let api_key_path = match args.model {
-            Model::Gemini2_5Pro => "gemini-key.txt",
-            Model::Gpt5 => "openai-key.txt",
+            Model::Gemini2_5Pro => "agent-config/gemini-key.txt",
+            Model::Gpt5 => "agent-config/openai-key.txt",
         };
         let api_key = read_file_to_string(api_key_path)?;
 
-        let query = read_file_to_string("query.txt")?;
-        let code_rollup = read_file_to_string("codeRollup.txt")?;
+        let query = read_file_to_string("agent-config/query.txt")?;
+        let code_rollup = read_file_to_string("agent-config/codeRollup.txt")?;
 
         Ok(Self {
             model: args.model,
@@ -102,7 +102,7 @@ fn check_gitignore() -> Result<(), AppError> {
         Ok(content) => content,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             return Err(AppError::Config(
-                "'.gitignore' file not found. Please ensure '/gemini-key.txt' and '/openai-key.txt' are listed in it to protect your API keys.".to_string()
+                "'.gitignore' file not found. Please ensure key files like '/agent-config/gemini-key.txt' are listed in it, or the whole '/agent-config' directory.".to_string()
             ));
         }
         Err(e) => {
@@ -114,11 +114,23 @@ fn check_gitignore() -> Result<(), AppError> {
         }
     };
 
-    let required_entries = ["/gemini-key.txt", "/openai-key.txt"];
+    // If the whole directory is ignored, we're good.
+    if gitignore_content.lines().any(|line| {
+        let trimmed = line.trim();
+        trimmed == "/agent-config" || trimmed == "agent-config/"
+    }) {
+        return Ok(());
+    }
+
+    // Otherwise, check for individual key files.
+    let required_entries = [
+        "/agent-config/gemini-key.txt",
+        "/agent-config/openai-key.txt",
+    ];
     for entry in required_entries {
         if !gitignore_content.lines().any(|line| line.trim() == entry) {
             return Err(AppError::Config(
-                format!("Security check failed: Your .gitignore file must contain the line '{entry}' to prevent accidental exposure of your API key.")
+                format!("Security check failed: Your .gitignore file must contain the line '{entry}' or ignore '/agent-config' to prevent accidental exposure of your API key.")
             ));
         }
     }

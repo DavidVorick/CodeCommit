@@ -240,6 +240,17 @@ fn test_forbid_modifying_gitignore_and_config_dir() {
         .to_string()
         .contains("Modification of directory 'config/' is not allowed."));
 
+    // Root-level agent-config directory must be protected
+    let result_agent_config_dir = protection.validate(&PathBuf::from("agent-config/settings.yaml"));
+    assert!(matches!(
+        result_agent_config_dir,
+        Err(AppError::FileUpdate(_))
+    ));
+    assert!(result_agent_config_dir
+        .unwrap_err()
+        .to_string()
+        .contains("Modification of directory 'agent-config/' is not allowed."));
+
     // A similarly-named path nested elsewhere should be allowed
     assert!(protection.validate(&PathBuf::from("src/config.rs")).is_ok());
 }

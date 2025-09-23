@@ -10,7 +10,7 @@
 #
 # A "component" is a subdirectory within the 'src/' directory.
 
-OUTPUT_FILE="codeRollup.txt"
+OUTPUT_FILE="agent-config/codeRollup.txt"
 components=()
 process_all=false
 exec > "$OUTPUT_FILE"

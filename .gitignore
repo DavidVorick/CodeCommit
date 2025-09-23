@@ -8,10 +8,3 @@
 /agent-config
 /logs
 /code-commit
-/config
-
-/gemini-key.txt
-/openai-key.txt
-
-/codeRollup.txt
-/query.txt

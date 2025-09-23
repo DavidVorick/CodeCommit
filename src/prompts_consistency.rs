@@ -41,4 +41,4 @@ expectations of the author of the user specification - the user has likely
 never reviewed the code themselves, which makes your review the only
 opportunity for the user to realize that something is amiss.
 
-Please provide your report in paragraph/essay format."#;
+Please provide your report in paragraph/essay format, word-wrapped to 80 characters."#;

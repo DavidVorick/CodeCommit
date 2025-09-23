@@ -170,6 +170,10 @@ stated in .gitignore is also protected, which means the supervisor can use 'git
 status' and 'git diff' to easily see the full list of changes before accepting
 and/or committing them.
 
+The parser should do a verification pass before making any file modifications.
+If any part of the response attempts to modify a disallowed file, then no files
+should be updated on disk at all.
+
 ### Running the Build
 
 After parsing the response and making local changes, the code-commit binary
@@ -480,4 +484,5 @@ expectations of the author of the user specification - the user has likely
 never reviewed the code themselves, which makes your review the only
 opportunity for the user to realize that something is amiss.
 
-Please provide your report in paragraph/essay format.
+Please provide your report in paragraph/essay format, word-wrapped to 80
+characters.

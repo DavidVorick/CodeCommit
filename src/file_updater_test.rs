@@ -182,12 +182,8 @@ fn test_validate_path_forbidden_file() {
         .to_string()
         .contains("Modification of critical file 'build.sh' is not allowed."));
 
-    let result2 = protection.validate(&PathBuf::from("query.txt"));
-    assert!(matches!(result2, Err(AppError::FileUpdate(_))));
-    assert!(result2
-        .unwrap_err()
-        .to_string()
-        .contains("Modification of critical file 'query.txt' is not allowed."));
+    // a top-level query.txt should be modifiable now
+    assert!(protection.validate(&PathBuf::from("query.txt")).is_ok());
 }
 
 #[test]
@@ -221,7 +217,7 @@ fn test_validate_path_with_gitignore() {
 }
 
 #[test]
-fn test_forbid_modifying_gitignore_and_config_dir() {
+fn test_forbid_modifying_gitignore_and_agent_config_dir() {
     let protection = PathProtection::new().unwrap();
 
     // .gitignore must not be modifiable
@@ -232,13 +228,10 @@ fn test_forbid_modifying_gitignore_and_config_dir() {
         .to_string()
         .contains("Modification of critical file '.gitignore' is not allowed."));
 
-    // Root-level config directory must be protected
-    let result_config_dir = protection.validate(&PathBuf::from("config/settings.yaml"));
-    assert!(matches!(result_config_dir, Err(AppError::FileUpdate(_))));
-    assert!(result_config_dir
-        .unwrap_err()
-        .to_string()
-        .contains("Modification of directory 'config/' is not allowed."));
+    // A 'config' directory should now be allowed
+    assert!(protection
+        .validate(&PathBuf::from("config/settings.yaml"))
+        .is_ok());
 
     // Root-level agent-config directory must be protected
     let result_agent_config_dir = protection.validate(&PathBuf::from("agent-config/settings.yaml"));

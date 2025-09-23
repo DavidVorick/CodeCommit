@@ -214,9 +214,10 @@ removal within the set of file replacements:
 ```
 
 Just like for the initial query, the repair queries and responses need to be
-logged. The queries can be logged at 'logs/[date]/repair-query-[n].txt' where
-'n' is the count of the number of repair queries that have been attempted. The
-same date should be used as for the inital query.
+logged. The queries can be logged at
+'logs/[date]-committing-code/repair-query-[n].txt' where 'n' is the count of
+the number of repair queries that have been attempted. The same date should be
+used as for the inital query.
 
 And, just like for the initial query, the responses must be logged, using the
 same strategy. The filenames should be
@@ -416,9 +417,9 @@ calls the LLM to get a response. The prompt will have the following format:
 [codebase]
 
 The 'system prompt' is a prompt that has been hardcoded into the binary, the
-query can be found at agent-config/query.txt, and the codebase can be found at
-agent-config/codeRollup.txt. It is assumed that the 'code-commit' binary will
-be located in the top level folder of the project.
+query can be found at agent-config/consistency-query.txt, and the codebase can
+be found at agent-config/codeRollup.txt. It is assumed that the 'code-commit'
+binary will be located in the top level folder of the project.
 
 Before making the query, the query must be logged. The 'code-commit' binary
 should check if there's a local 'logs' folder. If it does not exist yet, then

@@ -50,7 +50,7 @@ async fn run() -> Result<(), AppError> {
     let cli_args = cli::parse_cli_args()?;
 
     let logger_suffix = match cli_args.workflow {
-        Workflow::CommitCode => "",
+        Workflow::CommitCode => "committing-code",
         Workflow::ConsistencyCheck => "consistency-report",
     };
     let logger = logger::Logger::new(logger_suffix)?;

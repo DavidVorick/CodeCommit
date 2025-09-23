@@ -62,10 +62,6 @@ impl PathProtection {
             "Cargo.lock",
             "build.sh",
             "codeRollup.sh",
-            "codeRollup.txt",
-            "query.txt",
-            "gemini-key.txt",
-            "openai-key.txt",
             "LLMInstructions.md",
             "UserSpecification.md",
         ]
@@ -111,7 +107,7 @@ impl PathProtection {
 
         if let Some(Component::Normal(first_comp)) = path.components().next() {
             if let Some(name) = first_comp.to_str() {
-                if matches!(name, ".git" | "logs" | "target" | "config" | "agent-config") {
+                if matches!(name, ".git" | "logs" | "target" | "agent-config") {
                     return Err(AppError::FileUpdate(format!(
                         "Modification of directory '{name}/' is not allowed."
                     )));

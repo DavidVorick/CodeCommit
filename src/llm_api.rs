@@ -21,24 +21,15 @@ impl GeminiClient {
         }
     }
 
-    pub async fn query(&self, prompt: &str) -> Result<Value, AppError> {
+    pub async fn query(&self, request_body: &Value) -> Result<Value, AppError> {
         let url = GEMINI_API_URL_BASE;
-
-        let request_body = json!({
-            "contents": [{
-                "parts": [{ "text": prompt }]
-            }],
-            "generationConfig": {
-                "temperature": 0.7
-            }
-        });
 
         let resp = self
             .client
             .post(url)
             .header("x-goog-api-key", &self.api_key)
             .header("Content-Type", "application/json")
-            .json(&request_body)
+            .json(request_body)
             .send()
             .await
             .map_err(|e| AppError::Network(censor_api_key_in_error_string(e, &self.api_key)))?;
@@ -60,23 +51,13 @@ impl GptClient {
         }
     }
 
-    pub async fn query(&self, prompt: &str) -> Result<Value, AppError> {
-        let request_body = json!({
-            "model": GPT_MODEL_NAME,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-        });
-
+    pub async fn query(&self, request_body: &Value) -> Result<Value, AppError> {
         let resp = self
             .client
             .post(GPT_API_URL)
             .bearer_auth(&self.api_key)
             .header("Content-Type", "application/json")
-            .json(&request_body)
+            .json(request_body)
             .send()
             .await
             .map_err(|e| AppError::Network(censor_api_key_in_error_string(e, &self.api_key)))?;
@@ -91,10 +72,39 @@ pub enum LlmApiClient {
 }
 
 impl LlmApiClient {
-    pub async fn query(&self, prompt: &str) -> Result<Value, AppError> {
+    pub fn get_url(&self) -> &'static str {
         match self {
-            LlmApiClient::Gemini(c) => c.query(prompt).await,
-            LlmApiClient::Gpt(c) => c.query(prompt).await,
+            LlmApiClient::Gemini(_) => GEMINI_API_URL_BASE,
+            LlmApiClient::Gpt(_) => GPT_API_URL,
+        }
+    }
+
+    pub fn build_request_body(&self, prompt: &str) -> Value {
+        match self {
+            LlmApiClient::Gemini(_) => json!({
+                "contents": [{
+                    "parts": [{ "text": prompt }]
+                }],
+                "generationConfig": {
+                    "temperature": 0.7
+                }
+            }),
+            LlmApiClient::Gpt(_) => json!({
+                "model": GPT_MODEL_NAME,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+            }),
+        }
+    }
+
+    pub async fn query(&self, request_body: &Value) -> Result<Value, AppError> {
+        match self {
+            LlmApiClient::Gemini(c) => c.query(request_body).await,
+            LlmApiClient::Gpt(c) => c.query(request_body).await,
         }
     }
 

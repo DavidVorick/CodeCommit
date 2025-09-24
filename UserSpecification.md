@@ -8,16 +8,18 @@ objective. All workflows are implemented by the 'code-commit' binary.
 
 ### Committing Code
 
-The 'committing code' workflow uses LLMs to run prgramming tasks and is the
+The 'committing-code' workflow uses LLMs to run prgramming tasks and is the
 default workflow of the 'code-commit' binary. Other workflows can be specified
 with flags, and if no workflow flags are provided the binary will assume that
 it is supposed to execute the workflow for committing code.
 
+The programmatic slug that refers to this workflow is 'committing-code'.
+
 ### Checking Consistency
 
-The 'checking consistency' workflow uses LLMs to verify that the project is
-self consistent. It does not write any code, but rather produces output for the
-user that tells them about the state of their project.
+The 'consistency' workflow uses LLMs to verify that the project is self
+consistent. It does not write any code, but rather produces output for the user
+that tells them about the state of their project.
 
 More specifically, it looks for places where where the UserSpecification is
 inconsistent with itself, and it looks for places where the UserSpecification
@@ -29,12 +31,48 @@ therefore it must be both human readable and machine readable.
 The consistency workflow can be triggered with the command line flag
 '--consistency-check' or '--consistency' or '--cc'.
 
+The programmatic slug that refers to this workflow is 'consistency'.
+
 ## LLMs
 
 CodeCommit supports multiple LLMs. The default LLM should be gemini-2.5-pro,
 but as an alternative it should also be able to use GPT-5. To run a different
 model, the user should pass a '--model' flag. Unrecognized models and
 unrecognized flags should produce an error.
+
+### Logging
+
+Each call to the code-commit tool creates its own folder in the
+agent-config/logs/ directory that logs all of the activity performed by the
+agentic workflow. The folder for the workflow will be "[date]-[workflow]" using
+the yyyy-mm-dd-hh-ss date format. For example, a logging folder might be named
+"2025-09-23-19-51-35-committing-code"
+
+Every LLM call must create at least four log files. The first log file is named
+'query.txt', and it contains the text query that is being sent to the LLM. The
+second file is named 'query.json', and it contains the full json object that is
+used to send a request to the LLM. That object should include the URL that was
+used to call the LLM. The third file is called 'query-response.txt' and it
+contains the full text output provided by the LLM. The final file is called
+'query-response.json' and it contains the full json object sent by the LLM as
+the response.
+
+Some workflows make multiple calls to LLMs. To accomodate, a two part prefix is
+added to the names of these 4 files. The first part is a counter, which tracks
+which number call to the LLM this query is. The second part is a name, provided
+by the workflow, which establishes the purpose of this LLM call. For example,
+if the workflow says that the name of the call is "repair", then the name of
+the file might be "3-repair-query.txt". The counter starts at one and
+increments for every LLM call.
+
+After making an LLM call, the caller receives the current count as one of the
+return values, so that they can appropriately name any related logging files
+that they create associated with that LLM call.
+
+If there is an error while making the LLM call, the full body of the LLM call
+must be read, so that the full error can be presented in the
+query-response.json file. If the error is not presented as JSON, then it can be
+wrapped in a JSON object.
 
 ### Gemini 2.5 Pro
 
@@ -108,34 +146,17 @@ by running 'codeRollup.sh' - but the supervisor will handle that. If either the
 query file or the code rollup file are missing, then an error is returned and
 the program exits.
 
-Before making the initial query, the query must be logged. The 'code-commit'
-binary should check if there's a local 'logs' folder. If it does not exist yet,
-then it will be created. Then, a new folder inside of the logs folder will be
-created, where the name of the folder is 'yyyy-mm-dd-hh-ss-committing-code',
-matching the current time. This is the folder at all log files will be stored
-in for this run of 'code-commit'. The initial query will be stored in
-logs/[date]-committing-code/initial-query.txt.
-
 The query is then sent to the LLM.
 
 ### Parsing the Response
 
 After sending a query to the LLM, either a response will be received or an
-error will be returned. Either way, the result needs to be stored in
-'logs/[date]-committing-code/initial-query-response.txt'. If there is an error,
-the first line of the response file should be 'ERROR' and the subsequent line
-can contian the error. If there is not an error, then the file should contain
-the plaintext response.
-
-The response itself is received as a JSON object and then parsed into a text
-response. The full JSON response should be stored at
-'logs/[date]-committing-code/initial-query-response.json'
-
-If the response is not an error, then the response needs to be parsed for
-directions to update the code files. The parser will look for the '^^^[file]'
-syntax that indicates a file should be updated, followed by the '^^^end' syntax
-that indicates the end of the replacement data for the file. This syntax can
-also be used to create new files, including empty files.
+error will be returned. If the response is not an error, then the response
+needs to be parsed for directions to update the code files. The parser will
+look for the '^^^[file]' syntax that indicates a file should be updated,
+followed by the '^^^end' syntax that indicates the end of the replacement data
+for the file. This syntax can also be used to create new files, including empty
+files.
 
 To delete a file, the parser will look for '^^^[file]' folowed by '^^^delete',
 which signals that the file is supposed to be removed.
@@ -153,7 +174,6 @@ not being modified, which means that it cannot modify:
 + UserSpecification.md
 + anything in the .git folder
 + anything in the agent-config folder
-+ anything in the logs folder
 + anything in the target folder
 + anything specified in the .gitignore file
 
@@ -176,13 +196,14 @@ should be updated on disk at all.
 After parsing the response and making local changes, the code-commit binary
 will attempt to build the project. This means running 'build.sh' and checking
 that it exits successfully. The output of the build - both stdout and stderr as
-well as the exit code - needs to be logged in
-'logs/[date]-committing-code/initial-build.txt'.
+well as the exit code - needs to be logged in the logging folder with the name
+"build.txt". A numerical prefix needs to be added to the file name so that it
+is properly grouped with the corresponding LLM call.
 
 If the build script exits sucessfully, 'code-commit' stops there. The build is
 considered to have exited successfully if the exit code is 0, even if there is
-output to stderr (some build processes provide non-warning informational output
-to stderr). If the build did not exit successfully, 'code-commit' needs to make
+output to stderr; some build processes provide non-warning informational output
+to stderr. If the build did not exit successfully, 'code-commit' needs to make
 a series of up to three repair queries to attempt to repair the file.  Each
 repair query has the following format:
 
@@ -213,21 +234,11 @@ removal within the set of file replacements:
 --- FILE REMOVED [filename] ---
 ```
 
-Just like for the initial query, the repair queries and responses need to be
-logged. The queries can be logged at
-'logs/[date]-committing-code/repair-query-[n].txt' where 'n' is the count of
-the number of repair queries that have been attempted. The same date should be
-used as for the inital query.
-
-And, just like for the initial query, the responses must be logged, using the
-same strategy. The filenames should be
-'logs/[date]-committing-code/repair-query-[n]-response.txt' and
-'logs/[date]-committing-code/repair-query-[n]-response.json'.
-
 Then the response needs to be parsed, any code needs to be updated, and the
 build needs to be run again, repeating the cycle as necessary until up to three
 repair queries total have been attempted. The build script outputs should be
-logged at 'logs/[date]-committing-code/repair-query-[n]-build.txt'.
+logged as build.txt, with an appropriate numerical prefix so each build.txt
+file is properly grouped with its corresponding LLM call.
 
 Each time that a new repair query is attempted, only the latest file
 replacements are presented. That means if a subsequent response replaces a file
@@ -294,7 +305,6 @@ will result in an error:
 + UserSpecification.md
 + anything in the .git folder
 + anything in the agent-config folder
-+ anything in the logs folder
 + anything in the target folder
 + anything specified in the .gitignore file
 
@@ -366,7 +376,6 @@ will result in an error:
 + UserSpecification.md
 + anything in the .git folder
 + anything in the agent-config folder
-+ anything in the logs folder
 + anything in the target folder
 + anything specified in the .gitignore file
 
@@ -395,7 +404,7 @@ line is not present in the .gitignore.
 
 API keys should be sent in http headers rather than as query strings.
 
-code-commit will enforce programatically that the LLM cannot modify any of the
+code-commit will enforce programatically that an LLM cannot modify any of the
 listed critical files, and will also ensure that the LLM cannot do any path
 traversal (using characters like '/../' in the fiilepath) and cannot modify any
 files outside of the directory that code-commit is running from.
@@ -419,15 +428,10 @@ calls the LLM to get a response. The prompt will have the following format:
 The 'system prompt' is a prompt that has been hardcoded into the binary, the
 query can be found at agent-config/consistency-query.txt, and the codebase can
 be found at agent-config/codeRollup.txt. It is assumed that the 'code-commit'
-binary will be located in the top level folder of the project.
-
-Before making the query, the query must be logged. The 'code-commit' binary
-should check if there's a local 'logs' folder. If it does not exist yet, then
-it will be created. Then, a new folder inside of the logs folder will be
-created, where the name of the folder is 'yyyy-mm-dd-hh-ss-consistency-report',
-matching the current time. This is the folder at all log files will be stored
-in for this run of 'code-commit'. The query will be stored in
-logs/[date]-consistency-report/query.txt.
+binary will be located in the top level folder of the project. If there is no
+agent-config/consistency-query.txt, it means that the user is happy to rely
+entirely on the system prompt, and therefore the call will proceed as though
+the file were empty.
 
 The query is then sent to the LLM, and the text response is recoreded in
 agent-config/consistency-report.txt.

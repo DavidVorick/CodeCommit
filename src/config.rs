@@ -1,5 +1,5 @@
 use crate::app_error::AppError;
-use crate::cli::{CliArgs, Model};
+use crate::cli::{CliArgs, Model, Workflow};
 use crate::prompts::{INITIAL_QUERY_SYSTEM_PROMPT, REPAIR_QUERY_SYSTEM_PROMPT};
 use crate::prompts_consistency::CONSISTENCY_CHECK_SYSTEM_PROMPT;
 use std::collections::HashMap;
@@ -23,7 +23,24 @@ impl Config {
         };
         let api_key = read_file_to_string(api_key_path)?;
 
-        let query = read_file_to_string("agent-config/query.txt")?;
+        let query = match args.workflow {
+            Workflow::CommitCode => read_file_to_string("agent-config/query.txt")?,
+            Workflow::ConsistencyCheck => {
+                let path = Path::new("agent-config/consistency-query.txt");
+                match fs::read_to_string(path) {
+                    Ok(content) => content,
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
+                    Err(e) => {
+                        return Err(AppError::Config(format!(
+                            "Failed to read file '{}': {}",
+                            path.display(),
+                            e
+                        )));
+                    }
+                }
+            }
+        };
+
         let code_rollup = read_file_to_string("agent-config/codeRollup.txt")?;
 
         Ok(Self {

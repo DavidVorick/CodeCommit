@@ -53,7 +53,6 @@ will result in an error:
 + UserSpecification.md
 + anything in the .git folder
 + anything in the agent-config folder
-+ anything in the logs folder
 + anything in the target folder
 + anything specified in the .gitignore file
 
@@ -115,7 +114,6 @@ will result in an error:
 + UserSpecification.md
 + anything in the .git folder
 + anything in the agent-config folder
-+ anything in the logs folder
 + anything in the target folder
 + anything specified in the .gitignore file
 

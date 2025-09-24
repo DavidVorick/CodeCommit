@@ -22,6 +22,7 @@ use crate::app_error::AppError;
 use crate::cli::{CliArgs, Model, Workflow};
 use crate::config::Config;
 use crate::llm_api::{GeminiClient, GptClient, LlmApiClient};
+use serde_json::json;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -51,7 +52,7 @@ async fn run() -> Result<(), AppError> {
 
     let logger_suffix = match cli_args.workflow {
         Workflow::CommitCode => "committing-code",
-        Workflow::ConsistencyCheck => "consistency-report",
+        Workflow::ConsistencyCheck => "consistency",
     };
     let logger = logger::Logger::new(logger_suffix)?;
 
@@ -82,38 +83,49 @@ async fn run_commit_code(logger: &logger::Logger, cli_args: CliArgs) -> Result<(
     for attempt in 1..=MAX_ATTEMPTS {
         println!("Starting attempt {attempt}/{MAX_ATTEMPTS}...");
 
-        let (prompt, log_name) = if attempt == 1 {
-            (config.build_initial_prompt(), "initial-query".to_string())
+        let (prompt, name_part) = if attempt == 1 {
+            (config.build_initial_prompt(), "initial-query")
         } else {
             let build_output = last_build_output
                 .as_ref()
                 .expect("Build output should exist for repair attempts");
             (
                 config.build_repair_prompt(build_output, &cumulative_updates),
-                format!("repair-query-{}", attempt - 1),
+                "repair",
             )
         };
-        logger.log_prompt(&log_name, &prompt)?;
+        let log_prefix = format!("{attempt}-{name_part}");
 
-        let response_json = match llm_client.query(&prompt).await {
+        logger.log_query_text(&log_prefix, &prompt)?;
+        let request_body = llm_client.build_request_body(&prompt);
+        let url = llm_client.get_url();
+        let log_body = json!({
+            "url": url,
+            "body": &request_body
+        });
+        logger.log_query_json(&log_prefix, &log_body)?;
+
+        let response_json = match llm_client.query(&request_body).await {
             Ok(json) => json,
             Err(e) => {
+                let error_json = json!({ "error": e.to_string() });
+                logger.log_response_json(&log_prefix, &error_json)?;
                 let error_msg = format!("ERROR\n{e}");
-                logger.log_response_text(&log_name, &error_msg)?;
+                logger.log_response_text(&log_prefix, &error_msg)?;
                 return Err(e);
             }
         };
-        logger.log_response_json(&log_name, &response_json)?;
+        logger.log_response_json(&log_prefix, &response_json)?;
 
         let response_text = match llm_client.extract_text_from_response(&response_json) {
             Ok(text) => text,
             Err(e) => {
                 let error_msg = format!("ERROR\n{e}");
-                logger.log_response_text(&log_name, &error_msg)?;
+                logger.log_response_text(&log_prefix, &error_msg)?;
                 return Err(e);
             }
         };
-        logger.log_response_text(&log_name, &response_text)?;
+        logger.log_response_text(&log_prefix, &response_text)?;
 
         println!("Parsing LLM response and applying file updates...");
         let updates = response_parser::parse_llm_response(&response_text)?;
@@ -128,12 +140,12 @@ async fn run_commit_code(logger: &logger::Logger, cli_args: CliArgs) -> Result<(
         println!("Running build script...");
         match build_runner::run() {
             Ok(output) => {
-                logger.log_build_output(&log_name, &output)?;
+                logger.log_build_output(&log_prefix, &output)?;
                 println!("Build successful!");
                 return Ok(());
             }
             Err(build_failure) => {
-                logger.log_build_output(&log_name, &build_failure.output)?;
+                logger.log_build_output(&log_prefix, &build_failure.output)?;
                 println!("Build failed. Preparing for repair attempt...");
                 last_build_output = Some(build_failure.output);
             }
@@ -153,28 +165,38 @@ async fn run_consistency_check(logger: &logger::Logger, cli_args: CliArgs) -> Re
     };
 
     let prompt = config.build_consistency_prompt();
-    let log_name = "query";
-    logger.log_prompt(log_name, &prompt)?;
+    let log_prefix = "1-consistency-check";
+    logger.log_query_text(log_prefix, &prompt)?;
 
-    let response_json = match llm_client.query(&prompt).await {
+    let request_body = llm_client.build_request_body(&prompt);
+    let url = llm_client.get_url();
+    let log_body = json!({
+        "url": url,
+        "body": &request_body
+    });
+    logger.log_query_json(log_prefix, &log_body)?;
+
+    let response_json = match llm_client.query(&request_body).await {
         Ok(json) => json,
         Err(e) => {
+            let error_json = json!({ "error": e.to_string() });
+            logger.log_response_json(log_prefix, &error_json)?;
             let error_msg = format!("ERROR\n{e}");
-            logger.log_response_text(log_name, &error_msg)?;
+            logger.log_response_text(log_prefix, &error_msg)?;
             return Err(e);
         }
     };
-    logger.log_response_json(log_name, &response_json)?;
+    logger.log_response_json(log_prefix, &response_json)?;
 
     let response_text = match llm_client.extract_text_from_response(&response_json) {
         Ok(text) => text,
         Err(e) => {
             let error_msg = format!("ERROR\n{e}");
-            logger.log_response_text(log_name, &error_msg)?;
+            logger.log_response_text(log_prefix, &error_msg)?;
             return Err(e);
         }
     };
-    logger.log_response_text(log_name, &response_text)?;
+    logger.log_response_text(log_prefix, &response_text)?;
 
     println!("Writing consistency report...");
     let report_dir = PathBuf::from("agent-config");

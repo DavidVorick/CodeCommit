@@ -9,8 +9,8 @@ UserSpecification.md and LLMInstructions.md to define a goal, and then it uses
 LLMs to implement the specifications.
 
 code-commit is constantly evolving and might often be in a state of disrepair.
-The best way to make use of code-commit for yourself is to look at the git tags
-- each tagged version is a stable and fully put together iteration of
+The best way to make use of code-commit for yourself is to look at the git
+tags. Each tagged version is a stable and fully put together iteration of
 code-commit (or at least, I thought it was stable when I made the tag).
 
 The project is evolving too quickly for the README to be he all that helpful,

@@ -2,6 +2,7 @@ use crate::app_error::AppError;
 use crate::cli::{CliArgs, Model, Workflow};
 use crate::prompts::{INITIAL_QUERY_SYSTEM_PROMPT, REPAIR_QUERY_SYSTEM_PROMPT};
 use crate::prompts_consistency::CONSISTENCY_CHECK_SYSTEM_PROMPT;
+use crate::prompts_inst::INST_SYSTEM_PROMPT;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -27,6 +28,20 @@ impl Config {
             Workflow::CommitCode => read_file_to_string("agent-config/query.txt")?,
             Workflow::ConsistencyCheck => {
                 let path = Path::new("agent-config/consistency-query.txt");
+                match fs::read_to_string(path) {
+                    Ok(content) => content,
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
+                    Err(e) => {
+                        return Err(AppError::Config(format!(
+                            "Failed to read file '{}': {}",
+                            path.display(),
+                            e
+                        )));
+                    }
+                }
+            }
+            Workflow::Inst => {
+                let path = Path::new("agent-config/inst-query.txt");
                 match fs::read_to_string(path) {
                     Ok(content) => content,
                     Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
@@ -78,6 +93,13 @@ impl Config {
         format!(
             "{}\n[query]\n{}\n[codebase]\n{}",
             CONSISTENCY_CHECK_SYSTEM_PROMPT, self.query, self.code_rollup
+        )
+    }
+
+    pub fn build_inst_prompt(&self) -> String {
+        format!(
+            "{}\n[query]\n{}\n[codebase]\n{}",
+            INST_SYSTEM_PROMPT, self.query, self.code_rollup
         )
     }
 }

@@ -7,6 +7,7 @@ mod llm_api;
 mod logger;
 mod prompts;
 mod prompts_consistency;
+mod prompts_inst;
 mod response_parser;
 
 #[cfg(test)]
@@ -53,12 +54,14 @@ async fn run() -> Result<(), AppError> {
     let logger_suffix = match cli_args.workflow {
         Workflow::CommitCode => "committing-code",
         Workflow::ConsistencyCheck => "consistency",
+        Workflow::Inst => "inst",
     };
     let logger = logger::Logger::new(logger_suffix)?;
 
     let result = match cli_args.workflow {
         Workflow::CommitCode => run_commit_code(&logger, cli_args).await,
         Workflow::ConsistencyCheck => run_consistency_check(&logger, cli_args).await,
+        Workflow::Inst => run_inst_workflow(&logger, cli_args).await,
     };
 
     if let Err(e) = &result {
@@ -205,6 +208,63 @@ async fn run_consistency_check(logger: &logger::Logger, cli_args: CliArgs) -> Re
     fs::write(&report_path, response_text)?;
 
     println!("Consistency report written to {}", report_path.display());
+
+    Ok(())
+}
+
+async fn run_inst_workflow(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppError> {
+    println!("Starting institutionalize knowledge workflow...");
+    let config = Config::load(cli_args)?;
+    let llm_client = match config.model {
+        Model::Gemini2_5Pro => LlmApiClient::Gemini(GeminiClient::new(config.api_key.clone())),
+        Model::Gpt5 => LlmApiClient::Gpt(GptClient::new(config.api_key.clone())),
+    };
+
+    let prompt = config.build_inst_prompt();
+    let log_prefix = "1-inst";
+    logger.log_query_text(log_prefix, &prompt)?;
+
+    let request_body = llm_client.build_request_body(&prompt);
+    let url = llm_client.get_url();
+    let log_body = json!({
+        "url": url,
+        "body": &request_body
+    });
+    logger.log_query_json(log_prefix, &log_body)?;
+
+    let response_json = match llm_client.query(&request_body).await {
+        Ok(json) => json,
+        Err(e) => {
+            let error_json = json!({ "error": e.to_string() });
+            logger.log_response_json(log_prefix, &error_json)?;
+            let error_msg = format!("ERROR\n{e}");
+            logger.log_response_text(log_prefix, &error_msg)?;
+            return Err(e);
+        }
+    };
+    logger.log_response_json(log_prefix, &response_json)?;
+
+    let response_text = match llm_client.extract_text_from_response(&response_json) {
+        Ok(text) => text,
+        Err(e) => {
+            let error_msg = format!("ERROR\n{e}");
+            logger.log_response_text(log_prefix, &error_msg)?;
+            return Err(e);
+        }
+    };
+    logger.log_response_text(log_prefix, &response_text)?;
+
+    println!("Writing institutionalized knowledge...");
+    let report_path = PathBuf::from("src/InstitutionalizedKnowledge.md");
+    if let Some(parent) = report_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(&report_path, response_text)?;
+
+    println!(
+        "Institutionalized knowledge written to {}",
+        report_path.display()
+    );
 
     Ok(())
 }

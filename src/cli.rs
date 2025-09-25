@@ -22,6 +22,7 @@ pub enum Workflow {
     #[default]
     CommitCode,
     ConsistencyCheck,
+    Inst,
 }
 
 pub struct CliArgs {
@@ -32,20 +33,40 @@ pub struct CliArgs {
 pub fn parse_cli_args() -> Result<CliArgs, AppError> {
     let mut args = std::env::args().skip(1);
     let mut model = Model::default();
-    let mut workflow = Workflow::default();
+    let mut workflow: Option<Workflow> = None;
 
     while let Some(arg) = args.next() {
-        if arg == "--model" {
-            let model_str = args.next().ok_or_else(|| {
-                AppError::Config("Missing value for --model argument".to_string())
-            })?;
-            model = Model::from_str(&model_str)?;
-        } else if arg == "--consistency-check" || arg == "--consistency" || arg == "--cc" {
-            workflow = Workflow::ConsistencyCheck;
-        } else {
-            return Err(AppError::Config(format!("Unknown argument: {arg}")));
+        match arg.as_str() {
+            "--model" => {
+                let model_str = args.next().ok_or_else(|| {
+                    AppError::Config("Missing value for --model argument".to_string())
+                })?;
+                model = Model::from_str(&model_str)?;
+            }
+            "--consistency-check" | "--consistency" | "--cc" => {
+                if workflow.is_some() {
+                    return Err(AppError::Config(
+                        "It is an error to trigger more than one workflow at a time.".to_string(),
+                    ));
+                }
+                workflow = Some(Workflow::ConsistencyCheck);
+            }
+            "--inst" | "--instituiontalize" | "--institutionalize-knowledge" => {
+                if workflow.is_some() {
+                    return Err(AppError::Config(
+                        "It is an error to trigger more than one workflow at a time.".to_string(),
+                    ));
+                }
+                workflow = Some(Workflow::Inst);
+            }
+            _ => {
+                return Err(AppError::Config(format!("Unknown argument: {arg}")));
+            }
         }
     }
 
-    Ok(CliArgs { model, workflow })
+    Ok(CliArgs {
+        model,
+        workflow: workflow.unwrap_or_default(),
+    })
 }

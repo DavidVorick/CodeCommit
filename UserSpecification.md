@@ -332,7 +332,8 @@ warnings are produced when running 'build.sh'. Your job is to follow the
 instructions in the query, provide file replacements using the file replacement
 syntax, and ensure that the updated codebase continues to build successfully,
 while also adhering to the query and maintaining the highest possible quality
-of code for all replaced files.
+of code for all replaced files. If the codebase contains an LLMInstructions
+file, please follow all of the directions in that file.
 
 ### Repair Query System Prompt (hardcoded into binary)
 
@@ -404,9 +405,11 @@ original working code, and the list of file changes made by the previous LLM.
 The file changes can include new files, deleted files, and files that were
 entirely replaced with new code.
 
-Please identify what went wrong, and then fix broken code. Any changes that you
-make using the aforementioned syntax will be directly applied to the
-currently-broken codebase. Let's get the build working again.
+Please identify what went wrong, and then fix broken code. If the codebase
+contains an LLMInstructions file, please follow all of the directions in that
+file. Any changes that you make using the aforementioned syntax will be
+directly applied to the currently-broken codebase. Let's get the build working
+again.
 
 ### Safety
 

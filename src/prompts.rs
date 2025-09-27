@@ -134,6 +134,15 @@ entirely replaced with new code.
 
 Please identify what went wrong, and then fix broken code. If the codebase
 contains an LLMInstructions file, please follow all of the directions in that
-file. Any changes that you make using the aforementioned syntax will be
-directly applied to the currently-broken codebase. Let's get the build working
-again."#;
+file.
+
+As you attempt to fix the code, please also determine whether the errors
+messages are sufficiently helpful. If you, an expert who can see the code, can
+easily determine what is going wrong based on the errors that were produced,
+then the errors do not need to be modified. However, if you cannot easily tell
+what went wrong based on the errors, please also update the error messages so
+that they provide more information and are more helpful for identifying the
+bugs in the code.
+
+Any changes that you make using the aforementioned syntax will be directly
+applied to the currently-broken codebase. Let's get the build working again."#;

@@ -37,19 +37,6 @@ The consistency workflow can be triggered with the command line flag
 
 The programmatic slug that refers to this workflow is 'consistency'.
 
-### Institutionalize Knowledge
-
-The 'inst' workflow uses LLMs to run a knowledge collection and preservation
-task. It does not write any code itself, but rather identifies knowledge that
-is contained within the code yet not described in the user specification, and
-then it institutionalizes that knowledge in a file located at
-src/InstiutionalKnowledge.md
-
-The inst workflow can be triggered with the command line flag '--inst' or
-'--instituiontalize' or '--institutionalize-knowledge'.
-
-The programmatic slug that refers to this workflow is 'inst'.
-
 ## LLMs
 
 CodeCommit supports multiple LLMs. The default LLM should be gemini-2.5-pro,
@@ -90,6 +77,9 @@ If there is an error while making the LLM call, the full body of the LLM call
 must be read, so that the full error can be presented in the
 query-response.json file. If the error is not presented as JSON, then it can be
 wrapped in a JSON object.
+
+The query-response.json file must also contain "totalResponseTime" field which
+indicates how long it took between making the call and receiving the response.
 
 ### Gemini 2.5 Pro
 
@@ -519,69 +509,3 @@ The report should have the following sections:
 
 Please provide your report in paragraph/essay format, word-wrapped to 80
 characters.
-
-## Institutionalizing Knowledge
-
-This is a specification for the implementation of an agentic coding workflow
-that builds context for an LLM that reviews specifications code and then
-documents knowledge that is contained within the code. The instituionalized
-knowledge is kept in a file at 'src/InstitutionalizedKnowledge.md'
-
-### The Query
-
-The binary builds context for an LLM that requests code review, and then it
-calls the LLM to get a response. The prompt will have the following format:
-
-[system prompt]
-[query]
-[codebase]
-
-The 'system prompt' is a prompt that has been hardcoded into the binary, the
-query can be found at agent-config/inst-query.txt, and the codebase can be
-found at agent-config/codeRollup.txt. It is assumed that the 'code-commit'
-binary will be located in the top level folder of the project. If there is no
-agent-config/inst-query.txt, it means that the user is happy to rely entirely
-on the system prompt, and therefore the call will proceed as though the file
-were empty.
-
-The query is then sent to the LLM, and the text response is recoreded in
-src/InstitutionalizedKnowledge.md, replacing any existing file that is already
-at that location.
-
-### System Prompt (hardcoded into binary)
-
-You are taking the role of an expert software developer in a fully automatic,
-agentic workflow. You are not talking to a user, but rather to an automated
-pipeline of shell scripts. This means that your output must follow instructions
-exactly, otherwise the automated pipeline will fail.
-
-You are about to be provided with a user-written query, which may be empty if
-the user did not have any specific instructions. After the query, you will be
-provided with a codebase.
-
-The codebase may either be the entire codebase of a project, or it may only
-contain portions of the project code. Either way, you are to review the code
-that you receive. The codebase is an implementation of the user specification,
-located at UserSpecification.md
-
-Your task is to scan the implementation and look for knowledge that is
-contained within the implementation which is not in the user specification and
-also would not likely be known to an expert programmer with all of the relevant
-specializations. In other words, you are looking for knowledge that was
-acquired by deploying the implementation and iterating after the deployment.
-
-You must be very selective with what knowledge you choose to institutionalize.
-In many cases, there will be nothing to institutionalize at all, in which case
-it is okay to concisely state that there is nothing of note in the knowledge
-file. It is better to not institutionalize anything than it is to
-institutionalize something that is likely already known a priori to expert
-software developers with the relevant specializations.
-
-You are to create an output file that will fully replace any existing file at
-src/InstitutionalizedKnowledge.md - this means that if there is any worthwhile
-knowledge currently in that file, you must preserve that knowledge, especially
-if that knowledge pertains to code which was not presented to you.
-
-Your reply will be parsed by an automated workflow, and the entire reply will
-be recorded in src/InstitutionalizedKnowledge.md, replacing whatever file is
-already there. Plan your response accordingly.

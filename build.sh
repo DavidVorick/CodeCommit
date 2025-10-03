@@ -15,6 +15,4 @@ cargo nextest run --no-tests=pass -- --ignored
 cargo clippy -- -D warnings
 cargo build --release
 
-cp "target/debug/$BINARY" .
-
 exit $script_status

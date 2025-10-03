@@ -22,7 +22,6 @@ pub enum Workflow {
     #[default]
     CommitCode,
     ConsistencyCheck,
-    Inst,
 }
 
 pub struct CliArgs {
@@ -50,14 +49,6 @@ pub fn parse_cli_args() -> Result<CliArgs, AppError> {
                     ));
                 }
                 workflow = Some(Workflow::ConsistencyCheck);
-            }
-            "--inst" | "--instituiontalize" | "--institutionalize-knowledge" => {
-                if workflow.is_some() {
-                    return Err(AppError::Config(
-                        "It is an error to trigger more than one workflow at a time.".to_string(),
-                    ));
-                }
-                workflow = Some(Workflow::Inst);
             }
             _ => {
                 return Err(AppError::Config(format!("Unknown argument: {arg}")));

@@ -49,8 +49,8 @@ unrecognized flags should produce an error.
 Each call to the code-commit tool creates its own folder in the
 agent-config/logs/ directory that logs all of the activity performed by the
 agentic workflow. The folder for the workflow will be "[date]-[workflow]" using
-the yyyy-mm-dd-hh-ss date format. For example, a logging folder might be named
-"2025-09-23-19-51-35-committing-code"
+the yyyy-mm-dd-hh-mm-ss date format. For example, a logging folder might be
+named "2025-09-23-19-51-35-committing-code"
 
 Every LLM call must create at least four log files. The first log file is named
 'query.txt', and it contains the text query that is being sent to the LLM. The

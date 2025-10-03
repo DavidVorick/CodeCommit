@@ -4,6 +4,7 @@ mod cli;
 mod config;
 mod file_updater;
 mod llm_api;
+mod llm_caller;
 mod logger;
 mod prompts;
 mod prompts_consistency;
@@ -23,6 +24,7 @@ use crate::app_error::AppError;
 use crate::cli::{CliArgs, Model, Workflow};
 use crate::config::Config;
 use crate::llm_api::{GeminiClient, GptClient, LlmApiClient};
+use crate::llm_caller::call_llm_and_log;
 use serde_json::json;
 use std::collections::HashMap;
 use std::fs;
@@ -108,27 +110,8 @@ async fn run_commit_code(logger: &logger::Logger, cli_args: CliArgs) -> Result<(
         });
         logger.log_query_json(&log_prefix, &log_body)?;
 
-        let response_json = match llm_client.query(&request_body).await {
-            Ok(json) => json,
-            Err(e) => {
-                let error_json = json!({ "error": e.to_string() });
-                logger.log_response_json(&log_prefix, &error_json)?;
-                let error_msg = format!("ERROR\n{e}");
-                logger.log_response_text(&log_prefix, &error_msg)?;
-                return Err(e);
-            }
-        };
-        logger.log_response_json(&log_prefix, &response_json)?;
-
-        let response_text = match llm_client.extract_text_from_response(&response_json) {
-            Ok(text) => text,
-            Err(e) => {
-                let error_msg = format!("ERROR\n{e}");
-                logger.log_response_text(&log_prefix, &error_msg)?;
-                return Err(e);
-            }
-        };
-        logger.log_response_text(&log_prefix, &response_text)?;
+        let response_text =
+            call_llm_and_log(&llm_client, &request_body, logger, &log_prefix).await?;
 
         println!("Parsing LLM response and applying file updates...");
         let updates = response_parser::parse_llm_response(&response_text)?;
@@ -179,27 +162,7 @@ async fn run_consistency_check(logger: &logger::Logger, cli_args: CliArgs) -> Re
     });
     logger.log_query_json(log_prefix, &log_body)?;
 
-    let response_json = match llm_client.query(&request_body).await {
-        Ok(json) => json,
-        Err(e) => {
-            let error_json = json!({ "error": e.to_string() });
-            logger.log_response_json(log_prefix, &error_json)?;
-            let error_msg = format!("ERROR\n{e}");
-            logger.log_response_text(log_prefix, &error_msg)?;
-            return Err(e);
-        }
-    };
-    logger.log_response_json(log_prefix, &response_json)?;
-
-    let response_text = match llm_client.extract_text_from_response(&response_json) {
-        Ok(text) => text,
-        Err(e) => {
-            let error_msg = format!("ERROR\n{e}");
-            logger.log_response_text(log_prefix, &error_msg)?;
-            return Err(e);
-        }
-    };
-    logger.log_response_text(log_prefix, &response_text)?;
+    let response_text = call_llm_and_log(&llm_client, &request_body, logger, log_prefix).await?;
 
     println!("Writing consistency report...");
     let report_dir = PathBuf::from("agent-config");
@@ -232,27 +195,7 @@ async fn run_inst_workflow(logger: &logger::Logger, cli_args: CliArgs) -> Result
     });
     logger.log_query_json(log_prefix, &log_body)?;
 
-    let response_json = match llm_client.query(&request_body).await {
-        Ok(json) => json,
-        Err(e) => {
-            let error_json = json!({ "error": e.to_string() });
-            logger.log_response_json(log_prefix, &error_json)?;
-            let error_msg = format!("ERROR\n{e}");
-            logger.log_response_text(log_prefix, &error_msg)?;
-            return Err(e);
-        }
-    };
-    logger.log_response_json(log_prefix, &response_json)?;
-
-    let response_text = match llm_client.extract_text_from_response(&response_json) {
-        Ok(text) => text,
-        Err(e) => {
-            let error_msg = format!("ERROR\n{e}");
-            logger.log_response_text(log_prefix, &error_msg)?;
-            return Err(e);
-        }
-    };
-    logger.log_response_text(log_prefix, &response_text)?;
+    let response_text = call_llm_and_log(&llm_client, &request_body, logger, log_prefix).await?;
 
     println!("Writing institutionalized knowledge...");
     let report_path = PathBuf::from("src/InstitutionalizedKnowledge.md");

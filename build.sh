@@ -10,8 +10,8 @@ trap 'handle_error' ERR
 
 cargo fmt
 cargo build
-cargo nextest run --no-tests=pass
-cargo nextest run --no-tests=pass -- --ignored
+cargo nextest run --no-tests=pass --no-fail-fast
+cargo nextest run --no-tests=pass --no-fail-fast -- --ignored
 cargo clippy -- -D warnings
 cargo build --release
 

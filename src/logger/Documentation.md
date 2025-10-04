@@ -1,85 +1,39 @@
-# Logger Module Documentation
+# logger
 
-This document provides a comprehensive guide to the `logger` module's exports and APIs.
+The logger module handles creating and writing to log files for each workflow run.
 
-## Overview
+## `struct Logger`
 
-The `logger` module is responsible for creating and managing log files for each run of an agentic workflow. It ensures that all relevant information, from LLM queries and responses to build outputs and final errors, is stored in a structured and easily accessible manner.
+Manages logging for a workflow run. Creates a timestamped directory in `agent-config/logs/` on creation.
 
-When a workflow starts, a new `Logger` instance is created. This instance automatically creates a unique, timestamped directory inside `agent-config/logs/`. All subsequent logging calls on that instance will write files into this specific directory.
+### `Logger::new(suffix: &str) -> Result<Self, AppError>`
 
-## Structs
+Creates a new logger. `suffix` is appended to the log directory name, e.g., "committing-code".
 
-### `Logger`
+### Methods
 
-The primary struct that manages logging for a workflow run.
+- `log_query_text(&self, prefix: &str, content: &str) -> Result<(), AppError>`
+  - Logs to `<prefix>-query.txt`
 
-#### Creation
+- `log_query_json(&self, prefix: &str, content: &Value) -> Result<(), AppError>`
+  - Logs to `<prefix>-query.json`
 
-##### `Logger::new(suffix: &str) -> Result<Self, AppError>`
+- `log_response_json(&self, prefix: &str, content: &Value) -> Result<(), AppError>`
+  - Logs to `<prefix>-response.json`
 
-Creates a new `Logger` instance. This will create a new directory for logging.
+- `log_response_text(&self, prefix: &str, content: &str) -> Result<(), AppError>`
+  - Logs to `<prefix>-response.txt`
 
--   **Arguments:**
-    -   `suffix: &str`: A string to append to the log directory name. This is typically the name of the workflow being run (e.g., "committing-code").
--   **Returns:**
-    -   `Ok(Logger)`: A new logger instance on success.
-    -   `Err(AppError)`: An I/O error if the log directory cannot be created.
--   **Directory Naming:** The created directory will be named `agent-config/logs/YYYY-MM-DD-HH-MM-SS-<suffix>`.
+- `log_build_output(&self, prefix: &str, content: &str) -> Result<(), AppError>`
+  - Logs to `<prefix>-build.txt`
 
-#### Methods
+- `log_final_error(&self, error: &AppError) -> Result<(), std::io::Error>`
+  - Logs to `final_error.txt`
 
-All logging methods write files into the directory created when the `Logger` was instantiated.
+## `mod llm_caller`
 
-##### `log_query_text(&self, prefix: &str, content: &str) -> Result<(), AppError>`
+Provides a convenient wrapper for calling an LLM and logging the interaction.
 
-Logs the raw text of a query sent to an LLM.
+### `call_llm_and_log(llm_client: &LlmApiClient, request_body: &Value, logger: &Logger, log_prefix: &str) -> Result<String, AppError>`
 
--   **Arguments:**
-    -   `prefix: &str`: A prefix for the filename, typically indicating the attempt number and purpose (e.g., "1-initial-query").
-    -   `content: &str`: The query text to log.
--   **Filename:** `<prefix>-query.txt`
-
-##### `log_query_json(&self, prefix: &str, content: &Value) -> Result<(), AppError>`
-
-Logs the full JSON request body sent to an LLM.
-
--   **Arguments:**
-    -   `prefix: &str`: A prefix for the filename.
-    -   `content: &Value`: The `serde_json::Value` representing the request body.
--   **Filename:** `<prefix>-query.json`
-
-##### `log_response_json(&self, prefix: &str, content: &Value) -> Result<(), AppError>`
-
-Logs the full JSON response received from an LLM.
-
--   **Arguments:**
-    -   `prefix: &str`: A prefix for the filename.
-    -   `content: &Value`: The `serde_json::Value` representing the response body.
--   **Filename:** `<prefix>-response.json`
-
-##### `log_response_text(&self, prefix: &str, content: &str) -> Result<(), AppError>`
-
-Logs the extracted text content from an LLM's response.
-
--   **Arguments:**
-    -   `prefix: &str`: A prefix for the filename.
-    -   `content: &str`: The response text to log.
--   **Filename:** `<prefix>-response.txt`
-
-##### `log_build_output(&self, prefix: &str, content: &str) -> Result<(), AppError>`
-
-Logs the output (stdout and stderr) of a build script run.
-
--   **Arguments:**
-    -   `prefix: &str`: A prefix for the filename, used to associate the build with a specific LLM call.
-    -   `content: &str`: The build output to log.
--   **Filename:** `<prefix>-build.txt`
-
-##### `log_final_error(&self, error: &AppError) -> Result<(), std::io::Error>`
-
-Logs the final error that caused the workflow to terminate. This is intended to be called just before the program exits with an error.
-
--   **Arguments:**
-    -   `error: &AppError`: The application error to log.
--   **Filename:** `final_error.txt`
+Calls an LLM, measures response time, and logs the request and response using the provided logger. Returns the extracted text from the LLM response on success.

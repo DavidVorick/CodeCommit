@@ -1,13 +1,13 @@
+use super::Logger;
 use crate::app_error::AppError;
 use crate::llm_api::LlmApiClient;
-use crate::logger;
 use serde_json::{json, Value};
 use std::time::Instant;
 
 pub async fn call_llm_and_log(
     llm_client: &LlmApiClient,
     request_body: &Value,
-    logger: &logger::Logger,
+    logger: &Logger,
     log_prefix: &str,
 ) -> Result<String, AppError> {
     let start_time = Instant::now();

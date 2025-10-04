@@ -71,19 +71,31 @@ A fully compliant CodeCommit agentic codebase follows the following rules:
 + Files must remain small and focused. As a general rule of thumb, files should
   not exceed 300 lines of code unless there is clear justification for why the
   file cannot be split into smaller files.
++ Modules should also prefer to stay small and focused.
 + The codebase is grouped into modules, and each module has its own
   UserSpecification.md which describes the functions of the module. The
   UserSpecification.md file is authored and maintained by the user, you are not
   allowed to modify it.
 + Each module has a Documentation.md which fully enumerates all of the exports
-  and APIs defined by the module. This file is the only file that will be
-  available to other expert LLMs that are authoring other modules which depend
-  on this module, therefore the documentation must be thorough and explain the
-  best/proper way to use each export/API.
-+ A top level file called Modules.md enumerates each module in the codebase.
+  and APIs defined by the module.
++ A top level file called src/Modules.md enumerates each module in the codebase.
   The enumeration contains the name of the module, a brief description of the
   module, and a list of other modules that the module depends on. You are
   responsible for authoring this file and keeping it up to date.
+
+Documentation.md files should be clean and simple, and easily render in a vim
+terminal. The Documentation.md files will primarily be used by other expert
+coders, which allows them to be minimal. Where possible, the documentation
+should prefer to document exports / API endpoints by simply providing the
+call signature, and allowing the names of the functions and fields to be
+self-describing. If that context is not sufficient for an expert programmer
+to use the APIs correctly, a prose description can be provided that
+provides additional context and assistance.
+
+The Modules.md file should similarly be clean and simple, and easily render
+in a vim terminal. Descriptions should be in prose, and should only provide
+context that would be necessary for an expert programmer to understand the
+purpose of the module within the codebase.
 
 Your top priority is to ensure that the Modules.md file provides an accurate
 description of each module and has a fully up-to-date list of dependencies

@@ -15,16 +15,6 @@ if there aren't many comments.
 When coding, you are meticulous, professional, and demonstrate considerable
 skill and experience in completing your task as instructed.
 
-## Code File Sizes
-
-Within reason, code files are not to exceed 250 lines of code. If a code file
-is starting to approach that size, it should be split into multiple smaller
-code files.
-
-Tests must always be kept in their own files. Do not mix production logic with
-testing logic. Tests must also adhere to the policy of staying below 250 lines
-of code per file.
-
 ## Testing
 
 Every time that code is created or modified, tests must be written to verify
@@ -44,6 +34,9 @@ Testing is broken into two categories: short testing and long testing. The
 short test suite must always finish within 20 seconds, and the long test suite
 must always finish within 90 seconds.
 
+Tests must always be in their own file, and must be named using a `_test.rs`
+suffix.
+
 ## Comments
 
 Code should be kept as clean and as minimal as possible, which also means that
@@ -51,31 +44,11 @@ there should be minimal comments. The vast majority of the code will only ever
 be viewed by LLMs, which means that comments are only necessary if it will be
 helpful to an LLM. The majority of code will not need any comments at all.
 
-## Documentation
-
-The documentation will only ever be read by LLMs. This means that documentation
-does not need to be pretty, and instead should optimize for presenting
-information clearly without consuming too many tokens.
-
 ## Rust Conventions
-
-The build will always run the following commands:
-
-```
-cargo fmt
-cargo build
-cargo nextest run
-cargo nextest run -- --ignored
-cargo clippy -- -D warnings
-```
-
-All five commands need to pass without error for a code update to be considered
-successful. If a code update is not successful, the output will be thrown away.
 
 All common rust idioms and best practices must be followed.
 
-All files should be named using `snake_case`. All tests should have the
-`_test.rs` suffix.
+All files should be named using `snake_case`.
 
 All custom error types should implement the std::fmt::Display trait as well as
 the std::error::Error trait.

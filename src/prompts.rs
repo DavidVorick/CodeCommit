@@ -50,7 +50,7 @@ will result in an error:
 + build.sh
 + codeRollup.sh
 + LLMInstructions.md
-+ UserSpecification.md
++ any file named UserSpecification.md
 + anything in the .git folder
 + anything in the agent-config folder
 + anything in the target folder
@@ -112,7 +112,7 @@ will result in an error:
 + build.sh
 + codeRollup.sh
 + LLMInstructions.md
-+ UserSpecification.md
++ any file named UserSpecification.md
 + anything in the .git folder
 + anything in the agent-config folder
 + anything in the target folder

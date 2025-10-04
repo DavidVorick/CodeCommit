@@ -4,6 +4,17 @@ This is a specification for a tool that uses agentic workflows to assist with
 programming tasks. This tool offers multiple agentic flows, each with its own
 objective. All workflows are implemented by the 'code-commit' binary.
 
+## Project Design
+
+The CodeCommit project is itself built with code-commit, and follows
+code-commit best practices. This means that there is one high level
+UserSpecification which outlines the major functions of the projects, and lots
+of smaller modules that each have their own UserSpecification. All of the
+UserSpecification docuemnts work together to define the project.
+
+Note: the smaller modules paradigm was recently introduced, and CodeCommit has
+not yet been fully refactored to meet this paradigm.
+
 ## Supported Workflows
 
 The code-commit binary supports multiple workflows, each of which can be
@@ -12,7 +23,7 @@ workflow at a time.
 
 ### Committing Code
 
-The 'committing-code' workflow uses LLMs to run prgramming tasks and is the
+The 'committing-code' workflow uses LLMs to run programming tasks and is the
 default workflow of the 'code-commit' binary. Other workflows can be specified
 with flags, and if no workflow flags are provided the binary will assume that
 it is supposed to execute the workflow for committing code.
@@ -33,9 +44,19 @@ The report may either be read by a user or by another agentic workflow,
 therefore it must be both human readable and machine readable.
 
 The consistency workflow can be triggered with the command line flag
-'--consistency-check' or '--consistency' or '--cc'.
+'--consistency-check' or '--consistency' or '--cc'. The programmatic slug that
+refers to this workflow is 'consistency'.
 
-The programmatic slug that refers to this workflow is 'consistency'.
+### Refactor and Integrate
+
+The 'refactor' workflow uses LLMs to refactor the code into a format that is
+more amenable to agentic workflows. It does not add tests or change
+functionality at all, but instead renames files and functions and maintains
+agentic documentation.
+
+The refactor workflow can be triggered with the command line flag '--refactor'
+or '--refactor-and-integrate' or '--ref'. The programmatic slug that refers to
+this workflow is 'refactor'.
 
 ## LLMs
 
@@ -44,13 +65,9 @@ but as an alternative it should also be able to use GPT-5. To run a different
 model, the user should pass a '--model' flag. Unrecognized models and
 unrecognized flags should produce an error.
 
-### Logging
+### LLM Logging
 
-Each call to the code-commit tool creates its own folder in the
-agent-config/logs/ directory that logs all of the activity performed by the
-agentic workflow. The folder for the workflow will be "[date]-[workflow]" using
-the yyyy-mm-dd-hh-mm-ss date format. For example, a logging folder might be
-named "2025-09-23-19-51-35-committing-code"
+LLMs create logs using the logging module.
 
 Every LLM call must create at least four log files. The first log file is named
 'query.txt', and it contains the text query that is being sent to the LLM. The
@@ -79,7 +96,10 @@ query-response.json file. If the error is not presented as JSON, then it can be
 wrapped in a JSON object.
 
 The query-response.json file must also contain "totalResponseTime" field which
-indicates how long it took between making the call and receiving the response.
+indicates how long it took between making the call and receiving the response,
+recorded in milliseconds. There should also be a message printed to stdout
+which records the amount of time the LLM call took in seconds, with 3 decimals
+of precision.
 
 ### Gemini 2.5 Pro
 
@@ -120,13 +140,13 @@ that follows these steps:
 3. Run the build for the project. If the build passes, exit successfully.
 4. If the build fails, construct a prompt for an LLM requesting that the build
    be fixed.
-5. Return to step 2 up to three times total in an attempt to get the build
-   passing, for a total of 1 initial attempt and three repair attempts.
+5. Return to step 2 up to three times in an attempt to get the build passing,
+   for a total of 1 initial attempt and three repair attempts.
 6. If the build does not pass after three repair attempts, the update is
    considered to have failed, and the binary will exit with an error.
 
-The build is only considered to be passing if build.sh exits with an error code
-of 0.
+The build is considered to be passing if and only if build.sh exits with an
+error code of 0.
 
 ### The Initial Query
 
@@ -139,7 +159,7 @@ will have the following format:
 [codebase]
 
 The 'initial query system prompt' is a prompt that has been hardcoded into the
-binary.
+binary, and can be found at src/prompts.rs.
 
 The 'query' and the 'codebase' can both be found in the local project. It is
 assumed that the 'code-commit' binary will be stored alongside the local
@@ -165,20 +185,20 @@ followed by the '^^^end' syntax that indicates the end of the replacement data
 for the file. This syntax can also be used to create new files, including empty
 files.
 
-To delete a file, the parser will look for '^^^[file]' folowed by '^^^delete',
+To delete a file, the parser will look for '^^^[file]' followed by '^^^delete',
 which signals that the file is supposed to be removed.
 
 The parser needs to make sure that the [file] specified by the response does
 not do any path traversal, and also that the filepath points to some file
-inside the current directory. It needs to make sure that the critical files are
-not being modified, which means that it cannot modify:
+inside the current directory. It needs to make sure that the LLM is not
+attempting to modify critical files, namely:
 
 + .gitignore
 + Cargo.lock
 + build.sh
 + codeRollup.sh
 + LLMInstructions.md
-+ UserSpecification.md
++ any file named UserSpecification.md
 + anything in the .git folder
 + anything in the agent-config folder
 + anything in the target folder
@@ -191,12 +211,12 @@ and the '^^^end' fences.
 
 The supervisor is using git, and the .git folder is protected, and anything
 stated in .gitignore is also protected, which means the supervisor can use 'git
-status' and 'git diff' to easily see the full list of changes before accepting
-and/or committing them.
+status' and 'git diff' to easily see the full list of changes by the LLM before
+accepting and/or committing them.
 
 The parser should do a verification pass before making any file modifications.
-If any part of the response attempts to modify a disallowed file, then no files
-should be updated on disk at all.
+If any part of the LLM response attempts to modify a disallowed file, then no
+files should be updated on disk at all.
 
 ### Running the Build
 
@@ -220,12 +240,12 @@ repair query has the following format:
 [codebase]
 [file replacements]
 
-The repair query system prompt is hardcoded into the 'code-commit' binary. The
-build.sh output is the entire output (including both stdout and stderr)
-provided when running build.sh. The query is the contents in query.txt (which
-have not been modified), the codebase is the codebase found in codeRollup.txt
-(which has not been modified), and the file replacements are all of the files
-that got replaced by the system parser.
+The repair query system prompt is hardcoded into the 'code-commit' binary at
+src/prompts.rs. The build.sh output is the entire output (including both stdout
+and stderr) provided when running build.sh. The query is the contents in
+query.txt (which have not been modified), the codebase is the codebase found in
+codeRollup.txt (which has not been modified), and the file replacements are all
+of the files that got replaced by the system parser.
 
 The file replacements should be presented with the following syntax:
 
@@ -248,167 +268,10 @@ logged as build.txt, with an appropriate numerical prefix so each build.txt
 file is properly grouped with its corresponding LLM call.
 
 Each time that a new repair query is attempted, only the latest file
-replacements are presented. That means if a subsequent response replaces a file
-that has already been replaced, the original replacement will be omitted from
-the list of file replacements and only the latest replacement of the file will
-be listed.
-
-### Initial Query System Prompt (hardcoded into binary)
-
-You are taking the role of an expert software developer in a fully automatic,
-agentic workflow. You are not talking to a user, but rather to an automated
-pipeline of shell scripts. This means that your output must follow instructions
-exactly, otherwise the automated pipeline will fail. Furthermore, your code
-will never be read by a user. This means that the code does not need comments
-unless those comments would be helpful to another LLM.
-
-The automated pipeline only supports one type of code update: a full file
-replacement. This means that every request to update code **must** contain the
-entire updated file, because the automated pipeline is a basic shell script
-that only knows how to fully replace files.
-
-The syntax for requesting that a file be replaced is:
-
-^^^src/main.rs
-fn main() {
-    println!("example program");
-}
-^^^end
-
-The above example will replace the file 'src/main.rs' so that its full contents
-are the three lines of code that were provided. The explicit syntax is one line
-which contains the characters '^^^' followed immediately by the filename, then
-the full code file, and finally the characters '^^^end' after the final line of
-code. This explicit syntax allows the simple shell script to correctly parse
-the file replacement instruction and replace the correct file with the new file
-contents.
-
-You can use a similar syntax to create new files. For example, to create a new
-file called 'src/lib.rs', you could use the syntax:
-
-^^^src/lib.rs
-pub mod cli;
-^^^end
-
-If you wish to remove a file, you can use the following syntax:
-
-^^^src/cli.rs
-^^^delete
-
-As you write code, you should maintain the highest possible degree of
-professionalism. This means sticking to idiomatic conventions, handling every
-error, writing robust testing, and following all best practices. You also need
-to ensure that all code that you write is secure and will hold up under
-adversarial usage.
-
-The following files are not allowed to be modified, attempting to modify them
-will result in an error:
-
-+ .gitignore
-+ Cargo.lock
-+ build.sh
-+ codeRollup.sh
-+ LLMInstructions.md
-+ UserSpecification.md
-+ anything in the .git folder
-+ anything in the agent-config folder
-+ anything in the target folder
-+ anything specified in the .gitignore file
-
-You are about to be provided with a query that contains a request to modify a
-codebase. You will then be provided with the relevant pieces of the codebase.
-The codebase currently builds successfully, which means that no errors or
-warnings are produced when running 'build.sh'. Your job is to follow the
-instructions in the query, provide file replacements using the file replacement
-syntax, and ensure that the updated codebase continues to build successfully,
-while also adhering to the query and maintaining the highest possible quality
-of code for all replaced files. If the codebase contains an LLMInstructions
-file, please follow all of the directions in that file.
-
-### Repair Query System Prompt (hardcoded into binary)
-
-You are taking the role of an expert software developer in a fully automatic,
-agentic workflow. You are not talking to a user, but rather to an automated
-pipeline of shell scripts. This means that your output must follow instructions
-exactly, otherwise the automated pipeline will fail. Furthermore, your code
-will never be read by a user. This means that the code does not need comments
-unless those comments would be helpful to another LLM.
-
-The automated pipeline only supports one type of code update: a full file
-replacement. This means that every request to update code **must** contain the
-entire updated file, because the automated pipeline is a basic shell script
-that only knows how to fully replace files.
-
-The syntax for requesting that a file be replaced is:
-
-^^^src/main.rs
-fn main() {
-    println!("example program");
-}
-^^^end
-
-The above example will replace the file 'src/main.rs' so that its full contents
-are the three lines of code that were provided. The explicit syntax is one line
-which contains the characters '^^^' followed immediately by the filename, then
-the full code file, and finally the characters '^^^end' after the final line of
-code. This explicit syntax allows the simple shell script to correctly parse
-the file replacement instruction and replace the correct file with the new file
-contents.
-
-You can use a similar syntax to create new files. For example, to create a new
-file called 'src/lib.rs', you could use the syntax:
-
-^^^src/lib.rs
-pub mod cli;
-^^^end
-
-If you wish to remove a file, you can use the following syntax:
-
-^^^src/cli.rs
-^^^delete
-
-As you write code, you should maintain the highest possible degree of
-professionalism. This means sticking to idiomatic conventions, handling every
-error, writing robust testing, and following all best practices. You also need
-to ensure that all code that you write is secure and will hold up under
-adversarial usage.
-
-The following files are not allowed to be modified, attempting to modify them
-will result in an error:
-
-+ .gitignore
-+ Cargo.lock
-+ build.sh
-+ codeRollup.sh
-+ LLMInstructions.md
-+ UserSpecification.md
-+ anything in the .git folder
-+ anything in the agent-config folder
-+ anything in the target folder
-+ anything specified in the .gitignore file
-
-Your task today is to fix code that is broken. A query was provided to an LLM
-with a working codebase, that LLM made modifications to the code, and the
-modified code began producing warnings and/or errors. You will be provided with
-the build script output, the query that was provided to the previous LLM, the
-original working code, and the list of file changes made by the previous LLM.
-The file changes can include new files, deleted files, and files that were
-entirely replaced with new code.
-
-Please identify what went wrong, and then fix broken code. If the codebase
-contains an LLMInstructions file, please follow all of the directions in that
-file.
-
-As you attempt to fix the code, please also determine whether the errors
-messages are sufficiently helpful. If you, an expert who can see the code, can
-easily determine what is going wrong based on the errors that were produced,
-then the errors do not need to be modified. However, if you cannot easily tell
-what went wrong based on the errors, please also update the error messages so
-that they provide more information and are more helpful for identifying the
-bugs in the code.
-
-Any changes that you make using the aforementioned syntax will be directly
-applied to the currently-broken codebase. Let's get the build working again.
+replacements for each file are presented. That means if a subsequent response
+replaces a file that has already been replaced, the original replacement will
+be omitted from the list of file replacements and only the latest replacement
+of the file will be listed.
 
 ### Safety
 
@@ -444,68 +307,14 @@ calls the LLM to get a response. The prompt will have the following format:
 [query]
 [codebase]
 
-The 'system prompt' is a prompt that has been hardcoded into the binary, the
-query can be found at agent-config/consistency-query.txt, and the codebase can
-be found at agent-config/codeRollup.txt. It is assumed that the 'code-commit'
-binary will be located in the top level folder of the project. If there is no
+The 'system prompt' is a prompt that has been hardcoded into the binary at
+`prompts_consistency.rs`, the query can be found at
+agent-config/consistency-query.txt, and the codebase can be found at
+agent-config/codeRollup.txt. It is assumed that the 'code-commit' binary will
+be located in the top level folder of the project. If there is no
 agent-config/consistency-query.txt, it means that the user is happy to rely
 entirely on the system prompt, and therefore the call will proceed as though
 the file were empty.
 
 The query is then sent to the LLM, and the text response is recoreded in
 agent-config/consistency-report.txt.
-
-### System Prompt (hardcoded into binary)
-
-You are taking the role of an expert software developer in a fully automatic,
-agentic workflow. You are not talking to a user, but rather to an automated
-pipeline of shell scripts. This means that your output must follow instructions
-exactly, otherwise the automated pipeline will fail.
-
-You are about to be provided with a user-written query, which may be empty if
-the user did not have any specific instructions. After the query, you will be
-provided with a codebase.
-
-The codebase may either be the entire codebase of a project, or it may only
-contain portions of the project code. Either way, you are to review the code
-that you receive. You are allowed to note that code seems to be missing if you
-feel that the user may not be aware, but you should assume that the missing
-code has actually been written and is correct.
-
-Your task is to review the user specification and look for inconsistencies.
-Your foremost task is to look for inconsistencies within the user specification
-itself, your secondary task is to look for inconsistencies between the user
-specification and the implementation, and your final task is to look for
-overall mistakes in either the user specification or the implementation -
-including big mistakes, small mistakes, subtle mistakes, and even spelling and
-grammar mistakes.
-
-If everything looks correct and largely self-consistent, it is okay to
-establish that no inconsistencies or mistakes were identified. It is quite
-common to receive a codebase and specification that is completely clean, as
-these projects are heavily scrutinized on a regular basis.
-
-Your report should cover all of the following things:
-
-+ User Specification Overall Review
-+ Key Inconsistencies in the User Specification
-+ Key Mistakes in the User Specification
-+ Minor Mistakes in the User Specification
-+ Implementation Overall Review
-+ Key Inconsistencies in the Implementation
-+ Key Mistakes in the Implementation
-+ Minor Mistakes in the Implementation
-+ Key Miscellaneous Things of Note
-+ Minor Miscellaneous Things of Note
-
-The report should have the following sections:
-
-+ User Specification Review
-+ Implementation Review
-+ Miscellaneous Notes
-+ User Specification Action Items
-+ Implementation Action Items
-+ Miscellaneous Action Items
-
-Please provide your report in paragraph/essay format, word-wrapped to 80
-characters.

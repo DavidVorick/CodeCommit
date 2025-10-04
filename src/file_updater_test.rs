@@ -247,3 +247,27 @@ fn test_forbid_modifying_gitignore_and_agent_config_dir() {
     // A similarly-named path nested elsewhere should be allowed
     assert!(protection.validate(&PathBuf::from("src/config.rs")).is_ok());
 }
+
+#[test]
+fn test_validate_user_specification_md_is_forbidden_anywhere() {
+    let protection = PathProtection::new().unwrap();
+
+    let root_path = PathBuf::from("UserSpecification.md");
+    let result_root = protection.validate(&root_path);
+    assert!(matches!(result_root, Err(AppError::FileUpdate(_))));
+    assert_eq!(
+        result_root.unwrap_err().to_string(),
+        "File Update Error: Modification of critical file 'UserSpecification.md' is not allowed."
+    );
+
+    let nested_path = PathBuf::from("src/some_module/UserSpecification.md");
+    let result_nested = protection.validate(&nested_path);
+    assert!(matches!(result_nested, Err(AppError::FileUpdate(_))));
+    assert_eq!(
+        result_nested.unwrap_err().to_string(),
+        "File Update Error: Modification of critical file 'src/some_module/UserSpecification.md' is not allowed."
+    );
+
+    let unrelated_path = PathBuf::from("MyUserSpecification.md.bak");
+    assert!(protection.validate(&unrelated_path).is_ok());
+}

@@ -3,6 +3,7 @@ use crate::response_parser::FileUpdate;
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use path_clean::PathClean;
 use std::collections::HashSet;
+use std::ffi::OsStr;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
@@ -52,6 +53,7 @@ pub fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
 
 pub(crate) struct PathProtection {
     forbidden_files: HashSet<PathBuf>,
+    forbidden_filenames: HashSet<&'static OsStr>,
     gitignore_matcher: Gitignore,
 }
 
@@ -63,11 +65,15 @@ impl PathProtection {
             "build.sh",
             "codeRollup.sh",
             "LLMInstructions.md",
-            "UserSpecification.md",
         ]
         .iter()
         .map(PathBuf::from)
         .collect();
+
+        let forbidden_filenames = [OsStr::new("UserSpecification.md")]
+            .iter()
+            .copied()
+            .collect();
 
         let mut builder = GitignoreBuilder::new(".");
         builder.add(".gitignore");
@@ -77,6 +83,7 @@ impl PathProtection {
 
         Ok(Self {
             forbidden_files,
+            forbidden_filenames,
             gitignore_matcher,
         })
     }
@@ -103,6 +110,15 @@ impl PathProtection {
                 "Modification of critical file '{}' is not allowed.",
                 path.display()
             )));
+        }
+
+        if let Some(file_name) = path.file_name() {
+            if self.forbidden_filenames.contains(file_name) {
+                return Err(AppError::FileUpdate(format!(
+                    "Modification of critical file '{}' is not allowed.",
+                    path.display()
+                )));
+            }
         }
 
         if let Some(Component::Normal(first_comp)) = path.components().next() {

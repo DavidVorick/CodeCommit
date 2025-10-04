@@ -22,6 +22,7 @@ pub enum Workflow {
     #[default]
     CommitCode,
     ConsistencyCheck,
+    Refactor,
 }
 
 pub struct CliArgs {
@@ -49,6 +50,14 @@ pub fn parse_cli_args() -> Result<CliArgs, AppError> {
                     ));
                 }
                 workflow = Some(Workflow::ConsistencyCheck);
+            }
+            "--refactor" | "--refactor-and-integrate" | "--ref" => {
+                if workflow.is_some() {
+                    return Err(AppError::Config(
+                        "It is an error to trigger more than one workflow at a time.".to_string(),
+                    ));
+                }
+                workflow = Some(Workflow::Refactor);
             }
             _ => {
                 return Err(AppError::Config(format!("Unknown argument: {arg}")));

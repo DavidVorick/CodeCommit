@@ -2,6 +2,9 @@ use crate::app_error::AppError;
 use crate::cli::{CliArgs, Model, Workflow};
 use crate::prompts::{INITIAL_QUERY_SYSTEM_PROMPT, REPAIR_QUERY_SYSTEM_PROMPT};
 use crate::prompts_consistency::CONSISTENCY_CHECK_SYSTEM_PROMPT;
+use crate::refactor::prompts::{
+    REFACTOR_INITIAL_QUERY_SYSTEM_PROMPT, REFACTOR_REPAIR_QUERY_SYSTEM_PROMPT,
+};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -11,6 +14,7 @@ pub struct Config {
     pub api_key: String,
     pub query: String,
     pub code_rollup: String,
+    pub workflow: Workflow,
 }
 
 impl Config {
@@ -25,6 +29,7 @@ impl Config {
 
         let query = match args.workflow {
             Workflow::CommitCode => read_file_to_string("agent-config/query.txt")?,
+            Workflow::Refactor => read_file_to_string("agent-config/refactor-query.txt")?,
             Workflow::ConsistencyCheck => {
                 let path = Path::new("agent-config/consistency-query.txt");
                 match fs::read_to_string(path) {
@@ -48,13 +53,19 @@ impl Config {
             api_key: api_key.trim().to_string(),
             query,
             code_rollup,
+            workflow: args.workflow,
         })
     }
 
     pub fn build_initial_prompt(&self) -> String {
+        let system_prompt = match self.workflow {
+            Workflow::CommitCode => INITIAL_QUERY_SYSTEM_PROMPT,
+            Workflow::Refactor => REFACTOR_INITIAL_QUERY_SYSTEM_PROMPT,
+            Workflow::ConsistencyCheck => CONSISTENCY_CHECK_SYSTEM_PROMPT,
+        };
         format!(
             "{}\n[query]\n{}\n[codebase]\n{}",
-            INITIAL_QUERY_SYSTEM_PROMPT, self.query, self.code_rollup
+            system_prompt, self.query, self.code_rollup
         )
     }
 
@@ -64,20 +75,16 @@ impl Config {
         file_replacements: &HashMap<PathBuf, Option<String>>,
     ) -> String {
         let replacements_str = format_file_replacements(file_replacements);
+        let system_prompt = match self.workflow {
+            Workflow::CommitCode => REPAIR_QUERY_SYSTEM_PROMPT,
+            Workflow::Refactor => REFACTOR_REPAIR_QUERY_SYSTEM_PROMPT,
+            Workflow::ConsistencyCheck => {
+                panic!("Consistency check workflow does not support repair prompts.")
+            }
+        };
         format!(
             "{}\n[build.sh output]\n{}\n[query]\n{}\n[codebase]\n{}\n[file replacements]\n{}",
-            REPAIR_QUERY_SYSTEM_PROMPT,
-            build_output,
-            self.query,
-            self.code_rollup,
-            replacements_str
-        )
-    }
-
-    pub fn build_consistency_prompt(&self) -> String {
-        format!(
-            "{}\n[query]\n{}\n[codebase]\n{}",
-            CONSISTENCY_CHECK_SYSTEM_PROMPT, self.query, self.code_rollup
+            system_prompt, build_output, self.query, self.code_rollup, replacements_str
         )
     }
 }

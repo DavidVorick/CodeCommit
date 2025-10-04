@@ -26,7 +26,9 @@ code. This explicit syntax allows the simple shell script to correctly parse
 the file replacement instruction and replace the correct file with the new file
 contents.
 
-You can use a similar syntax to create new files, including empty files. For example, to create a new empty file called 'src/lib.rs', you could use the syntax:
+You can use a similar syntax to create new files, including empty files. For
+example, to create a new empty file called 'src/lib.rs', you could use the
+syntax:
 
 ^^^src/lib.rs
 ^^^end

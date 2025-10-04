@@ -25,13 +25,17 @@ pub enum Workflow {
     Refactor,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct CliArgs {
     pub model: Model,
     pub workflow: Workflow,
 }
 
 pub fn parse_cli_args() -> Result<CliArgs, AppError> {
-    let mut args = std::env::args().skip(1);
+    parse_args(std::env::args().skip(1))
+}
+
+pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliArgs, AppError> {
     let mut model = Model::default();
     let mut workflow: Option<Workflow> = None;
 

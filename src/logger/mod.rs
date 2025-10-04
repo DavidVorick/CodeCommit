@@ -5,7 +5,6 @@ use std::fs;
 use std::path::PathBuf;
 
 pub struct Logger {
-    // This field remains private, but we expose its path via a public method.
     log_dir: PathBuf,
 }
 
@@ -59,7 +58,6 @@ impl Logger {
         Ok(())
     }
 
-    // New public method to handle writing the final error.
     pub fn log_final_error(&self, error: &AppError) -> Result<(), std::io::Error> {
         let path = self.path_for("final_error.txt");
         fs::write(path, error.to_string())

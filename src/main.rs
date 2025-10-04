@@ -12,6 +12,8 @@ mod refactor;
 mod response_parser;
 
 #[cfg(test)]
+mod cli_test;
+#[cfg(test)]
 mod file_updater_gitignore_tests;
 #[cfg(test)]
 mod file_updater_test;
@@ -31,7 +33,6 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::exit;
 
-// 1 initial attempt + 3 repair attempts
 const MAX_ATTEMPTS: u32 = 4;
 
 #[tokio::main]
@@ -67,7 +68,6 @@ async fn run() -> Result<(), AppError> {
     };
 
     if let Err(e) = &result {
-        // If the main loop fails, log the final error.
         let _ = logger.log_final_error(e);
     }
 
@@ -85,7 +85,6 @@ async fn run_iterative_workflow(
     };
 
     let mut last_build_output: Option<String> = None;
-    // Track the cumulative file updates across all attempts.
     let mut cumulative_updates: HashMap<PathBuf, Option<String>> = HashMap::new();
 
     for attempt in 1..=MAX_ATTEMPTS {
@@ -119,7 +118,6 @@ async fn run_iterative_workflow(
         println!("Parsing LLM response and applying file updates...");
         let updates = response_parser::parse_llm_response(&response_text)?;
 
-        // Update the cumulative list of changes for the next repair prompt.
         for update in &updates {
             cumulative_updates.insert(update.path.clone(), update.content.clone());
         }

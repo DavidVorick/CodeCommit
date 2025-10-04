@@ -30,7 +30,6 @@ pub async fn call_llm_and_log(
     if let Some(obj) = logged_response.as_object_mut() {
         obj.insert("totalResponseTime".to_string(), json!(duration.as_millis()));
     } else {
-        // If the response is not a JSON object, wrap it to add the response time.
         logged_response = json!({
             "response_payload": logged_response,
             "totalResponseTime": duration.as_millis(),

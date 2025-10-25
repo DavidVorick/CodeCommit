@@ -14,6 +14,12 @@ pub async fn call_llm_and_log(
     let response_result = llm_client.query(request_body).await;
     let duration = start_time.elapsed();
 
+    println!(
+        "LLM call to {} took {:.3}s",
+        llm_client.get_url(),
+        duration.as_secs_f64()
+    );
+
     let response_json = match response_result {
         Ok(json) => json,
         Err(e) => {

@@ -1,5 +1,5 @@
-use crate::app_error::AppError;
 use super::api::{extract_text_from_gemini_response, extract_text_from_gpt_response};
+use crate::app_error::AppError;
 use serde_json::json;
 
 #[test]

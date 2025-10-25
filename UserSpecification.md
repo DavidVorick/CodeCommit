@@ -10,7 +10,7 @@ The CodeCommit project is itself built with code-commit, and follows
 code-commit best practices. This means that there is one high level
 UserSpecification which outlines the major functions of the project, as well as
 smaller modules that each have their own UserSpecification. All of the
-UserSpecification docuemnts work together to define the project.
+UserSpecification documents work together to define the project.
 
 ## Supported Workflows
 
@@ -33,7 +33,7 @@ The 'consistency' workflow uses LLMs to verify that the project is self
 consistent. It does not write any code, but rather produces output for the user
 that tells them about the state of their project.
 
-More specifically, it looks for places where where the UserSpecification is
+More specifically, it looks for places where the UserSpecification is
 inconsistent with itself, and it looks for places where the UserSpecification
 is inconsistent with the current implementation. It then compiles a report.
 
@@ -180,7 +180,7 @@ well as the exit code - needs to be logged in the logging folder with the name
 "build.txt". A numerical prefix needs to be added to the file name so that it
 is properly grouped with the corresponding LLM call.
 
-If the build script exits sucessfully, 'code-commit' stops there. The build is
+If the build script exits successfully, 'code-commit' stops there. The build is
 considered to have exited successfully if the exit code is 0, even if there is
 output to stderr; some build processes provide non-warning informational output
 to stderr. If the build did not exit successfully, 'code-commit' needs to make
@@ -241,7 +241,7 @@ API keys should be sent in http headers rather than as query strings.
 
 code-commit will enforce programatically that an LLM cannot modify any of the
 listed critical files, and will also ensure that the LLM cannot do any path
-traversal (using characters like '/../' in the fiilepath) and cannot modify any
+traversal (using characters like '/../' in the filepath) and cannot modify any
 files outside of the directory that code-commit is running from.
 
 ## Checking Consistency

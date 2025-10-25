@@ -3,7 +3,7 @@ mod build_runner;
 mod cli;
 mod config;
 mod file_updater;
-mod llm_api;
+mod llm;
 mod logger;
 mod prompts;
 mod prompts_consistency;
@@ -17,15 +17,13 @@ mod file_updater_gitignore_tests;
 #[cfg(test)]
 mod file_updater_test;
 #[cfg(test)]
-mod llm_api_test;
-#[cfg(test)]
 mod response_parser_test;
 
 use crate::app_error::AppError;
 use crate::cli::{CliArgs, Model, Workflow};
 use crate::config::Config;
-use crate::llm_api::{GeminiClient, GptClient, LlmApiClient};
-use crate::logger::llm_caller::call_llm_and_log;
+use crate::llm::api::{GeminiClient, GptClient, LlmApiClient};
+use crate::llm::caller::call_llm_and_log;
 use serde_json::json;
 use std::collections::HashMap;
 use std::fs;

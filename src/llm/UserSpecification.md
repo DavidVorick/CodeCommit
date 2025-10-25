@@ -20,8 +20,7 @@ added to the names of these 4 files. The first part is a counter, which tracks
 which number call to the LLM this query is. The second part is a name, provided
 by the workflow, which establishes the purpose of this LLM call. For example,
 if the workflow says that the name of the call is "repair", then the name of
-the file might be "3-repair-query.txt". The counter starts at one and
-increments for every LLM call.
+the file might be "3-repair-query.txt". The counter is provided by the caller.
 
 After making an LLM call, the caller receives the current count as one of the
 return values, so that they can appropriately name any related logging files

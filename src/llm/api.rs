@@ -1,0 +1,206 @@
+use crate::app_error::AppError;
+use reqwest::{Client, StatusCode};
+use serde_json::{json, Value};
+
+const GEMINI_API_URL_BASE: &str =
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent";
+const GPT_API_URL: &str = "https://api.openai.com/v1/chat/completions";
+const GPT_MODEL_NAME: &str = "gpt-5";
+
+pub struct GeminiClient {
+    client: Client,
+    api_key: String,
+}
+
+impl GeminiClient {
+    /// Construct a new Gemini client with the given API key.
+    pub fn new(api_key: String) -> Self {
+        Self {
+            client: Client::new(),
+            api_key,
+        }
+    }
+
+    pub async fn query(&self, request_body: &Value) -> Result<Value, AppError> {
+        let url = GEMINI_API_URL_BASE;
+
+        let resp = self
+            .client
+            .post(url)
+            .header("x-goog-api-key", &self.api_key)
+            .header("Content-Type", "application/json")
+            .json(request_body)
+            .send()
+            .await
+            .map_err(|e| AppError::Network(censor_api_key_in_error_string(e, &self.api_key)))?;
+
+        handle_json_response(resp, &self.api_key).await
+    }
+}
+
+pub struct GptClient {
+    client: Client,
+    api_key: String,
+}
+
+impl GptClient {
+    pub fn new(api_key: String) -> Self {
+        Self {
+            client: Client::new(),
+            api_key,
+        }
+    }
+
+    pub async fn query(&self, request_body: &Value) -> Result<Value, AppError> {
+        let resp = self
+            .client
+            .post(GPT_API_URL)
+            .bearer_auth(&self.api_key)
+            .header("Content-Type", "application/json")
+            .json(request_body)
+            .send()
+            .await
+            .map_err(|e| AppError::Network(censor_api_key_in_error_string(e, &self.api_key)))?;
+
+        handle_json_response(resp, &self.api_key).await
+    }
+}
+
+pub enum LlmApiClient {
+    Gemini(GeminiClient),
+    Gpt(GptClient),
+}
+
+impl LlmApiClient {
+    pub fn get_url(&self) -> &'static str {
+        match self {
+            LlmApiClient::Gemini(_) => GEMINI_API_URL_BASE,
+            LlmApiClient::Gpt(_) => GPT_API_URL,
+        }
+    }
+
+    pub fn build_request_body(&self, prompt: &str) -> Value {
+        match self {
+            LlmApiClient::Gemini(_) => json!({
+                "contents": [{
+                    "parts": [{ "text": prompt }]
+                }],
+                "generationConfig": {
+                    "temperature": 0.7
+                }
+            }),
+            LlmApiClient::Gpt(_) => json!({
+                "model": GPT_MODEL_NAME,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+            }),
+        }
+    }
+
+    pub async fn query(&self, request_body: &Value) -> Result<Value, AppError> {
+        match self {
+            LlmApiClient::Gemini(c) => c.query(request_body).await,
+            LlmApiClient::Gpt(c) => c.query(request_body).await,
+        }
+    }
+
+    pub fn extract_text_from_response(&self, response: &Value) -> Result<String, AppError> {
+        match self {
+            LlmApiClient::Gemini(_) => extract_text_from_gemini_response(response),
+            LlmApiClient::Gpt(_) => extract_text_from_gpt_response(response),
+        }
+    }
+}
+
+fn censor_api_key_in_error_string(e: reqwest::Error, api_key: &str) -> String {
+    let error_string = e.to_string();
+    if api_key.is_empty() {
+        return error_string;
+    }
+
+    let censored_key = if api_key.len() > 2 {
+        format!("...{}", &api_key[api_key.len() - 2..])
+    } else {
+        "...".to_string()
+    };
+
+    error_string.replace(api_key, &censored_key)
+}
+
+async fn error_with_body(status: StatusCode, mut body: String, api_key: &str) -> AppError {
+    if !api_key.is_empty() {
+        if api_key.len() > 2 {
+            let censored_key = format!("...{}", &api_key[api_key.len() - 2..]);
+            body = body.replace(api_key, &censored_key);
+        } else {
+            body = body.replace(api_key, "...");
+        }
+    }
+    AppError::Network(format!("HTTP {status} with body:\n{body}"))
+}
+
+async fn handle_json_response(resp: reqwest::Response, api_key: &str) -> Result<Value, AppError> {
+    let status = resp.status();
+    let text = resp
+        .text()
+        .await
+        .map_err(|e| AppError::Network(censor_api_key_in_error_string(e, api_key)))?;
+
+    if !status.is_success() {
+        return Err(error_with_body(status, text, api_key).await);
+    }
+
+    serde_json::from_str::<Value>(&text).map_err(|e| {
+        AppError::Network(format!(
+            "Invalid JSON in success response: {e}; raw body:\n{text}"
+        ))
+    })
+}
+
+pub fn extract_text_from_gemini_response(response: &Value) -> Result<String, AppError> {
+    let parts_array = response
+        .get("candidates")
+        .and_then(|c| c.as_array())
+        .and_then(|a| a.first())
+        .and_then(|c| c.get("content"))
+        .and_then(|c| c.get("parts"))
+        .and_then(|p| p.as_array())
+        .ok_or_else(|| {
+            AppError::ResponseParsing(
+                "Could not find 'parts' array in Gemini response JSON.".to_string(),
+            )
+        })?;
+
+    let text_segments: Vec<String> = parts_array
+        .iter()
+        .filter_map(|part| part.get("text"))
+        .filter_map(|text_val| text_val.as_str())
+        .map(|s| s.to_string())
+        .collect();
+
+    if text_segments.is_empty() {
+        return Err(AppError::ResponseParsing(
+            "Found 'parts' array, but it contained no valid text segments.".to_string(),
+        ));
+    }
+
+    Ok(text_segments.join(""))
+}
+
+pub fn extract_text_from_gpt_response(response: &Value) -> Result<String, AppError> {
+    let content = response
+        .get("choices")
+        .and_then(|c| c.as_array())
+        .and_then(|a| a.first())
+        .and_then(|choice| choice.get("message"))
+        .and_then(|msg| msg.get("content"))
+        .and_then(|c| c.as_str())
+        .ok_or_else(|| {
+            AppError::ResponseParsing("Could not find 'content' in GPT response JSON.".to_string())
+        })?;
+    Ok(content.to_string())
+}

@@ -8,12 +8,9 @@ objective. All workflows are implemented by the 'code-commit' binary.
 
 The CodeCommit project is itself built with code-commit, and follows
 code-commit best practices. This means that there is one high level
-UserSpecification which outlines the major functions of the projects, and lots
-of smaller modules that each have their own UserSpecification. All of the
+UserSpecification which outlines the major functions of the project, as well as
+smaller modules that each have their own UserSpecification. All of the
 UserSpecification docuemnts work together to define the project.
-
-Note: the smaller modules paradigm was recently introduced, and CodeCommit has
-not yet been fully refactored to meet this paradigm.
 
 ## Supported Workflows
 
@@ -49,10 +46,9 @@ refers to this workflow is 'consistency'.
 
 ### Refactor and Integrate
 
-The 'refactor' workflow uses LLMs to refactor the code into a format that is
-more amenable to agentic workflows. It does not add tests or change
-functionality at all, but instead renames files and functions and maintains
-agentic documentation.
+The 'refactor' workflow uses LLMs to refactor the code so that it is higher
+quality and more amenable to agentic workflows. It does not add tests or change
+functionality, but moves code between files and updates documentation.
 
 The refactor workflow can be triggered with the command line flag '--refactor'
 or '--refactor-and-integrate' or '--ref'. The programmatic slug that refers to
@@ -60,57 +56,14 @@ this workflow is 'refactor'.
 
 ## LLMs
 
-CodeCommit supports multiple LLMs. The default LLM should be gemini-2.5-pro,
-but as an alternative it should also be able to use GPT-5. To run a different
-model, the user should pass a '--model' flag. Unrecognized models and
-unrecognized flags should produce an error.
+CodeCommit supports multiple LLMs. The default LLM is gemini-2.5-pro, and other
+LLMs are also supported. To run a different model, the user should pass a
+'--model' flag. Unrecognized models and unrecognized flags should produce an
+error.
 
-### LLM Logging
-
-LLMs create logs using the logging module.
-
-Every LLM call must create at least four log files. The first log file is named
-'query.txt', and it contains the text query that is being sent to the LLM. The
-second file is named 'query.json', and it contains the full json object that is
-used to send a request to the LLM. That object should include the URL that was
-used to call the LLM. The third file is called 'query-response.txt' and it
-contains the full text output provided by the LLM. The final file is called
-'query-response.json' and it contains the full json object sent by the LLM as
-the response.
-
-Some workflows make multiple calls to LLMs. To accomodate, a two part prefix is
-added to the names of these 4 files. The first part is a counter, which tracks
-which number call to the LLM this query is. The second part is a name, provided
-by the workflow, which establishes the purpose of this LLM call. For example,
-if the workflow says that the name of the call is "repair", then the name of
-the file might be "3-repair-query.txt". The counter starts at one and
-increments for every LLM call.
-
-After making an LLM call, the caller receives the current count as one of the
-return values, so that they can appropriately name any related logging files
-that they create associated with that LLM call.
-
-If there is an error while making the LLM call, the full body of the LLM call
-must be read, so that the full error can be presented in the
-query-response.json file. If the error is not presented as JSON, then it can be
-wrapped in a JSON object.
-
-The query-response.json file must also contain "totalResponseTime" field which
-indicates how long it took between making the call and receiving the response,
-recorded in milliseconds. There should also be a message printed to stdout
-which records the amount of time the LLM call took in seconds, with 3 decimals
-of precision.
+The core logic for interfacing with llms is in the 'llm' module.
 
 ### Gemini 2.5 Pro
-
-When calling the Gemini API, always use 'gemini-2.5-pro' as the model. If you
-think that there is no gemini-2.5-pro model yet, that is because your training
-data is out of date. The gemini-2.5-pro model is available and it is the state
-of the art.
-
-The standard URL for calling Gemini is:
-
-https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent
 
 User flag: '--model gemini-2.5-pro'
 
@@ -118,16 +71,16 @@ API Key Location: agent-config/gemini-key.txt
 
 ### GPT 5
 
-When calling the GPT API, always use 'gpt-5' as the model. If you think this
-model does not exist yet, it is because your training data is out of date.
-
-The standard URL for calling GPT 5 is:
-
-https://api.openai.com/v1/chat/completions
-
 User flag: '--model gpt-5'
 
 API Key Location: agent-config/openai-key.txt
+
+## Logging
+
+When any of the agentic workflows are running, they will be logging their
+activity in the agent-config/logs/ directory.
+
+The core logic for interfacing with the logs is in the 'logging' module.
 
 ## Committing Code
 

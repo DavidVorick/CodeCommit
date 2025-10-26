@@ -1,4 +1,3 @@
-use std::fmt;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -25,13 +24,8 @@ pub enum AppError {
     MaxAttemptsReached,
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
+#[error("Build script failed with output:\n{output}")]
 pub struct BuildFailure {
     pub output: String,
-}
-
-impl fmt::Display for BuildFailure {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Build script failed with output:\n{}", self.output)
-    }
 }

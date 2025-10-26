@@ -4,6 +4,8 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use super::path_filter::PathFilter;
+
 fn read_and_format_file(path: &Path) -> Result<String, AppError> {
     let content = fs::read_to_string(path).map_err(AppError::Io)?;
     Ok(format!("--- {} ---\n{}\n\n", path.display(), content))
@@ -21,10 +23,31 @@ pub(crate) fn build_summary() -> Result<String, AppError> {
         "LLMInstructions.md",
         "UserSpecification.md",
     ];
+
+    let filter = PathFilter::new()?;
+
     for file_path in root_files_to_include {
         let path = Path::new(file_path);
         if path.exists() {
-            summary.push_str(&read_and_format_file(path)?);
+            match filter.validate(path) {
+                Ok(()) => {
+                    summary.push_str(&read_and_format_file(path)?);
+                }
+                Err(AppError::FileUpdate(msg)) => {
+                    return Err(AppError::Config(format!(
+                        "Mandatory file '{}' is ignored by .gitignore or is invalid: {}",
+                        path.display(),
+                        msg
+                    )));
+                }
+                Err(e) => {
+                    return Err(AppError::Config(format!(
+                        "Mandatory file '{}' is invalid: {}",
+                        path.display(),
+                        e
+                    )));
+                }
+            }
         }
     }
 

@@ -10,14 +10,16 @@ pub async fn run(logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
     let config = Config::load(&cli_args)?;
 
     println!("Building codebase context for consistency check...");
-    let codebase = context_builder::build_codebase_context(&config, logger).await?;
+    let next_agent_prompt = format!(
+        "{}\n[supervisor query]\n{}",
+        config.system_prompts, config.query
+    );
+    let codebase =
+        context_builder::build_codebase_context(&next_agent_prompt, &config, logger).await?;
     logger.log_text("codebase_for_consistency.txt", &codebase)?;
 
     println!("Running consistency check...");
-    let prompt = format!(
-        "{}\n[supervisor query]\n{}\n[codebase]\n{}",
-        config.system_prompts, config.query, codebase
-    );
+    let prompt = format!("{next_agent_prompt}\n[codebase]\n{codebase}");
 
     let report = llm::query(
         config.model,

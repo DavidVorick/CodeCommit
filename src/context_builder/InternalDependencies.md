@@ -17,4 +17,3 @@ This document lists all APIs that the `context_builder` module uses from other m
 ## `system_prompts` module
 
 - `system_prompts::CONTEXT_BUILDER_CONTEXT_QUERY`
-- `system_prompts::PROJECT_STRUCTURE`

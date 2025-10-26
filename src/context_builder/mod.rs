@@ -11,13 +11,12 @@ use crate::llm;
 use crate::logger::Logger;
 use crate::system_prompts::CONTEXT_BUILDER_CONTEXT_QUERY;
 
-pub async fn build_codebase_context(config: &Config, logger: &Logger) -> Result<String, AppError> {
+pub async fn build_codebase_context(
+    next_agent_full_prompt: &str,
+    config: &Config,
+    logger: &Logger,
+) -> Result<String, AppError> {
     let codebase_summary = summary_builder::build_summary()?;
-
-    let next_agent_full_prompt = format!(
-        "{}\n\n[supervisor query]\n{}",
-        config.system_prompts, config.query
-    );
 
     let prompt = format!(
         "{CONTEXT_BUILDER_CONTEXT_QUERY}\n\n=== Next Agent Full Prompt ===\n{next_agent_full_prompt}\n\n=== Codebase Summary ===\n{codebase_summary}"

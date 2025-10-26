@@ -12,7 +12,7 @@ This document lists all APIs that the `consistency` module uses from other modul
 
 ## `context_builder` module
 
-- `context_builder::build_codebase_context(config: &config::Config, logger: &logger::Logger) -> Result<String, AppError>`
+- `context_builder::build_codebase_context(next_agent_full_prompt: &str, config: &config::Config, logger: &logger::Logger) -> Result<String, AppError>`
 
 ## `llm` module
 

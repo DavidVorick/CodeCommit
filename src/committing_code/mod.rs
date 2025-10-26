@@ -28,7 +28,20 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
     let config = Config::load(&cli_args)?;
 
     println!("Building codebase context for LLM...");
-    let codebase = context_builder::build_codebase_context(&config, logger).await?;
+    let initial_query_prompt = if cli_args.refactor {
+        COMMITTING_CODE_REFACTOR_QUERY
+    } else {
+        COMMITTING_CODE_INITIAL_QUERY
+    };
+    let system_prompt_part =
+        format!("{PROJECT_STRUCTURE}\n{CODE_MODIFICATION_INSTRUCTIONS}\n{initial_query_prompt}");
+    let next_agent_prompt = format!(
+        "{}\n[supervisor query]\n{}",
+        system_prompt_part, config.query
+    );
+
+    let codebase =
+        context_builder::build_codebase_context(&next_agent_prompt, &config, logger).await?;
     logger.log_text("codebase.txt", &codebase)?;
 
     let mut last_build_output: Option<String> = None;
@@ -39,7 +52,7 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
 
         let (prompt, name_part) = if attempt == 1 {
             (
-                build_initial_prompt(&config, &cli_args, &codebase),
+                build_initial_prompt(&next_agent_prompt, &codebase),
                 "initial-query",
             )
         } else {
@@ -90,18 +103,8 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
     Err(AppError::MaxAttemptsReached)
 }
 
-fn build_initial_prompt(config: &Config, cli_args: &CliArgs, codebase: &str) -> String {
-    let initial_query_prompt = if cli_args.refactor {
-        COMMITTING_CODE_REFACTOR_QUERY
-    } else {
-        COMMITTING_CODE_INITIAL_QUERY
-    };
-    let system_prompt =
-        format!("{PROJECT_STRUCTURE}\n{CODE_MODIFICATION_INSTRUCTIONS}\n{initial_query_prompt}");
-    format!(
-        "{}\n[supervisor query]\n{}\n[codebase]\n{}",
-        system_prompt, config.query, codebase
-    )
+fn build_initial_prompt(next_agent_prompt: &str, codebase: &str) -> String {
+    format!("{next_agent_prompt}\n[codebase]\n{codebase}")
 }
 
 fn build_repair_prompt(

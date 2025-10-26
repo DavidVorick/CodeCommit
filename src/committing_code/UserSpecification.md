@@ -101,9 +101,9 @@ files should be updated on disk at all.
 After parsing the response and making local changes, the code-commit binary
 will attempt to build the project. This means running 'build.sh' and checking
 that it exits successfully. The output of the build - both stdout and stderr as
-well as the exit code - needs to be logged in the logging folder with the name
-"build.txt". A numerical prefix needs to be added to the file name so that it
-is properly grouped with the corresponding LLM call.
+well as the exit code - needs to be logged in the logging folder with the file
+suffix "build.txt". A numerical prefix needs to be added to the file name so
+that it is properly grouped with the corresponding LLM call.
 
 If the build script exits successfully, 'code-commit' stops there. The build is
 considered to have exited successfully if the exit code is 0, even if there is
@@ -144,8 +144,8 @@ removal within the set of file replacements:
 Then the response needs to be parsed, any code needs to be updated, and the
 build needs to be run again, repeating the cycle as necessary until up to three
 repair queries total have been attempted. The build script outputs should be
-logged as build.txt, with an appropriate numerical prefix so each build.txt
-file is properly grouped with its corresponding LLM call.
+logged with the file suffix build.txt, with an appropriate numerical prefix so
+each build.txt file is properly grouped with its corresponding LLM call.
 
 Each time that a new repair query is attempted, only the latest file
 replacements for each file are presented. That means if a subsequent response

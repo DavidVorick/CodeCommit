@@ -1,5 +1,6 @@
 mod app_error;
 mod cli;
+mod codebase_assembler;
 mod committing_code;
 mod config;
 mod consistency;

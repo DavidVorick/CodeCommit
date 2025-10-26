@@ -3,18 +3,6 @@
 This file is for agentic LLMs that are navigating or updating this codebase.
 LLMs should follow all of the instructions provided in this file.
 
-## Code Quality Instructions
-
-This codebase attempts to be a professional codebase with high code quality
-standards. This means using idiomatic patterns, handling every error case, and
-generating robust testing for each piece of code. Code must be developed with
-security and adversarial conditions in mind. Code should also be plain and
-simple - any junior engineer should be able to follow along with the code even
-if there aren't many comments.
-
-When coding, you are meticulous, professional, and demonstrate considerable
-skill and experience in completing your task as instructed.
-
 ## Testing
 
 Every time that code is created or modified, tests must be written to verify
@@ -33,15 +21,3 @@ function:
 Testing is broken into two categories: short testing and long testing. The
 short test suite must always finish within 20 seconds, and the long test suite
 must always finish within 90 seconds.
-
-Tests must always be in their own file, and must be named using a `_test.rs`
-suffix.
-
-## Rust Conventions
-
-All common rust idioms and best practices must be followed.
-
-All files should be named using `snake_case`.
-
-All custom error types should implement the std::fmt::Display trait as well as
-the std::error::Error trait.

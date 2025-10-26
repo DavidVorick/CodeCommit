@@ -7,7 +7,6 @@ pub struct Config {
     pub model: Model,
     pub api_key: String,
     pub query: String,
-    pub code_rollup: String,
 }
 
 impl Config {
@@ -38,13 +37,10 @@ impl Config {
             }
         };
 
-        let code_rollup = read_file_to_string("agent-config/codeRollup.txt")?;
-
         Ok(Self {
             model: args.model,
             api_key: api_key.trim().to_string(),
             query,
-            code_rollup,
         })
     }
 }

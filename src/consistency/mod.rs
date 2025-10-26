@@ -1,5 +1,6 @@
 use crate::app_error::AppError;
 use crate::cli::CliArgs;
+use crate::codebase_assembler;
 use crate::config::Config;
 use crate::llm;
 use crate::logger;
@@ -11,7 +12,10 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
     println!("Starting consistency check workflow...");
     let config = Config::load(&cli_args)?;
 
-    let prompt = build_initial_prompt(&config);
+    println!("Assembling codebase for consistency check...");
+    let codebase = codebase_assembler::assemble_codebase()?;
+
+    let prompt = build_initial_prompt(&config, &codebase);
     let log_prefix = "1-consistency-check";
 
     let response_text = llm::query(
@@ -34,10 +38,10 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
     Ok(())
 }
 
-fn build_initial_prompt(config: &Config) -> String {
+fn build_initial_prompt(config: &Config, codebase: &str) -> String {
     let system_prompt = format!("{PROJECT_STRUCTURE}\n{CONSISTENCY_CHECK}");
     format!(
         "{}\n[query]\n{}\n[codebase]\n{}",
-        system_prompt, config.query, config.code_rollup
+        system_prompt, config.query, codebase
     )
 }

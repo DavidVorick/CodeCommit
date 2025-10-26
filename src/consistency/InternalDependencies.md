@@ -6,6 +6,10 @@ This document lists all APIs that the `consistency` module uses from other modul
 
 - Uses the `CliArgs` struct as input to the workflow.
 
+## `codebase_assembler` module
+
+- `codebase_assembler::assemble_codebase() -> Result<String, AppError>`
+
 ## `config` module
 
 - `config::Config::load(args: &CliArgs) -> Result<Config, AppError>`

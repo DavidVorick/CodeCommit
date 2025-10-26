@@ -34,12 +34,16 @@ format:
 
 The codebase summary will contain the following files:
 
-+ the full file for the top level build.sh, Cargo.toml, LLMInstructions.md, and UserSpecification.md
++ the full file for the top level .gitignore, build.sh, Cargo.toml, LLMInstructions.md, and UserSpecification.md
 + all of the filenames of all of the top level files, including names of all the top level files in src/
 + for each module, the following will be provided:
 	+ the full InternalDependencies.md file
 	+ the full PublicAPI.md file
 	+ a list of the names of all files in the module, including documentation files
+
+Note that only files which are not listed in the .gitignore should be provided.
+Any file that appears in the .gitignore will not be mentioned in the codebase
+summary.
 
 Full files will be provided with the following syntax:
 
@@ -89,6 +93,10 @@ be presented with the following syntax:
 
 This list of files becomes the codebase in the next step. This codebase is
 logged as 'codebase.txt' in the logs.
+
+Note that it must be strictly enforced the preprocessing LLM cannot request any
+file that appears in the .gitignore. The parser closely checks that those files
+have not been requested and will not be included in the codebase.
 
 ## The Initial Query
 

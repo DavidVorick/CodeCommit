@@ -15,7 +15,7 @@ pub async fn run(logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
 
     println!("Running consistency check...");
     let prompt = format!(
-        "{}\n[user query]\n{}\n[codebase]\n{}",
+        "{}\n[supervisor query]\n{}\n[codebase]\n{}",
         config.system_prompts, config.query, codebase
     );
 
@@ -31,9 +31,6 @@ pub async fn run(logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
     let output_path = "agent-config/consistency-report.txt";
     fs::write(output_path, &report)?;
     println!("\nConsistency check report saved to {output_path}");
-
-    println!("\nConsistency Check Report:\n");
-    println!("{report}");
 
     Ok(())
 }

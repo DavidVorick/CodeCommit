@@ -20,6 +20,11 @@ The context query system prompt can be found in the `system_prompts` module.
 The next agent full prompt is provided as input to the caller that is
 requesting a custom context.
 
+Between the context query system prompt and the next agent full prompt, the
+text '=== Next Agent Full Prompt ===' will appear as its own line. Between the
+next agent full prompt and the codebase summary, the text '=== Codebase Summary
+===' will appear.
+
 The codebase summary will contain the following files:
 
 + the full file for the top level .gitignore, build.sh, Cargo.toml, LLMInstructions.md, and UserSpecification.md

@@ -12,6 +12,8 @@ fn read_and_format_file(path: &Path) -> Result<String, AppError> {
 pub(crate) fn build_summary() -> Result<String, AppError> {
     let mut summary = String::new();
 
+    summary.push_str("=== Project Root ===\n\n");
+
     let root_files_to_include = [
         ".gitignore",
         "build.sh",
@@ -30,7 +32,14 @@ pub(crate) fn build_summary() -> Result<String, AppError> {
     let mut src_top_level_filenames = Vec::new();
     let mut modules: BTreeMap<String, Vec<PathBuf>> = BTreeMap::new();
 
-    for result in WalkBuilder::new("./").max_depth(Some(1)).build() {
+    for result in WalkBuilder::new("./")
+        .max_depth(Some(1))
+        .git_ignore(true)
+        .parents(true)
+        .ignore(false)
+        .git_global(false)
+        .build()
+    {
         let entry =
             result.map_err(|e| AppError::Config(format!("Error walking directory: {e}")))?;
         if entry.depth() == 1 && entry.file_type().is_some_and(|ft| ft.is_file()) {
@@ -41,7 +50,14 @@ pub(crate) fn build_summary() -> Result<String, AppError> {
 
     let src_path = Path::new("src");
     if src_path.is_dir() {
-        for result in WalkBuilder::new(src_path).max_depth(Some(2)).build() {
+        for result in WalkBuilder::new(src_path)
+            .max_depth(Some(2))
+            .git_ignore(true)
+            .parents(true)
+            .ignore(false)
+            .git_global(false)
+            .build()
+        {
             let entry =
                 result.map_err(|e| AppError::Config(format!("Error walking directory: {e}")))?;
             let path = entry.path();
@@ -83,6 +99,7 @@ pub(crate) fn build_summary() -> Result<String, AppError> {
         let internal_deps_path = module_path.join("InternalDependencies.md");
 
         if public_api_path.exists() && internal_deps_path.exists() {
+            summary.push_str(&format!("=== {} ===\n\n", module_path.display()));
             summary.push_str(&read_and_format_file(&internal_deps_path)?);
             summary.push_str(&read_and_format_file(&public_api_path)?);
 

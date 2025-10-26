@@ -26,7 +26,7 @@ will have the following format:
 [project structure system prompt]
 [code modification instructions system prompt]
 [initial query system prompt]
-[user query]
+[supervisor query]
 [codebase]
 
 The system prompts can be found in the system-prompts module.

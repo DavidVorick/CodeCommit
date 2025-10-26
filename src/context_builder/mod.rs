@@ -9,14 +9,18 @@ use crate::app_error::AppError;
 use crate::config::Config;
 use crate::llm;
 use crate::logger::Logger;
-use crate::system_prompts::{CONTEXT_BUILDER_CONTEXT_QUERY, PROJECT_STRUCTURE};
+use crate::system_prompts::CONTEXT_BUILDER_CONTEXT_QUERY;
 
 pub async fn build_codebase_context(config: &Config, logger: &Logger) -> Result<String, AppError> {
     let codebase_summary = summary_builder::build_summary()?;
 
+    let next_agent_full_prompt = format!(
+        "{}\n\n[supervisor query]\n{}",
+        config.system_prompts, config.query
+    );
+
     let prompt = format!(
-        "{}\n{}\n[user query]\n{}\n[codebase summary]\n{}",
-        PROJECT_STRUCTURE, CONTEXT_BUILDER_CONTEXT_QUERY, config.query, codebase_summary
+        "{CONTEXT_BUILDER_CONTEXT_QUERY}\n\n=== Next Agent Full Prompt ===\n{next_agent_full_prompt}\n\n=== Codebase Summary ===\n{codebase_summary}"
     );
 
     let response_text = llm::query(

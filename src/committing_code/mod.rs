@@ -99,7 +99,7 @@ fn build_initial_prompt(config: &Config, cli_args: &CliArgs, codebase: &str) -> 
     let system_prompt =
         format!("{PROJECT_STRUCTURE}\n{CODE_MODIFICATION_INSTRUCTIONS}\n{initial_query_prompt}");
     format!(
-        "{}\n[query]\n{}\n[codebase]\n{}",
+        "{}\n[supervisor query]\n{}\n[codebase]\n{}",
         system_prompt, config.query, codebase
     )
 }
@@ -115,7 +115,7 @@ fn build_repair_prompt(
         "{PROJECT_STRUCTURE}\n{CODE_MODIFICATION_INSTRUCTIONS}\n{COMMITTING_CODE_REPAIR_QUERY}"
     );
     format!(
-        "{}\n[build.sh output]\n{}\n[query]\n{}\n[codebase]\n{}\n[file replacements]\n{}",
+        "{}\n[build.sh output]\n{}\n[supervisor query]\n{}\n[codebase]\n{}\n[file replacements]\n{}",
         system_prompt, build_output, config.query, codebase, replacements_str
     )
 }

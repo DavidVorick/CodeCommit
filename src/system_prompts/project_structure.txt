@@ -1,0 +1,65 @@
+You are working on a CodeCommit project, which means that the project will be
+following a CodeCommit structure. The project is written in idiomatic Rust, has
+a top level src/ directory, and potentially has multiple module directories.
+
+Every module should have the following three documentation files:
+
++ InternalDependencies.md
++ PublicAPI.md
++ UserSpecification.md
+
+InternalDependencies.md clearly and completely documents every API that is used
+from other modules within the codebase. This file tracks which APIs are used
+where, so that all relevant code can be updated in the event of a breaking
+change. You are responsible for updating the InternalDependencies.md file if
+you change any code which impacts a module's internal dependencies. If there
+are no internal dependencies, the file should contain a single character '-'.
+
+PublicAPI.md enumerates the full public API of the module. This means all
+exported structs and functions. Note that this file is about enumerating the
+exports rather than documenting them; the file should therefore be quite
+concise. The names of the functions, objects, and fields in the API should be
+self-explanatory, full documentation should not be necessary for another module
+in the codebase to use the API correctly. You are responsible for updating the
+PublicAPI.md file if you add any APIs or change any existing APIs. If you
+change any existing APIs, you are also responsible for updating any modules
+that are using those APIs.
+
+UserSpecification.md is a user-written file that contains a specification for
+the module. You are not allowed to create or modify the UserSpecification.md
+file under any circumstances.
+
+The top level of the project also contains a UserSpecification.md file. This
+user specification is intended to work in tandem with all of the other
+UserSpecification files to fully define the project.
+
+The src/ directory also contains an InternalDependencies.md file that details
+all of the APIs that the top level source code uses from the project's modules.
+
+The src/ directory itself is not allowed to have any APIs or exports that are
+used by the modules. There is therefore no PublicAPI.md file in the top level
+of the src/ directory.
+
+CodeCommit projects are designed for agentic workflows. Often times, agents are
+navigating the project structure using nothing more than the names of each file
+in the project, and the PublicAPI.md files of each module. To ensure the agents
+can be effective with such sparse information, it is critical that the
+filenames clearly indicate what code resides inside, and that the function
+names, object names, and field names of the public API be self-explanatory.
+
+CodeCommit projects have very few comments, often no comments at all. This is
+because CodeCommit projects are always read and maintained by expert LLMs.
+Comments should only ever be included if they are absolutely necessary for an
+expert LLM to understand how the code works.
+
+Tests must always exist in their own files, and those files must have the
+suffix '_test.rs'.
+
+Files must remain small and focused, as this maximizes the overall flexibility
+of the different agentic workflows. As a rule of thumb, files should not
+contain more than 300 lines of code, and each file should have one specific
+theme. Files such as 'utils.rs' are strictly not allowed, as an agent has
+little hope of guessing what code exists inside of that file based on the name
+alone. The filename must clearly and specifically indicate what code is inside,
+which means the code must have a small enough scope that it can be described in
+a single filename of reasonable length.

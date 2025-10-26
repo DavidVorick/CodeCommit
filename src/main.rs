@@ -5,10 +5,9 @@ mod config;
 mod file_updater;
 mod llm;
 mod logger;
-mod prompts;
-mod prompts_consistency;
 mod refactor;
 mod response_parser;
+mod system_prompts;
 
 #[cfg(test)]
 mod cli_test;

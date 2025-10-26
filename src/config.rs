@@ -1,9 +1,8 @@
 use crate::app_error::AppError;
 use crate::cli::{CliArgs, Model, Workflow};
-use crate::prompts::{INITIAL_QUERY_SYSTEM_PROMPT, REPAIR_QUERY_SYSTEM_PROMPT};
-use crate::prompts_consistency::CONSISTENCY_CHECK_SYSTEM_PROMPT;
-use crate::refactor::prompts::{
-    REFACTOR_INITIAL_QUERY_SYSTEM_PROMPT, REFACTOR_REPAIR_QUERY_SYSTEM_PROMPT,
+use crate::system_prompts::{
+    CODE_MODIFICATION_INSTRUCTIONS, COMMITTING_CODE_INITIAL_QUERY, COMMITTING_CODE_REPAIR_QUERY,
+    CONSISTENCY_CHECK, PROJECT_STRUCTURE, REFACTOR,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -59,9 +58,15 @@ impl Config {
 
     pub fn build_initial_prompt(&self) -> String {
         let system_prompt = match self.workflow {
-            Workflow::CommitCode => INITIAL_QUERY_SYSTEM_PROMPT,
-            Workflow::Refactor => REFACTOR_INITIAL_QUERY_SYSTEM_PROMPT,
-            Workflow::ConsistencyCheck => CONSISTENCY_CHECK_SYSTEM_PROMPT,
+            Workflow::CommitCode => format!(
+                "{PROJECT_STRUCTURE}\n{CODE_MODIFICATION_INSTRUCTIONS}\n{COMMITTING_CODE_INITIAL_QUERY}"
+            ),
+            Workflow::Refactor => {
+                format!("{PROJECT_STRUCTURE}\n{CODE_MODIFICATION_INSTRUCTIONS}\n{REFACTOR}")
+            }
+            Workflow::ConsistencyCheck => {
+                format!("{PROJECT_STRUCTURE}\n{CONSISTENCY_CHECK}")
+            }
         };
         format!(
             "{}\n[query]\n{}\n[codebase]\n{}",
@@ -76,8 +81,9 @@ impl Config {
     ) -> String {
         let replacements_str = format_file_replacements(file_replacements);
         let system_prompt = match self.workflow {
-            Workflow::CommitCode => REPAIR_QUERY_SYSTEM_PROMPT,
-            Workflow::Refactor => REFACTOR_REPAIR_QUERY_SYSTEM_PROMPT,
+            Workflow::CommitCode | Workflow::Refactor => format!(
+                "{PROJECT_STRUCTURE}\n{CODE_MODIFICATION_INSTRUCTIONS}\n{COMMITTING_CODE_REPAIR_QUERY}"
+            ),
             Workflow::ConsistencyCheck => {
                 panic!("Consistency check workflow does not support repair prompts.")
             }

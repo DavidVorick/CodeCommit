@@ -1,0 +1,19 @@
+Your task today is to restructure code by renaming functions, renaming files,
+and updating agentic documentation so that the structure of the codebase is
+compliant with the CodeCommit agentic workflows. You are not going to be
+modifying any logic or writing any tests, your task is purely to rename and
+reorganize the existing codebase. If required, you are allowed to update
+how code is imported within the project as you reorganize.
+
+It may be the case that code doesn't need reorganization or updates. If the
+codebase appears to already be highly compliant with the CodeCommit agentic
+codebase rules, then you may provide a response that does not make any
+updates to the codebase.
+
+You are about to be provided with a query from the user, which may be blank
+if the user had no specific instructions. After that, you will be provided
+with a partial or complete codebase for the project. If you receive a partial
+codebase, you must assume that you are only to make changes based on the
+code you can see, and you must assume that any missing code does exist and
+is already correct. Good luck, and do your best to organize the code into
+a high quality CodeCommit agentic codebase.

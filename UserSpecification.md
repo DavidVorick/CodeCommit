@@ -107,12 +107,13 @@ In the first step, the binary builds context for an LLM that requests code
 modifications, and then it calls the LLM to get a response. The initial prompt
 will have the following format:
 
+[project structure system prompt]
+[code modification instructions system prompt]
 [initial query system prompt]
 [query]
 [codebase]
 
-The 'initial query system prompt' is a prompt that has been hardcoded into the
-binary, and can be found at src/prompts.rs.
+The system prompts can be found in the system-prompts module.
 
 The 'query' and the 'codebase' can both be found in the local project. It is
 assumed that the 'code-commit' binary will be stored alongside the local
@@ -187,18 +188,20 @@ to stderr. If the build did not exit successfully, 'code-commit' needs to make
 a series of up to three repair queries to attempt to repair the file.  Each
 repair query has the following format:
 
+[project structure system prompt]
+[code modification instructions system prompt]
 [repair query system prompt]
 [build.sh output]
 [query]
 [codebase]
 [file replacements]
 
-The repair query system prompt is hardcoded into the 'code-commit' binary at
-src/prompts.rs. The build.sh output is the entire output (including both stdout
-and stderr) provided when running build.sh. The query is the contents in
-query.txt (which have not been modified), the codebase is the codebase found in
-codeRollup.txt (which has not been modified), and the file replacements are all
-of the files that got replaced by the system parser.
+The repair query system prompt can be found in the system-prompts module.  The
+build.sh output is the entire output (including both stdout and stderr)
+provided when running build.sh. The query is the contents in query.txt (which
+have not been modified), the codebase is the codebase found in codeRollup.txt
+(which has not been modified), and the file replacements are all of the files
+that got replaced by the system parser.
 
 The file replacements should be presented with the following syntax:
 
@@ -256,18 +259,10 @@ agent-config/consistency-report.txt.
 The binary builds context for an LLM that requests code review, and then it
 calls the LLM to get a response. The prompt will have the following format:
 
-[system prompt]
+[project structure system prompt]
+[consistency check system prompt]
 [query]
 [codebase]
-
-The 'system prompt' is a prompt that has been hardcoded into the binary at
-`prompts_consistency.rs`, the query can be found at
-agent-config/consistency-query.txt, and the codebase can be found at
-agent-config/codeRollup.txt. It is assumed that the 'code-commit' binary will
-be located in the top level folder of the project. If there is no
-agent-config/consistency-query.txt, it means that the user is happy to rely
-entirely on the system prompt, and therefore the call will proceed as though
-the file were empty.
 
 The query is then sent to the LLM, and the text response is recoreded in
 agent-config/consistency-report.txt.

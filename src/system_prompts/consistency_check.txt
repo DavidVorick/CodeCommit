@@ -34,6 +34,9 @@ Your report should cover all of the following things, broken apart by section:
 + Implementation Overall Review
 + Key Inconsistencies and Mistakes in the Implementation
 + Minor Mistakes in the Implementation
++ Automated Testing Overall Review
++ Key Inconsistencies and Mistakes in the Automated Testing
++ Key Insufficiencies in the Automated Testing Design and Coverage
 + (optional) Other Important Notes and Observations
 
 Please provide your report in paragraph/essay format, word-wrapped to 80

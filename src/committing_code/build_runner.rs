@@ -1,7 +1,7 @@
 use crate::app_error::BuildFailure;
 use std::process::Command;
 
-pub fn run() -> Result<String, BuildFailure> {
+pub(crate) fn run() -> Result<String, BuildFailure> {
     let output = Command::new("bash")
         .arg("build.sh")
         .output()

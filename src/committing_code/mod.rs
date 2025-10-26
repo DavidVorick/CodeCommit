@@ -1,15 +1,18 @@
+mod build_runner;
+mod file_updater;
+mod response_parser;
+
 use crate::app_error::AppError;
-use crate::build_runner;
 use crate::cli::CliArgs;
 use crate::config::Config;
-use crate::file_updater;
 use crate::llm;
 use crate::logger;
-use crate::response_parser;
 use crate::system_prompts::{
     CODE_MODIFICATION_INSTRUCTIONS, COMMITTING_CODE_INITIAL_QUERY, COMMITTING_CODE_REFACTOR_QUERY,
     COMMITTING_CODE_REPAIR_QUERY, PROJECT_STRUCTURE,
 };
+use file_updater as file_updater_impl;
+use response_parser as response_parser_impl;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -47,13 +50,13 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
         .await?;
 
         println!("Parsing LLM response and applying file updates...");
-        let updates = response_parser::parse_llm_response(&response_text)?;
+        let updates = response_parser_impl::parse_llm_response(&response_text)?;
 
         for update in &updates {
             cumulative_updates.insert(update.path.clone(), update.content.clone());
         }
 
-        file_updater::apply_updates(&updates)?;
+        file_updater_impl::apply_updates(&updates)?;
 
         println!("Running build script...");
         match build_runner::run() {

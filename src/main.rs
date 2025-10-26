@@ -1,23 +1,11 @@
 mod app_error;
-mod build_runner;
 mod cli;
 mod committing_code;
 mod config;
 mod consistency;
-mod file_updater;
 mod llm;
 mod logger;
-mod response_parser;
 mod system_prompts;
-
-#[cfg(test)]
-mod cli_test;
-#[cfg(test)]
-mod file_updater_gitignore_tests;
-#[cfg(test)]
-mod file_updater_test;
-#[cfg(test)]
-mod response_parser_test;
 
 use crate::app_error::AppError;
 use crate::cli::Workflow;

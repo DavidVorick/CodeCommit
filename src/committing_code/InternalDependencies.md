@@ -2,6 +2,14 @@
 
 This document lists all APIs that the `committing_code` module uses from other modules within this project.
 
+## `cli` module
+
+- Uses the `CliArgs` struct as input to the workflow.
+
+## `config` module
+
+- `config::Config::load(args: &CliArgs) -> Result<Config, AppError>`
+
 ## `llm` module
 
 - `llm::query(model: Model, api_key: String, prompt: &str, logger: &Logger, log_prefix: &str) -> Result<String, AppError>`

@@ -1,5 +1,4 @@
 use crate::app_error::AppError;
-use crate::response_parser::FileUpdate;
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use path_clean::PathClean;
 use std::collections::HashSet;
@@ -7,7 +6,9 @@ use std::ffi::OsStr;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
-pub fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
+use super::response_parser::FileUpdate;
+
+pub(crate) fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
     let protection_rules = PathProtection::new()?;
 
     for update in updates {

@@ -2,12 +2,12 @@ use crate::app_error::AppError;
 use std::path::PathBuf;
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct FileUpdate {
+pub(crate) struct FileUpdate {
     pub path: PathBuf,
     pub content: Option<String>,
 }
 
-pub fn parse_llm_response(text: &str) -> Result<Vec<FileUpdate>, AppError> {
+pub(crate) fn parse_llm_response(text: &str) -> Result<Vec<FileUpdate>, AppError> {
     let mut updates = Vec::new();
     let mut lines = text.lines().peekable();
 
@@ -22,7 +22,7 @@ pub fn parse_llm_response(text: &str) -> Result<Vec<FileUpdate>, AppError> {
             let path = PathBuf::from(path_str);
 
             if lines.peek() == Some(&"^^^delete") {
-                lines.next(); // Consume '^^^delete'
+                lines.next();
                 updates.push(FileUpdate {
                     path,
                     content: None,

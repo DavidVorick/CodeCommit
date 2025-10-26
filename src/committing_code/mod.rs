@@ -1,12 +1,15 @@
 mod build_runner;
 mod context_builder;
+mod context_path_filter;
 mod file_updater;
-mod response_parser;
+mod response_parser; // NEW: separate allowlist for context reads
 
+#[cfg(test)]
+mod context_path_filter_test;
 #[cfg(test)]
 mod file_updater_gitignore_tests;
 #[cfg(test)]
-mod file_updater_test;
+mod file_updater_test; // NEW: tests for context filter
 
 use crate::app_error::AppError;
 use crate::cli::CliArgs;
@@ -109,10 +112,12 @@ async fn build_codebase(config: &Config, logger: &logger::Logger) -> Result<Stri
 
     let file_paths = response_parser_impl::parse_context_llm_response(&response_text)?;
 
-    let protection = file_updater_impl::PathProtection::new()?;
+    // IMPORTANT: Use a permissive filter for *reading* context.
+    // Only enforce .gitignore + basic path safety; do NOT reuse modification rules.
+    let filter = context_path_filter::ContextPathFilter::new()?;
     let mut codebase = String::new();
     for path in file_paths {
-        protection.validate(&path)?;
+        filter.validate(&path)?;
         let content = std::fs::read_to_string(&path).map_err(|e| {
             AppError::FileUpdate(format!(
                 "Failed to read file for codebase {}: {}",

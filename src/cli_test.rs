@@ -13,6 +13,7 @@ fn test_no_args() {
         CliArgs {
             model: Model::Gemini2_5Pro,
             workflow: Workflow::CommitCode,
+            refactor: false,
         }
     );
 }
@@ -26,6 +27,7 @@ fn test_model_arg() {
         CliArgs {
             model: Model::Gpt5,
             workflow: Workflow::CommitCode,
+            refactor: false,
         }
     );
 }
@@ -49,34 +51,42 @@ fn test_consistency_check_workflow() {
     let args = to_string_vec(&["--consistency-check"]);
     let result = parse_args(args.into_iter()).unwrap();
     assert_eq!(result.workflow, Workflow::ConsistencyCheck);
+    assert!(!result.refactor);
 
     let args = to_string_vec(&["--consistency"]);
     let result = parse_args(args.into_iter()).unwrap();
     assert_eq!(result.workflow, Workflow::ConsistencyCheck);
+    assert!(!result.refactor);
 
     let args = to_string_vec(&["--cc"]);
     let result = parse_args(args.into_iter()).unwrap();
     assert_eq!(result.workflow, Workflow::ConsistencyCheck);
+    assert!(!result.refactor);
 }
 
 #[test]
-fn test_refactor_workflow() {
+fn test_refactor_flag() {
     let args = to_string_vec(&["--refactor"]);
     let result = parse_args(args.into_iter()).unwrap();
-    assert_eq!(result.workflow, Workflow::Refactor);
-
-    let args = to_string_vec(&["--refactor-and-integrate"]);
-    let result = parse_args(args.into_iter()).unwrap();
-    assert_eq!(result.workflow, Workflow::Refactor);
+    assert_eq!(result.workflow, Workflow::CommitCode);
+    assert!(result.refactor);
 
     let args = to_string_vec(&["--ref"]);
     let result = parse_args(args.into_iter()).unwrap();
-    assert_eq!(result.workflow, Workflow::Refactor);
+    assert_eq!(result.workflow, Workflow::CommitCode);
+    assert!(result.refactor);
+}
+
+#[test]
+fn test_refactor_with_consistency_is_error() {
+    let args = to_string_vec(&["--ref", "--cc"]);
+    let result = parse_args(args.into_iter());
+    assert!(result.is_err());
 }
 
 #[test]
 fn test_multiple_workflows_is_error() {
-    let args = to_string_vec(&["--ref", "--cc"]);
+    let args = to_string_vec(&["--cc", "--consistency"]);
     let result = parse_args(args.into_iter());
     assert!(result.is_err());
 }
@@ -89,14 +99,15 @@ fn test_unknown_argument() {
 }
 
 #[test]
-fn test_model_and_workflow() {
+fn test_model_and_refactor() {
     let args = to_string_vec(&["--model", "gpt-5", "--ref"]);
     let result = parse_args(args.into_iter()).unwrap();
     assert_eq!(
         result,
         CliArgs {
             model: Model::Gpt5,
-            workflow: Workflow::Refactor,
+            workflow: Workflow::CommitCode,
+            refactor: true,
         }
     );
 
@@ -106,7 +117,8 @@ fn test_model_and_workflow() {
         result,
         CliArgs {
             model: Model::Gpt5,
-            workflow: Workflow::Refactor,
+            workflow: Workflow::CommitCode,
+            refactor: true,
         }
     );
 }

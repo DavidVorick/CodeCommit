@@ -1,8 +1,8 @@
 use crate::app_error::AppError;
 use crate::cli::{CliArgs, Model, Workflow};
 use crate::system_prompts::{
-    CODE_MODIFICATION_INSTRUCTIONS, COMMITTING_CODE_INITIAL_QUERY, COMMITTING_CODE_REPAIR_QUERY,
-    CONSISTENCY_CHECK, PROJECT_STRUCTURE, REFACTOR,
+    CODE_MODIFICATION_INSTRUCTIONS, COMMITTING_CODE_INITIAL_QUERY, COMMITTING_CODE_REFACTOR_QUERY,
+    COMMITTING_CODE_REPAIR_QUERY, CONSISTENCY_CHECK, PROJECT_STRUCTURE,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -14,6 +14,7 @@ pub struct Config {
     pub query: String,
     pub code_rollup: String,
     pub workflow: Workflow,
+    pub refactor: bool,
 }
 
 impl Config {
@@ -28,7 +29,6 @@ impl Config {
 
         let query = match args.workflow {
             Workflow::CommitCode => read_file_to_string("agent-config/query.txt")?,
-            Workflow::Refactor => read_file_to_string("agent-config/refactor-query.txt")?,
             Workflow::ConsistencyCheck => {
                 let path = Path::new("agent-config/consistency-query.txt");
                 match fs::read_to_string(path) {
@@ -53,16 +53,21 @@ impl Config {
             query,
             code_rollup,
             workflow: args.workflow,
+            refactor: args.refactor,
         })
     }
 
     pub fn build_initial_prompt(&self) -> String {
         let system_prompt = match self.workflow {
-            Workflow::CommitCode => format!(
-                "{PROJECT_STRUCTURE}\n{CODE_MODIFICATION_INSTRUCTIONS}\n{COMMITTING_CODE_INITIAL_QUERY}"
-            ),
-            Workflow::Refactor => {
-                format!("{PROJECT_STRUCTURE}\n{CODE_MODIFICATION_INSTRUCTIONS}\n{REFACTOR}")
+            Workflow::CommitCode => {
+                let initial_query_prompt = if self.refactor {
+                    COMMITTING_CODE_REFACTOR_QUERY
+                } else {
+                    COMMITTING_CODE_INITIAL_QUERY
+                };
+                format!(
+                    "{PROJECT_STRUCTURE}\n{CODE_MODIFICATION_INSTRUCTIONS}\n{initial_query_prompt}"
+                )
             }
             Workflow::ConsistencyCheck => {
                 format!("{PROJECT_STRUCTURE}\n{CONSISTENCY_CHECK}")
@@ -81,7 +86,7 @@ impl Config {
     ) -> String {
         let replacements_str = format_file_replacements(file_replacements);
         let system_prompt = match self.workflow {
-            Workflow::CommitCode | Workflow::Refactor => format!(
+            Workflow::CommitCode => format!(
                 "{PROJECT_STRUCTURE}\n{CODE_MODIFICATION_INSTRUCTIONS}\n{COMMITTING_CODE_REPAIR_QUERY}"
             ),
             Workflow::ConsistencyCheck => {
@@ -132,7 +137,7 @@ fn check_gitignore() -> Result<(), AppError> {
         Ok(content) => content,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             return Err(AppError::Config(
-                "'.gitignore' file not found. Please ensure key files like '/agent-config/gemini-key.txt' are listed in it, or the whole '/agent-config' directory.".to_string()
+                "'.gitignore' file not found. It must exist and contain '/agent-config' to protect secrets.".to_string()
             ));
         }
         Err(e) => {
@@ -144,25 +149,13 @@ fn check_gitignore() -> Result<(), AppError> {
         }
     };
 
-    // If the whole directory is ignored, we're good.
-    if gitignore_content.lines().any(|line| {
+    if !gitignore_content.lines().any(|line| {
         let trimmed = line.trim();
         trimmed == "/agent-config" || trimmed == "agent-config/"
     }) {
-        return Ok(());
-    }
-
-    // Otherwise, check for individual key files.
-    let required_entries = [
-        "/agent-config/gemini-key.txt",
-        "/agent-config/openai-key.txt",
-    ];
-    for entry in required_entries {
-        if !gitignore_content.lines().any(|line| line.trim() == entry) {
-            return Err(AppError::Config(
-                format!("Security check failed: Your .gitignore file must contain the line '{entry}' or ignore '/agent-config' to prevent accidental exposure of your API key.")
-            ));
-        }
+        return Err(AppError::Config(
+            "Security check failed: Your .gitignore file must contain the line '/agent-config' to prevent accidental exposure of your API keys and logs.".to_string()
+        ));
     }
 
     Ok(())

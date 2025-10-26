@@ -27,6 +27,14 @@ it is supposed to execute the workflow for committing code.
 
 The programmatic slug that refers to this workflow is 'committing-code'.
 
+The committing code workflow has a 'refactor' modification which can be
+triggered by the flags '--refactor' or '--ref'. If either of these flags are
+used, the [initial query system prompt] will be replaced by the [refactor query
+system prompt].
+
+The user must provide guidance for the committing-code workflow by writing
+their own query in agent-config/query.txt
+
 ### Checking Consistency
 
 The 'consistency' workflow uses LLMs to verify that the project is self
@@ -44,15 +52,9 @@ The consistency workflow can be triggered with the command line flag
 '--consistency-check' or '--consistency' or '--cc'. The programmatic slug that
 refers to this workflow is 'consistency'.
 
-### Refactor and Integrate
-
-The 'refactor' workflow uses LLMs to refactor the code so that it is higher
-quality and more amenable to agentic workflows. It does not add tests or change
-functionality, but moves code between files and updates documentation.
-
-The refactor workflow can be triggered with the command line flag '--refactor'
-or '--refactor-and-integrate' or '--ref'. The programmatic slug that refers to
-this workflow is 'refactor'.
+The user can optionally provide guidance for the consistency workflow by
+writing their own query in agent-config/consistency-query.txt - if none is
+provided, an empty string will be used.
 
 ## LLMs
 
@@ -210,7 +212,7 @@ The file replacements should be presented with the following syntax:
 [file data]
 ```
 
-If a file was removed, the following synax should be used to specify the
+If a file was removed, the following syntax should be used to specify the
 removal within the set of file replacements:
 
 ```

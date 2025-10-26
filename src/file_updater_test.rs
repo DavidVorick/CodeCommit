@@ -164,12 +164,11 @@ fn test_validate_path_forbidden_dir() {
         .to_string()
         .contains("Modification of directory '.git/' is not allowed."));
 
-    let result_logs = protection.validate(&PathBuf::from("logs/2023-01-01/query.txt"));
-    assert!(matches!(result_logs, Err(AppError::FileUpdate(_))));
-    assert!(result_logs
-        .unwrap_err()
-        .to_string()
-        .contains("Modification of directory 'logs/' is not allowed."));
+    // The logs/ directory is no longer protected at this level, as logs are
+    // now in agent-config/ which is protected.
+    assert!(protection
+        .validate(&PathBuf::from("logs/2023-01-01/query.txt"))
+        .is_ok());
 }
 
 #[test]

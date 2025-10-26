@@ -22,13 +22,13 @@ pub enum Workflow {
     #[default]
     CommitCode,
     ConsistencyCheck,
-    Refactor,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct CliArgs {
     pub model: Model,
     pub workflow: Workflow,
+    pub refactor: bool,
 }
 
 pub fn parse_cli_args() -> Result<CliArgs, AppError> {
@@ -38,6 +38,7 @@ pub fn parse_cli_args() -> Result<CliArgs, AppError> {
 pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliArgs, AppError> {
     let mut model = Model::default();
     let mut workflow: Option<Workflow> = None;
+    let mut refactor = false;
 
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -55,13 +56,8 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
                 }
                 workflow = Some(Workflow::ConsistencyCheck);
             }
-            "--refactor" | "--refactor-and-integrate" | "--ref" => {
-                if workflow.is_some() {
-                    return Err(AppError::Config(
-                        "It is an error to trigger more than one workflow at a time.".to_string(),
-                    ));
-                }
-                workflow = Some(Workflow::Refactor);
+            "--refactor" | "--ref" => {
+                refactor = true;
             }
             _ => {
                 return Err(AppError::Config(format!("Unknown argument: {arg}")));
@@ -69,8 +65,17 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
         }
     }
 
+    let final_workflow = workflow.unwrap_or_default();
+
+    if refactor && final_workflow != Workflow::CommitCode {
+        return Err(AppError::Config(
+            "The --refactor flag can only be used with the 'committing-code' workflow.".to_string(),
+        ));
+    }
+
     Ok(CliArgs {
         model,
-        workflow: workflow.unwrap_or_default(),
+        workflow: final_workflow,
+        refactor,
     })
 }

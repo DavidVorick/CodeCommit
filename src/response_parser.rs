@@ -4,8 +4,6 @@ use std::path::PathBuf;
 #[derive(Debug, PartialEq, Clone)]
 pub struct FileUpdate {
     pub path: PathBuf,
-    /// The content to write. `Some(content)` for file creation/replacement
-    /// (including empty files with `Some("")`), and `None` for deletion.
     pub content: Option<String>,
 }
 
@@ -23,7 +21,6 @@ pub fn parse_llm_response(text: &str) -> Result<Vec<FileUpdate>, AppError> {
             }
             let path = PathBuf::from(path_str);
 
-            // Check for the `^^^delete` marker immediately following the filename.
             if lines.peek() == Some(&"^^^delete") {
                 lines.next(); // Consume '^^^delete'
                 updates.push(FileUpdate {
@@ -33,7 +30,6 @@ pub fn parse_llm_response(text: &str) -> Result<Vec<FileUpdate>, AppError> {
                 continue;
             }
 
-            // Otherwise, collect lines until `^^^end`.
             let content_lines: Vec<&str> = lines.by_ref().take_while(|&l| l != "^^^end").collect();
 
             updates.push(FileUpdate {

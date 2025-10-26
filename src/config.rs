@@ -111,7 +111,6 @@ fn format_file_replacements(replacements: &HashMap<PathBuf, Option<String>>) -> 
             Some(content) => {
                 result.push_str(&format!("--- FILE REPLACEMENT {path_str} ---\n"));
                 result.push_str(content);
-                // Ensure a newline separates the content from the next header
                 if !content.ends_with('\n') {
                     result.push('\n');
                 }

@@ -4,19 +4,15 @@ use std::fs;
 use std::path::PathBuf;
 use tempfile::tempdir;
 
-// Helper function to set up a test environment
 fn setup_test_env(gitignore_content: &str) -> (tempfile::TempDir, PathProtection) {
     let dir = tempdir().unwrap();
     fs::write(dir.path().join(".gitignore"), gitignore_content).unwrap();
 
-    // The `ignore` crate needs to be run from within the directory
-    // that contains the `.gitignore` file to work as expected.
     let original_cwd = std::env::current_dir().unwrap();
     std::env::set_current_dir(dir.path()).unwrap();
 
     let protection = PathProtection::new().unwrap();
 
-    // Return to the original directory immediately after creating the PathProtection
     std::env::set_current_dir(original_cwd).unwrap();
 
     (dir, protection)
@@ -53,9 +49,6 @@ fn test_gitignore_wildcard_extension() {
 
 #[test]
 fn test_gitignore_ignored_directory() {
-    // FIX: Use "/target/" to anchor the rule to the root directory.
-    // This correctly tests that a root-level `target` is ignored,
-    // while a nested directory with the same name is not.
     let (_dir, protection) = setup_test_env("/target/");
 
     let result = protection.validate(&PathBuf::from("target/debug/app.exe"));
@@ -74,7 +67,6 @@ fn test_gitignore_negation_rule() {
     let result = protection.validate(&PathBuf::from("debug.log"));
     assert!(matches!(result, Err(AppError::FileUpdate(_))));
 
-    // This file is explicitly un-ignored (whitelisted) and should be allowed.
     assert!(protection.validate(&PathBuf::from("important.log")).is_ok());
 }
 
@@ -82,11 +74,9 @@ fn test_gitignore_negation_rule() {
 fn test_gitignore_root_specific_rule() {
     let (_dir, protection) = setup_test_env("/config.yaml");
 
-    // This should be blocked because it's in the root
     let result = protection.validate(&PathBuf::from("config.yaml"));
     assert!(matches!(result, Err(AppError::FileUpdate(_))));
 
-    // This should be allowed because it's not in the root
     assert!(protection
         .validate(&PathBuf::from("src/config.yaml"))
         .is_ok());
@@ -97,7 +87,6 @@ fn test_gitignore_comments_and_empty_lines_are_ignored() {
     let gitignore_content = "# This is a comment\n\n  \n*.tmp";
     let (_dir, protection) = setup_test_env(gitignore_content);
 
-    // The comment and empty lines should have no effect.
     let result = protection.validate(&PathBuf::from("file.tmp"));
     assert!(matches!(result, Err(AppError::FileUpdate(_))));
 
@@ -128,12 +117,10 @@ fn test_gitignore_no_gitignore_file_present() {
     let original_cwd = std::env::current_dir().unwrap();
     std::env::set_current_dir(dir.path()).unwrap();
 
-    // No .gitignore file is created. PathProtection::new() should succeed.
     let protection_result = PathProtection::new();
     assert!(protection_result.is_ok());
     let protection = protection_result.unwrap();
 
-    // With no rules, no files should be blocked by the gitignore matcher.
     assert!(protection.validate(&PathBuf::from("any/file.txt")).is_ok());
     assert!(protection.validate(&PathBuf::from("another.log")).is_ok());
 

@@ -5,8 +5,6 @@ use std::fs;
 use std::path::PathBuf;
 use tempfile::tempdir;
 
-// --- Tests for apply_updates (File System Operations) ---
-
 #[test]
 fn test_apply_updates_create_new_file() {
     let dir = tempdir().unwrap();
@@ -112,8 +110,6 @@ fn test_apply_updates_create_nested_directory() {
     std::env::set_current_dir(original_cwd).unwrap();
 }
 
-// --- Tests for PathProtection (Validation Logic) ---
-
 #[test]
 fn test_validate_path_valid() {
     let protection = PathProtection::new().unwrap();
@@ -164,8 +160,6 @@ fn test_validate_path_forbidden_dir() {
         .to_string()
         .contains("Modification of directory '.git/' is not allowed."));
 
-    // The logs/ directory is no longer protected at this level, as logs are
-    // now in agent-config/ which is protected.
     assert!(protection
         .validate(&PathBuf::from("logs/2023-01-01/query.txt"))
         .is_ok());
@@ -181,7 +175,6 @@ fn test_validate_path_forbidden_file() {
         .to_string()
         .contains("Modification of critical file 'build.sh' is not allowed."));
 
-    // a top-level query.txt should be modifiable now
     assert!(protection.validate(&PathBuf::from("query.txt")).is_ok());
 }
 
@@ -191,27 +184,21 @@ fn test_validate_path_with_gitignore() {
     let original_cwd = std::env::current_dir().unwrap();
     std::env::set_current_dir(dir.path()).unwrap();
 
-    // Create a temporary .gitignore file
     let gitignore_content = "# Ignore secrets\nsecrets.txt\n\n# Ignore temp files\n*.tmp\n";
     fs::write(".gitignore", gitignore_content).unwrap();
 
-    // Now, PathProtection will read this .gitignore
     let protection = PathProtection::new().unwrap();
 
-    // Test a file that is explicitly ignored
     let result1 = protection.validate(&PathBuf::from("secrets.txt"));
     assert!(matches!(result1, Err(AppError::FileUpdate(_))));
     assert!(result1.unwrap_err().to_string().contains("secrets.txt"));
 
-    // Test a file that matches a pattern
     let result2 = protection.validate(&PathBuf::from("data/user.tmp"));
     assert!(matches!(result2, Err(AppError::FileUpdate(_))));
     assert!(result2.unwrap_err().to_string().contains(".tmp"));
 
-    // Test a file that is not ignored
     assert!(protection.validate(&PathBuf::from("src/main.rs")).is_ok());
 
-    // Cleanup: change back to original directory
     std::env::set_current_dir(original_cwd).unwrap();
 }
 
@@ -219,7 +206,6 @@ fn test_validate_path_with_gitignore() {
 fn test_forbid_modifying_gitignore_and_agent_config_dir() {
     let protection = PathProtection::new().unwrap();
 
-    // .gitignore must not be modifiable
     let result_gitignore = protection.validate(&PathBuf::from(".gitignore"));
     assert!(matches!(result_gitignore, Err(AppError::FileUpdate(_))));
     assert!(result_gitignore
@@ -227,12 +213,10 @@ fn test_forbid_modifying_gitignore_and_agent_config_dir() {
         .to_string()
         .contains("Modification of critical file '.gitignore' is not allowed."));
 
-    // A 'config' directory should now be allowed
     assert!(protection
         .validate(&PathBuf::from("config/settings.yaml"))
         .is_ok());
 
-    // Root-level agent-config directory must be protected
     let result_agent_config_dir = protection.validate(&PathBuf::from("agent-config/settings.yaml"));
     assert!(matches!(
         result_agent_config_dir,
@@ -243,7 +227,6 @@ fn test_forbid_modifying_gitignore_and_agent_config_dir() {
         .to_string()
         .contains("Modification of directory 'agent-config/' is not allowed."));
 
-    // A similarly-named path nested elsewhere should be allowed
     assert!(protection.validate(&PathBuf::from("src/config.rs")).is_ok());
 }
 

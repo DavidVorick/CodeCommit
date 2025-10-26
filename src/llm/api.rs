@@ -14,7 +14,6 @@ pub(crate) struct GeminiClient {
 }
 
 impl GeminiClient {
-    /// Construct a new Gemini client with the given API key.
     pub(crate) fn new(api_key: String) -> Self {
         Self {
             client: Client::new(),

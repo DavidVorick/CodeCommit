@@ -53,7 +53,7 @@ async fn run() -> Result<(), AppError> {
     let logger = logger::Logger::new(logger_suffix)?;
 
     let result = match cli_args.workflow {
-        Workflow::CommitCode => run_commit_code(&logger, cli_args).await,
+        Workflow::CommitCode => run_iterative_workflow(&logger, cli_args).await,
         Workflow::ConsistencyCheck => run_consistency_check(&logger, cli_args).await,
     };
 
@@ -124,10 +124,6 @@ async fn run_iterative_workflow(
 
     println!("Build did not pass after {MAX_ATTEMPTS} attempts. Aborting.");
     Err(AppError::MaxAttemptsReached)
-}
-
-async fn run_commit_code(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppError> {
-    run_iterative_workflow(logger, cli_args).await
 }
 
 async fn run_consistency_check(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppError> {

@@ -18,11 +18,8 @@ mod file_updater_test;
 mod response_parser_test;
 
 use crate::app_error::AppError;
-use crate::cli::{CliArgs, Model, Workflow};
+use crate::cli::{CliArgs, Workflow};
 use crate::config::Config;
-use crate::llm::api::{GeminiClient, GptClient, LlmApiClient};
-use crate::llm::caller::call_llm_and_log;
-use serde_json::json;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -72,10 +69,6 @@ async fn run_iterative_workflow(
     cli_args: CliArgs,
 ) -> Result<(), AppError> {
     let config = Config::load(cli_args)?;
-    let llm_client = match config.model {
-        Model::Gemini2_5Pro => LlmApiClient::Gemini(GeminiClient::new(config.api_key.clone())),
-        Model::Gpt5 => LlmApiClient::Gpt(GptClient::new(config.api_key.clone())),
-    };
 
     let mut last_build_output: Option<String> = None;
     let mut cumulative_updates: HashMap<PathBuf, Option<String>> = HashMap::new();
@@ -96,17 +89,14 @@ async fn run_iterative_workflow(
         };
         let log_prefix = format!("{attempt}-{name_part}");
 
-        logger.log_text(&format!("{log_prefix}-query.txt"), &prompt)?;
-        let request_body = llm_client.build_request_body(&prompt);
-        let url = llm_client.get_url();
-        let log_body = json!({
-            "url": url,
-            "body": &request_body
-        });
-        logger.log_json(&format!("{log_prefix}-query.json"), &log_body)?;
-
-        let response_text =
-            call_llm_and_log(&llm_client, &request_body, logger, &log_prefix).await?;
+        let response_text = llm::query(
+            config.model,
+            config.api_key.clone(),
+            &prompt,
+            logger,
+            &log_prefix,
+        )
+        .await?;
 
         println!("Parsing LLM response and applying file updates...");
         let updates = response_parser::parse_llm_response(&response_text)?;
@@ -143,24 +133,18 @@ async fn run_commit_code(logger: &logger::Logger, cli_args: CliArgs) -> Result<(
 async fn run_consistency_check(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppError> {
     println!("Starting consistency check workflow...");
     let config = Config::load(cli_args)?;
-    let llm_client = match config.model {
-        Model::Gemini2_5Pro => LlmApiClient::Gemini(GeminiClient::new(config.api_key.clone())),
-        Model::Gpt5 => LlmApiClient::Gpt(GptClient::new(config.api_key.clone())),
-    };
 
     let prompt = config.build_initial_prompt();
     let log_prefix = "1-consistency-check";
-    logger.log_text(&format!("{log_prefix}-query.txt"), &prompt)?;
 
-    let request_body = llm_client.build_request_body(&prompt);
-    let url = llm_client.get_url();
-    let log_body = json!({
-        "url": url,
-        "body": &request_body
-    });
-    logger.log_json(&format!("{log_prefix}-query.json"), &log_body)?;
-
-    let response_text = call_llm_and_log(&llm_client, &request_body, logger, log_prefix).await?;
+    let response_text = llm::query(
+        config.model,
+        config.api_key.clone(),
+        &prompt,
+        logger,
+        log_prefix,
+    )
+    .await?;
 
     println!("Writing consistency report...");
     let report_dir = PathBuf::from("agent-config");

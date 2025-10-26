@@ -8,21 +8,21 @@ const GEMINI_MODEL_NAME: &str = "gemini-2.5-pro";
 const GPT_API_URL: &str = "https://api.openai.com/v1/chat/completions";
 const GPT_MODEL_NAME: &str = "gpt-5";
 
-pub struct GeminiClient {
+pub(crate) struct GeminiClient {
     client: Client,
     api_key: String,
 }
 
 impl GeminiClient {
     /// Construct a new Gemini client with the given API key.
-    pub fn new(api_key: String) -> Self {
+    pub(crate) fn new(api_key: String) -> Self {
         Self {
             client: Client::new(),
             api_key,
         }
     }
 
-    pub async fn query(&self, request_body: &Value) -> Result<Value, AppError> {
+    pub(crate) async fn query(&self, request_body: &Value) -> Result<Value, AppError> {
         let url = GEMINI_API_URL_BASE;
 
         let resp = self
@@ -39,20 +39,20 @@ impl GeminiClient {
     }
 }
 
-pub struct GptClient {
+pub(crate) struct GptClient {
     client: Client,
     api_key: String,
 }
 
 impl GptClient {
-    pub fn new(api_key: String) -> Self {
+    pub(crate) fn new(api_key: String) -> Self {
         Self {
             client: Client::new(),
             api_key,
         }
     }
 
-    pub async fn query(&self, request_body: &Value) -> Result<Value, AppError> {
+    pub(crate) async fn query(&self, request_body: &Value) -> Result<Value, AppError> {
         let resp = self
             .client
             .post(GPT_API_URL)
@@ -67,27 +67,27 @@ impl GptClient {
     }
 }
 
-pub enum LlmApiClient {
+pub(crate) enum LlmApiClient {
     Gemini(GeminiClient),
     Gpt(GptClient),
 }
 
 impl LlmApiClient {
-    pub fn get_model_name(&self) -> &'static str {
+    pub(crate) fn get_model_name(&self) -> &'static str {
         match self {
             LlmApiClient::Gemini(_) => GEMINI_MODEL_NAME,
             LlmApiClient::Gpt(_) => GPT_MODEL_NAME,
         }
     }
 
-    pub fn get_url(&self) -> &'static str {
+    pub(crate) fn get_url(&self) -> &'static str {
         match self {
             LlmApiClient::Gemini(_) => GEMINI_API_URL_BASE,
             LlmApiClient::Gpt(_) => GPT_API_URL,
         }
     }
 
-    pub fn build_request_body(&self, prompt: &str) -> Value {
+    pub(crate) fn build_request_body(&self, prompt: &str) -> Value {
         match self {
             LlmApiClient::Gemini(_) => json!({
                 "contents": [{
@@ -109,14 +109,14 @@ impl LlmApiClient {
         }
     }
 
-    pub async fn query(&self, request_body: &Value) -> Result<Value, AppError> {
+    pub(crate) async fn query(&self, request_body: &Value) -> Result<Value, AppError> {
         match self {
             LlmApiClient::Gemini(c) => c.query(request_body).await,
             LlmApiClient::Gpt(c) => c.query(request_body).await,
         }
     }
 
-    pub fn extract_text_from_response(&self, response: &Value) -> Result<String, AppError> {
+    pub(crate) fn extract_text_from_response(&self, response: &Value) -> Result<String, AppError> {
         match self {
             LlmApiClient::Gemini(_) => extract_text_from_gemini_response(response),
             LlmApiClient::Gpt(_) => extract_text_from_gpt_response(response),
@@ -169,7 +169,7 @@ async fn handle_json_response(resp: reqwest::Response, api_key: &str) -> Result<
     })
 }
 
-pub fn extract_text_from_gemini_response(response: &Value) -> Result<String, AppError> {
+pub(crate) fn extract_text_from_gemini_response(response: &Value) -> Result<String, AppError> {
     let parts_array = response
         .get("candidates")
         .and_then(|c| c.as_array())
@@ -199,7 +199,7 @@ pub fn extract_text_from_gemini_response(response: &Value) -> Result<String, App
     Ok(text_segments.join(""))
 }
 
-pub fn extract_text_from_gpt_response(response: &Value) -> Result<String, AppError> {
+pub(crate) fn extract_text_from_gpt_response(response: &Value) -> Result<String, AppError> {
     let content = response
         .get("choices")
         .and_then(|c| c.as_array())

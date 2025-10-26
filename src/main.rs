@@ -1,9 +1,9 @@
 mod app_error;
 mod cli;
-mod codebase_assembler;
 mod committing_code;
 mod config;
 mod consistency;
+mod context_builder;
 mod llm;
 mod logger;
 mod system_prompts;

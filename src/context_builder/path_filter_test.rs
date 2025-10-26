@@ -1,27 +1,23 @@
-use super::context_path_filter::ContextPathFilter;
+use super::path_filter::PathFilter;
 use crate::app_error::AppError;
 use std::fs;
 use std::path::PathBuf;
 use tempfile::tempdir;
 
-/// Create a temp dir, write a `.gitignore`, build a filter from that directory,
-/// then return both so tests can validate behavior deterministically.
-fn setup_test_env(gitignore_content: &str) -> (tempfile::TempDir, ContextPathFilter) {
+fn setup_test_env(gitignore_content: &str) -> (tempfile::TempDir, PathFilter) {
     let dir = tempdir().unwrap();
     fs::write(dir.path().join(".gitignore"), gitignore_content).unwrap();
 
     let original_cwd = std::env::current_dir().expect("cwd");
     std::env::set_current_dir(dir.path()).unwrap();
 
-    let filter = ContextPathFilter::new().unwrap();
+    let filter = PathFilter::new().unwrap();
 
     std::env::set_current_dir(original_cwd).unwrap();
     (dir, filter)
 }
 
 #[test]
-/// Ensure typical non-ignored project control files (like LLMInstructions.md)
-/// are allowed to be included in context.
 fn test_allows_llminstructions_not_ignored() {
     let (_dir, filter) = setup_test_env("/agent-config\n/target/\n");
     assert!(filter
@@ -30,7 +26,6 @@ fn test_allows_llminstructions_not_ignored() {
 }
 
 #[test]
-/// A simple filename in .gitignore must be excluded from context.
 fn test_gitignore_simple_filename() {
     let (_dir, filter) = setup_test_env("secrets.txt");
     let res = filter.validate(&PathBuf::from("secrets.txt"));
@@ -39,7 +34,6 @@ fn test_gitignore_simple_filename() {
 }
 
 #[test]
-/// Wildcard extensions should be respected for exclusion.
 fn test_gitignore_wildcard_extension() {
     let (_dir, filter) = setup_test_env("*.log");
 
@@ -53,19 +47,16 @@ fn test_gitignore_wildcard_extension() {
 }
 
 #[test]
-/// Ignored directories (trailing slash) should be excluded recursively.
 fn test_gitignore_ignored_directory() {
     let (_dir, filter) = setup_test_env("/target/");
 
     let r = filter.validate(&PathBuf::from("target/debug/app"));
     assert!(matches!(r, Err(AppError::FileUpdate(_))));
 
-    // Not ignored when 'target' is a non-root nested folder name.
     assert!(filter.validate(&PathBuf::from("src/target/mod.rs")).is_ok());
 }
 
 #[test]
-/// Negation rules ('!') should whitelist specific files.
 fn test_gitignore_negation_rule() {
     let content = "# Ignore logs\n*.log\n# except this one\n!important.log";
     let (_dir, filter) = setup_test_env(content);
@@ -77,7 +68,6 @@ fn test_gitignore_negation_rule() {
 }
 
 #[test]
-/// Root-anchored rules apply only at repository root.
 fn test_gitignore_root_specific_rule() {
     let (_dir, filter) = setup_test_env("/config.yaml");
 
@@ -88,7 +78,6 @@ fn test_gitignore_root_specific_rule() {
 }
 
 #[test]
-/// Recursive wildcard directory patterns should block all matching subtrees.
 fn test_gitignore_recursive_wildcard_directory() {
     let (_dir, filter) = setup_test_env("**/temp/");
 
@@ -107,14 +96,12 @@ fn test_gitignore_recursive_wildcard_directory() {
 }
 
 #[test]
-/// If there's no .gitignore, the filter should permit everything that passes the
-/// basic path-safety checks.
 fn test_no_gitignore_file_present() {
     let dir = tempdir().unwrap();
     let original_cwd = std::env::current_dir().unwrap();
     std::env::set_current_dir(dir.path()).unwrap();
 
-    let filter = ContextPathFilter::new().unwrap();
+    let filter = PathFilter::new().unwrap();
 
     assert!(filter.validate(&PathBuf::from("any/file.txt")).is_ok());
     assert!(filter.validate(&PathBuf::from("another.log")).is_ok());
@@ -123,7 +110,6 @@ fn test_no_gitignore_file_present() {
 }
 
 #[test]
-/// Basic path-safety checks should still apply for context reads.
 fn test_absolute_and_traversal_blocked() {
     let (_dir, filter) = setup_test_env("");
 

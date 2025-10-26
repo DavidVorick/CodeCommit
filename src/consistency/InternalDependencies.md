@@ -6,13 +6,13 @@ This document lists all APIs that the `consistency` module uses from other modul
 
 - Uses the `CliArgs` struct as input to the workflow.
 
-## `codebase_assembler` module
-
-- `codebase_assembler::assemble_codebase() -> Result<String, AppError>`
-
 ## `config` module
 
 - `config::Config::load(args: &CliArgs) -> Result<Config, AppError>`
+
+## `context_builder` module
+
+- `context_builder::build_codebase_context(config: &config::Config, logger: &logger::Logger) -> Result<String, AppError>`
 
 ## `llm` module
 
@@ -20,7 +20,7 @@ This document lists all APIs that the `consistency` module uses from other modul
 
 ## `logger` module
 
-The `logger` module's `Logger` struct is passed to other modules, but no `Logger` methods are directly called.
+- `logger::Logger::log_text(&self, file_name: &str, content: &str) -> Result<(), AppError>`
 
 ## `system_prompts` module
 

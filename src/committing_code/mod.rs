@@ -1,24 +1,21 @@
 mod build_runner;
-mod context_builder;
-mod context_path_filter;
 mod file_updater;
-mod response_parser; // NEW: separate allowlist for context reads
+mod response_parser;
 
-#[cfg(test)]
-mod context_path_filter_test;
 #[cfg(test)]
 mod file_updater_gitignore_tests;
 #[cfg(test)]
-mod file_updater_test; // NEW: tests for context filter
+mod file_updater_test;
 
 use crate::app_error::AppError;
 use crate::cli::CliArgs;
 use crate::config::Config;
+use crate::context_builder;
 use crate::llm;
 use crate::logger;
 use crate::system_prompts::{
-    CODE_MODIFICATION_INSTRUCTIONS, COMMITTING_CODE_CONTEXT_QUERY, COMMITTING_CODE_INITIAL_QUERY,
-    COMMITTING_CODE_REFACTOR_QUERY, COMMITTING_CODE_REPAIR_QUERY, PROJECT_STRUCTURE,
+    CODE_MODIFICATION_INSTRUCTIONS, COMMITTING_CODE_INITIAL_QUERY, COMMITTING_CODE_REFACTOR_QUERY,
+    COMMITTING_CODE_REPAIR_QUERY, PROJECT_STRUCTURE,
 };
 use file_updater as file_updater_impl;
 use response_parser as response_parser_impl;
@@ -31,7 +28,7 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
     let config = Config::load(&cli_args)?;
 
     println!("Building codebase context for LLM...");
-    let codebase = build_codebase(&config, logger).await?;
+    let codebase = context_builder::build_codebase_context(&config, logger).await?;
     logger.log_text("codebase.txt", &codebase)?;
 
     let mut last_build_output: Option<String> = None;
@@ -91,49 +88,6 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
 
     println!("Build did not pass after {MAX_ATTEMPTS} attempts. Aborting.");
     Err(AppError::MaxAttemptsReached)
-}
-
-async fn build_codebase(config: &Config, logger: &logger::Logger) -> Result<String, AppError> {
-    let codebase_summary = context_builder::build_codebase_summary()?;
-
-    let prompt = format!(
-        "{}\n{}\n[user query]\n{}\n[codebase summary]\n{}",
-        PROJECT_STRUCTURE, COMMITTING_CODE_CONTEXT_QUERY, config.query, codebase_summary
-    );
-
-    let response_text = llm::query(
-        config.model,
-        config.api_key.clone(),
-        &prompt,
-        logger,
-        "0-context-query",
-    )
-    .await?;
-
-    let file_paths = response_parser_impl::parse_context_llm_response(&response_text)?;
-
-    // IMPORTANT: Use a permissive filter for *reading* context.
-    // Only enforce .gitignore + basic path safety; do NOT reuse modification rules.
-    let filter = context_path_filter::ContextPathFilter::new()?;
-    let mut codebase = String::new();
-    for path in file_paths {
-        filter.validate(&path)?;
-        let content = std::fs::read_to_string(&path).map_err(|e| {
-            AppError::FileUpdate(format!(
-                "Failed to read file for codebase {}: {}",
-                path.display(),
-                e
-            ))
-        })?;
-        codebase.push_str(&format!("--- {} ---\n", path.display()));
-        codebase.push_str(&content);
-        if !content.ends_with('\n') {
-            codebase.push('\n');
-        }
-        codebase.push('\n');
-    }
-
-    Ok(codebase)
 }
 
 fn build_initial_prompt(config: &Config, cli_args: &CliArgs, codebase: &str) -> String {

@@ -9,7 +9,7 @@ fn read_and_format_file(path: &Path) -> Result<String, AppError> {
     Ok(format!("--- {} ---\n{}\n\n", path.display(), content))
 }
 
-pub(crate) fn build_codebase_summary() -> Result<String, AppError> {
+pub(crate) fn build_summary() -> Result<String, AppError> {
     let mut summary = String::new();
 
     let root_files_to_include = [

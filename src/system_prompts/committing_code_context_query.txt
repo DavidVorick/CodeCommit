@@ -1,0 +1,12 @@
+You are about to be provided with a query that contains a request to modify a
+codebase. After that, you will be provided with a bunch of code filenames
+followed by some module documentation files.
+
+You will then be provided with the relevant pieces of the codebase.
+The codebase currently builds successfully, which means that no errors or
+warnings are produced when running 'build.sh'. Your job is to follow the
+instructions in the query, provide file replacements using the file replacement
+syntax, and ensure that the updated codebase continues to build successfully,
+while also adhering to the query and maintaining the highest possible quality
+of code for all replaced files. If the codebase contains an LLMInstructions
+file, please follow all of the directions in that file.

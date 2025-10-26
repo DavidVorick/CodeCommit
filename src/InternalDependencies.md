@@ -2,9 +2,13 @@
 
 This document lists all APIs that the top-level `src` code (e.g., `main.rs`, `config.rs`) uses from other modules within this project.
 
-## `llm` module
+## `committing_code` module
 
-- `llm::query(model: Model, api_key: String, prompt: &str, logger: &Logger, log_prefix: &str) -> Result<String, AppError>`
+- `committing_code::run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppError>`
+
+## `consistency` module
+
+- `consistency::run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppError>`
 
 ## `logger` module
 

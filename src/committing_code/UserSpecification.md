@@ -17,31 +17,102 @@ that follows these steps:
 The build is considered to be passing if and only if build.sh exits with an
 error code of 0.
 
+## Building the Context
+
+To build the context for the LLM that requests code modifications, a
+preprocessing LLM is used. 
+
+### Preprocessing LLM Call
+
+This LLM will be given a prompt with the following
+format:
+
+[project structure system prompt]
+[context query system prompt]
+[user query]
+[codebase summary]
+
+The codebase summary will contain the following files:
+
++ the full file for the top level build.sh, Cargo.toml, LLMInstructions.md, and UserSpecification.md
++ all of the filenames of all of the top level files, including names of all the top level files in src/
++ for each module, the following will be provided:
+	+ the full InternalDependencies.md file
+	+ the full PublicAPI.md file
+	+ a list of the names of all files in the module, including documentation files
+
+Full files will be provided with the following syntax:
+
+```
+--- [filepath] ---
+[file data]
+```
+
+And lists of filenames will be provided with the following syntax:
+
+```
+--- FILENAMES ---
+src/example1.rs
+src/module/PublicAPI.md
+--- END FILENAMES ---
+```
+
+Note that the full filepath from the top level of the project is provided for
+each file and filename.
+
+### Parsing the LLM Response
+
+The LLM will provide a response that contains a list of files, structured like
+this:
+
+```
+%%%files
+LLMInstructions.md
+UserSpecification.md
+src/main.rs
+src/example_module/PublicAPI.md
+src/other_module/mod.rs
+src/other_module/InternalDependencies.md
+src/other_module/PublicAPI.md
+src/other_module/UserSpecification.md
+%%%end
+```
+
+Every file that appears in that list needs to be provided in full as a part of
+the codebase in the initial query. The list will be parsed, and each file will
+be presented with the following syntax:
+
+```
+--- [filepath] ---
+[file data]
+```
+
+This list of files becomes the codebase in the next step. This codebase is
+logged as 'codebase.txt' in the logs.
+
 ## The Initial Query
 
-In the first step, the binary builds context for an LLM that requests code
+For the initial query, the binary builds context for an LLM that requests code
 modifications, and then it calls the LLM to get a response. The initial prompt
 will have the following format:
 
 [project structure system prompt]
 [code modification instructions system prompt]
 [initial query system prompt]
-[query]
+[user query]
 [codebase]
 
 The system prompts can be found in the system-prompts module.
 
-The 'query' and the 'codebase' can both be found in the local project. It is
-assumed that the 'code-commit' binary will be stored alongside the local
-project as well, therefore the 'code-commit' binary should be able to find the
-'query' at 'agent-config/query.txt' and it should be able to find the codebase
-at 'agent-config/codeRollup.txt'.
+The 'query' can be found in the local project. It is assumed that the
+'code-commit' binary will be stored alongside the local project as well,
+therefore the 'code-commit' binary should be able to find the 'query' at
+'agent-config/query.txt'.
 
-The query file and the code rollup file will both be created by the supervisor.
-The query file will be hand-written, and the code rollup file will be created
-by running 'codeRollup.sh' - but the supervisor will handle that. If either the
-query file or the code rollup file are missing, then an error is returned and
-the program exits.
+The 'codebase' was generated in the previous step by a preprocessing LLM.
+
+The query file will be hand-written by the supervisor. If the query file is
+missing, then an error is returned and the program exits.
 
 The query is then sent to the LLM.
 
@@ -115,7 +186,7 @@ repair query has the following format:
 The repair query system prompt can be found in the system-prompts module.  The
 build.sh output is the entire output (including both stdout and stderr)
 provided when running build.sh. The query is the contents in query.txt (which
-have not been modified), the codebase is the codebase found in codeRollup.txt
+have not been modified), the codebase is the previously generated codebase
 (which has not been modified), and the file replacements are all of the files
 that got replaced by the system parser.
 

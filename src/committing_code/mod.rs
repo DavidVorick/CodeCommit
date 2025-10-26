@@ -2,6 +2,11 @@ mod build_runner;
 mod file_updater;
 mod response_parser;
 
+#[cfg(test)]
+mod file_updater_gitignore_tests;
+#[cfg(test)]
+mod file_updater_test;
+
 use crate::app_error::AppError;
 use crate::cli::CliArgs;
 use crate::config::Config;

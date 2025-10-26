@@ -11,8 +11,13 @@ use super::response_parser::FileUpdate;
 pub(crate) fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
     let protection_rules = PathProtection::new()?;
 
+    // First, validate all paths before making any changes.
     for update in updates {
         protection_rules.validate(&update.path)?;
+    }
+
+    // If all validations pass, apply the updates.
+    for update in updates {
         let path = update.path.clean();
 
         match &update.content {

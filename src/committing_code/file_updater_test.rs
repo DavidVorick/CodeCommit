@@ -253,3 +253,44 @@ fn test_validate_user_specification_md_is_forbidden_anywhere() {
     let unrelated_path = PathBuf::from("MyUserSpecification.md.bak");
     assert!(protection.validate(&unrelated_path).is_ok());
 }
+
+#[test]
+fn test_apply_updates_aborts_on_invalid_path_without_applying_changes() {
+    let dir = tempdir().unwrap();
+    let original_cwd = std::env::current_dir().unwrap();
+    std::env::set_current_dir(dir.path()).unwrap();
+
+    let valid_path1 = PathBuf::from("valid1.txt");
+    let invalid_path = PathBuf::from("build.sh"); // This is a protected file
+    let valid_path2 = PathBuf::from("valid2.txt");
+
+    let updates = vec![
+        FileUpdate {
+            path: valid_path1.clone(),
+            content: Some("content1".to_string()),
+        },
+        FileUpdate {
+            path: invalid_path,
+            content: Some("hacked".to_string()),
+        },
+        FileUpdate {
+            path: valid_path2.clone(),
+            content: Some("content2".to_string()),
+        },
+    ];
+
+    let result = apply_updates(&updates);
+    assert!(matches!(result, Err(AppError::FileUpdate(_))));
+
+    // Verify that NO files were created
+    assert!(
+        !valid_path1.exists(),
+        "First valid file should not be created"
+    );
+    assert!(
+        !valid_path2.exists(),
+        "Second valid file should not be created"
+    );
+
+    std::env::set_current_dir(original_cwd).unwrap();
+}

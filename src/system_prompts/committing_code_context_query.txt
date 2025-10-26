@@ -1,6 +1,20 @@
+(NOTE: This file is a work-in-progress by the user, ignore it and do not modify it)
+
 You are about to be provided with a query that contains a request to modify a
-codebase. After that, you will be provided with a bunch of code filenames
-followed by some module documentation files.
+codebase. After that, you will be provided with:
+
++ the top level UserSpecification.md
++ all of the filenames of all of the top level files, including the top level src/ files
++ some data related to each module, which includes:
+	+ the InternalDependencies.md file
+	+ the PublicAPI.md file
+	+ a list of the names of all files in the module, including documentation files
+
+Your task is a preprocessing task. Your job is to look at the query from the
+user, then look at all of the files and documentation in the codebase, and then
+determine which files need to be supplied as context to the LLM that will
+implement the user's request.
+
 
 You will then be provided with the relevant pieces of the codebase.
 The codebase currently builds successfully, which means that no errors or

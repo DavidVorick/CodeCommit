@@ -28,6 +28,7 @@ these projects are heavily scrutinized on a regular basis.
 
 Your report should cover all of the following things, broken apart by section:
 
++ (if needed) Response to the User's Query
 + User Specifications Overall Review
 + Key Inconsistencies and Mistakes in the User Specification
 + Minor Mistakes in the User Specification

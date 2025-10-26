@@ -3,14 +3,15 @@ use crate::cli::CliArgs;
 use crate::config::Config;
 use crate::llm;
 use crate::logger;
+use crate::system_prompts::{CONSISTENCY_CHECK, PROJECT_STRUCTURE};
 use std::fs;
 use std::path::PathBuf;
 
 pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppError> {
     println!("Starting consistency check workflow...");
-    let config = Config::load(cli_args)?;
+    let config = Config::load(&cli_args)?;
 
-    let prompt = config.build_initial_prompt();
+    let prompt = build_initial_prompt(&config);
     let log_prefix = "1-consistency-check";
 
     let response_text = llm::query(
@@ -31,4 +32,12 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
     println!("Consistency report written to {}", report_path.display());
 
     Ok(())
+}
+
+fn build_initial_prompt(config: &Config) -> String {
+    let system_prompt = format!("{PROJECT_STRUCTURE}\n{CONSISTENCY_CHECK}");
+    format!(
+        "{}\n[query]\n{}\n[codebase]\n{}",
+        system_prompt, config.query, config.code_rollup
+    )
 }

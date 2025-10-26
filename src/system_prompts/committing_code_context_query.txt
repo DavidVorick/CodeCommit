@@ -3,11 +3,11 @@
 You are about to be provided with a query that contains a request to modify a
 codebase. After that, you will be provided with:
 
-+ the top level UserSpecification.md
-+ all of the filenames of all of the top level files, including the top level src/ files
-+ some data related to each module, which includes:
-	+ the InternalDependencies.md file
-	+ the PublicAPI.md file
++ the top level build.sh, Cargo.toml, LLMInstructions.md, and UserSpecification.md
++ all of the filenames of all of the top level files, including names of all the top level files in src/
++ for each module, the following will be provided:
+	+ the full InternalDependencies.md file
+	+ the full PublicAPI.md file
 	+ a list of the names of all files in the module, including documentation files
 
 Your task is a preprocessing task. Your job is to look at the query from the

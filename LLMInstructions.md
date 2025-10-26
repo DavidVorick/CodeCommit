@@ -37,13 +37,6 @@ must always finish within 90 seconds.
 Tests must always be in their own file, and must be named using a `_test.rs`
 suffix.
 
-## Comments
-
-Code should be kept as clean and as minimal as possible, which also means that
-there should be minimal comments. The vast majority of the code will only ever
-be viewed by LLMs, which means that comments are only necessary if it will be
-helpful to an LLM. The majority of code will not need any comments at all.
-
 ## Rust Conventions
 
 All common rust idioms and best practices must be followed.

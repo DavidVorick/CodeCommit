@@ -4,5 +4,5 @@ This document lists all APIs that the `llm` module uses from other modules withi
 
 ## `logger` module
 
-- `logger::Logger::log_response_json(&self, prefix: &str, content: &Value) -> Result<(), AppError>`
-- `logger::Logger::log_response_text(&self, prefix: &str, content: &str) -> Result<(), AppError>`
+- `logger::Logger::log_text(&self, file_name: &str, content: &str) -> Result<(), AppError>`
+- `logger::Logger::log_json(&self, file_name: &str, content: &Value) -> Result<(), AppError>`

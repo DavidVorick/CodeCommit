@@ -14,9 +14,5 @@ This document lists all APIs that the top-level `src` code (e.g., `main.rs`, `co
 ## `logger` module
 
 - `logger::Logger::new(suffix: &str) -> Result<Self, AppError>`
-- `logger::Logger::log_query_text(&self, prefix: &str, content: &str) -> Result<(), AppError>`
-- `logger::Logger::log_query_json(&self, prefix: &str, content: &Value) -> Result<(), AppError>`
-- `logger::Logger::log_response_json(&self, prefix: &str, content: &Value) -> Result<(), AppError>`
-- `logger::Logger::log_response_text(&self, prefix: &str, content: &str) -> Result<(), AppError>`
-- `logger::Logger::log_build_output(&self, prefix: &str, content: &str) -> Result<(), AppError>`
-- `logger::Logger::log_final_error(&self, error: &AppError) -> Result<(), std::io::Error>`
+- `logger::Logger::log_text(&self, file_name: &str, content: &str) -> Result<(), AppError>`
+- `logger::Logger::log_json(&self, file_name: &str, content: &Value) -> Result<(), AppError>`

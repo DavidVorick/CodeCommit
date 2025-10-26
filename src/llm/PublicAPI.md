@@ -15,6 +15,7 @@ This document enumerates the full public API of the `llm` module.
 ### `enum LlmApiClient`
 - `Gemini(GeminiClient)`
 - `Gpt(GptClient)`
+- `get_model_name(&self) -> &'static str`
 - `get_url(&self) -> &'static str`
 - `build_request_body(&self, prompt: &str) -> Value`
 - `query(&self, request_body: &Value) -> Result<Value, AppError>`

@@ -16,7 +16,7 @@ pub async fn call_llm_and_log(
 
     println!(
         "LLM call to {} took {:.3}s",
-        llm_client.get_url(),
+        llm_client.get_model_name(),
         duration.as_secs_f64()
     );
 
@@ -25,9 +25,9 @@ pub async fn call_llm_and_log(
         Err(e) => {
             let error_json =
                 json!({ "error": e.to_string(), "totalResponseTime": duration.as_millis() });
-            logger.log_response_json(log_prefix, &error_json)?;
+            logger.log_json(&format!("{log_prefix}-response.json"), &error_json)?;
             let error_msg = format!("ERROR\n{e}");
-            logger.log_response_text(log_prefix, &error_msg)?;
+            logger.log_text(&format!("{log_prefix}-response.txt"), &error_msg)?;
             return Err(e);
         }
     };
@@ -41,17 +41,17 @@ pub async fn call_llm_and_log(
             "totalResponseTime": duration.as_millis(),
         });
     }
-    logger.log_response_json(log_prefix, &logged_response)?;
+    logger.log_json(&format!("{log_prefix}-response.json"), &logged_response)?;
 
     let response_text = match llm_client.extract_text_from_response(&response_json) {
         Ok(text) => text,
         Err(e) => {
             let error_msg = format!("ERROR\n{e}");
-            logger.log_response_text(log_prefix, &error_msg)?;
+            logger.log_text(&format!("{log_prefix}-response.txt"), &error_msg)?;
             return Err(e);
         }
     };
-    logger.log_response_text(log_prefix, &response_text)?;
+    logger.log_text(&format!("{log_prefix}-response.txt"), &response_text)?;
 
     Ok(response_text)
 }

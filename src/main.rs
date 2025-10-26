@@ -61,7 +61,7 @@ async fn run() -> Result<(), AppError> {
     };
 
     if let Err(e) = &result {
-        let _ = logger.log_final_error(e);
+        let _ = logger.log_text("final_error.txt", &e.to_string());
     }
 
     result
@@ -96,14 +96,14 @@ async fn run_iterative_workflow(
         };
         let log_prefix = format!("{attempt}-{name_part}");
 
-        logger.log_query_text(&log_prefix, &prompt)?;
+        logger.log_text(&format!("{log_prefix}-query.txt"), &prompt)?;
         let request_body = llm_client.build_request_body(&prompt);
         let url = llm_client.get_url();
         let log_body = json!({
             "url": url,
             "body": &request_body
         });
-        logger.log_query_json(&log_prefix, &log_body)?;
+        logger.log_json(&format!("{log_prefix}-query.json"), &log_body)?;
 
         let response_text =
             call_llm_and_log(&llm_client, &request_body, logger, &log_prefix).await?;
@@ -120,12 +120,12 @@ async fn run_iterative_workflow(
         println!("Running build script...");
         match build_runner::run() {
             Ok(output) => {
-                logger.log_build_output(&log_prefix, &output)?;
+                logger.log_text(&format!("{log_prefix}-build.txt"), &output)?;
                 println!("Build successful!");
                 return Ok(());
             }
             Err(build_failure) => {
-                logger.log_build_output(&log_prefix, &build_failure.output)?;
+                logger.log_text(&format!("{log_prefix}-build.txt"), &build_failure.output)?;
                 println!("Build failed. Preparing for repair attempt...");
                 last_build_output = Some(build_failure.output);
             }
@@ -150,7 +150,7 @@ async fn run_consistency_check(logger: &logger::Logger, cli_args: CliArgs) -> Re
 
     let prompt = config.build_initial_prompt();
     let log_prefix = "1-consistency-check";
-    logger.log_query_text(log_prefix, &prompt)?;
+    logger.log_text(&format!("{log_prefix}-query.txt"), &prompt)?;
 
     let request_body = llm_client.build_request_body(&prompt);
     let url = llm_client.get_url();
@@ -158,7 +158,7 @@ async fn run_consistency_check(logger: &logger::Logger, cli_args: CliArgs) -> Re
         "url": url,
         "body": &request_body
     });
-    logger.log_query_json(log_prefix, &log_body)?;
+    logger.log_json(&format!("{log_prefix}-query.json"), &log_body)?;
 
     let response_text = call_llm_and_log(&llm_client, &request_body, logger, log_prefix).await?;
 

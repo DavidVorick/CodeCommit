@@ -266,5 +266,5 @@ calls the LLM to get a response. The prompt will have the following format:
 [query]
 [codebase]
 
-The query is then sent to the LLM, and the text response is recoreded in
+The query is then sent to the LLM, and the text response is recorded in
 agent-config/consistency-report.txt.

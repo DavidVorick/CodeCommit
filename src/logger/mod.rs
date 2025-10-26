@@ -25,41 +25,16 @@ impl Logger {
         self.log_dir.join(file_name)
     }
 
-    pub fn log_query_text(&self, prefix: &str, content: &str) -> Result<(), AppError> {
-        let path = self.path_for(&format!("{prefix}-query.txt"));
+    pub fn log_text(&self, file_name: &str, content: &str) -> Result<(), AppError> {
+        let path = self.path_for(file_name);
         fs::write(path, content)?;
         Ok(())
     }
 
-    pub fn log_query_json(&self, prefix: &str, content: &Value) -> Result<(), AppError> {
-        let path = self.path_for(&format!("{prefix}-query.json"));
+    pub fn log_json(&self, file_name: &str, content: &Value) -> Result<(), AppError> {
+        let path = self.path_for(file_name);
         let pretty_json = serde_json::to_string_pretty(content)?;
         fs::write(path, pretty_json)?;
         Ok(())
-    }
-
-    pub fn log_response_json(&self, prefix: &str, content: &Value) -> Result<(), AppError> {
-        let path = self.path_for(&format!("{prefix}-response.json"));
-        let pretty_json = serde_json::to_string_pretty(content)?;
-        fs::write(path, pretty_json)?;
-        Ok(())
-    }
-
-    pub fn log_response_text(&self, prefix: &str, content: &str) -> Result<(), AppError> {
-        let path = self.path_for(&format!("{prefix}-response.txt"));
-        fs::write(path, content)?;
-        Ok(())
-    }
-
-    pub fn log_build_output(&self, prefix: &str, content: &str) -> Result<(), AppError> {
-        let filename = format!("{prefix}-build.txt");
-        let path = self.path_for(&filename);
-        fs::write(path, content)?;
-        Ok(())
-    }
-
-    pub fn log_final_error(&self, error: &AppError) -> Result<(), std::io::Error> {
-        let path = self.path_for("final_error.txt");
-        fs::write(path, error.to_string())
     }
 }

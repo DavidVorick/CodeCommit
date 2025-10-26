@@ -4,6 +4,7 @@ use serde_json::{json, Value};
 
 const GEMINI_API_URL_BASE: &str =
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent";
+const GEMINI_MODEL_NAME: &str = "gemini-2.5-pro";
 const GPT_API_URL: &str = "https://api.openai.com/v1/chat/completions";
 const GPT_MODEL_NAME: &str = "gpt-5";
 
@@ -72,6 +73,13 @@ pub enum LlmApiClient {
 }
 
 impl LlmApiClient {
+    pub fn get_model_name(&self) -> &'static str {
+        match self {
+            LlmApiClient::Gemini(_) => GEMINI_MODEL_NAME,
+            LlmApiClient::Gpt(_) => GPT_MODEL_NAME,
+        }
+    }
+
     pub fn get_url(&self) -> &'static str {
         match self {
             LlmApiClient::Gemini(_) => GEMINI_API_URL_BASE,

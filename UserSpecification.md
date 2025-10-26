@@ -56,6 +56,9 @@ The user can optionally provide guidance for the consistency workflow by
 writing their own query in agent-config/consistency-query.txt - if none is
 provided, an empty string will be used.
 
+The output of the consistency check will be placed in
+agent-config/consistency-report.txt
+
 ## LLMs
 
 CodeCommit supports multiple LLMs. The default LLM is gemini-2.5-pro, and other

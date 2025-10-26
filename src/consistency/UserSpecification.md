@@ -17,3 +17,12 @@ calls the LLM to get a response. The prompt will have the following format:
 
 The query is then sent to the LLM, and the text response is recorded in
 agent-config/consistency-report.txt.
+
+The system prompts can both be found in the `system_prompts` modules, the query
+can be found in agent-config/consistency-query.txt, and the codebase is built
+using the `context_builder` module.
+
+The `context_builder` module needs the whole rest of the prompt as input
+(everything from the project structure system prompt to the query) so that it
+can accurately identify which context is necessary to successfully complete the
+consistency report.

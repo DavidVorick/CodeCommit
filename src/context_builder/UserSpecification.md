@@ -13,11 +13,11 @@ This LLM will be given a prompt with the following
 format:
 
 [context query system prompt]
-[next agent system prompts]
+[next agent full prompt]
 [codebase summary]
 
 The context query system prompt can be found in the `system_prompts` module.
-The next agent system prompt is provided as input to the caller that is
+The next agent full prompt is provided as input to the caller that is
 requesting a custom context.
 
 The codebase summary will contain the following files:

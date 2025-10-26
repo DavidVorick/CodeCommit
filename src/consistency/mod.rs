@@ -4,7 +4,7 @@ use crate::config::Config;
 use crate::context_builder;
 use crate::llm;
 use crate::logger::Logger;
-use crate::system_prompts::{CONSISTENCY_CHECK, PROJECT_STRUCTURE};
+use std::fs;
 
 pub async fn run(logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
     let config = Config::load(&cli_args)?;
@@ -15,8 +15,8 @@ pub async fn run(logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
 
     println!("Running consistency check...");
     let prompt = format!(
-        "{}\n{}\n[user query]\n{}\n[codebase]\n{}",
-        PROJECT_STRUCTURE, CONSISTENCY_CHECK, config.query, codebase
+        "{}\n[user query]\n{}\n[codebase]\n{}",
+        config.system_prompts, config.query, codebase
     );
 
     let report = llm::query(
@@ -27,6 +27,10 @@ pub async fn run(logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
         "consistency-check",
     )
     .await?;
+
+    let output_path = "agent-config/consistency-report.txt";
+    fs::write(output_path, &report)?;
+    println!("\nConsistency check report saved to {output_path}");
 
     println!("\nConsistency Check Report:\n");
     println!("{report}");

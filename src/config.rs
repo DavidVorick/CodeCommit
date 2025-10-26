@@ -1,5 +1,9 @@
 use crate::app_error::AppError;
 use crate::cli::{CliArgs, Model, Workflow};
+use crate::system_prompts::{
+    COMMITTING_CODE_INITIAL_QUERY, COMMITTING_CODE_REFACTOR_QUERY, CONSISTENCY_CHECK,
+    PROJECT_STRUCTURE,
+};
 use std::fs;
 use std::path::Path;
 
@@ -7,6 +11,7 @@ pub struct Config {
     pub model: Model,
     pub api_key: String,
     pub query: String,
+    pub system_prompts: String,
 }
 
 impl Config {
@@ -37,10 +42,24 @@ impl Config {
             }
         };
 
+        let system_prompts = match args.workflow {
+            Workflow::CommitCode => {
+                if args.refactor {
+                    COMMITTING_CODE_REFACTOR_QUERY.to_string()
+                } else {
+                    COMMITTING_CODE_INITIAL_QUERY.to_string()
+                }
+            }
+            Workflow::ConsistencyCheck => {
+                format!("{PROJECT_STRUCTURE}\n{CONSISTENCY_CHECK}")
+            }
+        };
+
         Ok(Self {
             model: args.model,
             api_key: api_key.trim().to_string(),
             query,
+            system_prompts,
         })
     }
 }

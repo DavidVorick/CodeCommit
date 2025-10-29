@@ -118,21 +118,24 @@ pub(crate) fn build_summary() -> Result<String, AppError> {
 
     for (module_name, mut files) in modules {
         let module_path = src_path.join(&module_name);
-        let public_api_path = module_path.join("PublicAPI.md");
+        summary.push_str(&format!("=== {} ===\n\n", module_path.display()));
+
         let internal_deps_path = module_path.join("InternalDependencies.md");
-
-        if public_api_path.exists() && internal_deps_path.exists() {
-            summary.push_str(&format!("=== {} ===\n\n", module_path.display()));
+        if internal_deps_path.exists() {
             summary.push_str(&read_and_format_file(&internal_deps_path)?);
-            summary.push_str(&read_and_format_file(&public_api_path)?);
-
-            summary.push_str("--- FILENAMES ---\n");
-            files.sort();
-            for file in files {
-                summary.push_str(&format!("{}\n", file.display()));
-            }
-            summary.push_str("--- END FILENAMES ---\n\n");
         }
+
+        let public_api_path = module_path.join("PublicAPI.md");
+        if public_api_path.exists() {
+            summary.push_str(&read_and_format_file(&public_api_path)?);
+        }
+
+        summary.push_str("--- FILENAMES ---\n");
+        files.sort();
+        for file in files {
+            summary.push_str(&format!("{}\n", file.display()));
+        }
+        summary.push_str("--- END FILENAMES ---\n\n");
     }
 
     Ok(summary)

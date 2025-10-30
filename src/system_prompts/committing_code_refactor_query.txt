@@ -5,6 +5,10 @@ modifying any logic or writing any tests, your task is purely to rename and
 reorganize the existing codebase. If required, you are allowed to update
 how code is imported within the project as you reorganize.
 
+Please remember that you are not alloewd to make new modules, you are only
+allowed to move code around within an existing module or between existing
+modules. You know that a module is valid if it has a UserSpecification.md file.
+
 It may be the case that code doesn't need reorganization or updates. If the
 codebase appears to already be highly compliant with the CodeCommit agentic
 codebase rules, then you may provide a response that does not make any

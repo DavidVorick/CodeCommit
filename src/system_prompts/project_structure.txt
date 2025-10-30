@@ -64,8 +64,8 @@ alone. The filename must clearly and specifically indicate what code is inside,
 which means the code must have a small enough scope that it can be described in
 a single filename of reasonable length.
 
-Tests must always exist in their own files, and those files must have the
-suffix '_test.rs'.
+Configuration must depend on reading files, not on reading environment
+variables.
 
 Code must be written in idiomatic rust. The code attempts to be a professional
 codebase with high quality standards, and should be developed with security and
@@ -81,3 +81,15 @@ You are not allowed to create new modules yourself. You must modify code within
 the existing set of modules, and something does not count as a module until it
 contains a UserSpecification.md. Because each sub-folder counts as a module,
 you are also not allowed to create sub-folders.
+
+Any tests you write must be highly scalable, and must not be prone to NDFs. You
+must assume that any test you write is one of many tests, and that some of the
+other tests will be checking the same logic that you are. You must also assume
+that the test suite might be run multiple times in parallel from the same
+directory. This means that any tests which require persistence will need to use
+randomized names for their files and folders. Tests also should not assume that
+they will be cleaned up if they error out early. Please be meticulous when
+designing tests.
+
+Tests must always exist in their own files, and those files must have the
+suffix '_test.rs'.

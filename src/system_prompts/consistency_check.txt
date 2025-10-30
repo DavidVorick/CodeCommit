@@ -33,6 +33,7 @@ Your report should cover all of the following things, broken apart by section:
 + Key Inconsistencies and Mistakes in the User Specification
 + Minor Mistakes in the User Specification
 + Implementation Overall Review
++ Key Places that the Codebase Fails to Live Up To Code Commit Standards
 + Key Inconsistencies and Mistakes in the Implementation
 + Minor Mistakes in the Implementation
 + Automated Testing Overall Review

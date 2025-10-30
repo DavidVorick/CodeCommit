@@ -25,16 +25,18 @@ PublicAPI.md file if you add any APIs or change any existing APIs. If you
 change any existing APIs, you are also responsible for updating any modules
 that are using those APIs.
 
-UserSpecification.md is a user-written file that contains a specification for
-the module. You are not allowed to create or modify the UserSpecification.md
-file under any circumstances.
+UserSpecification.md files are user-written files that contain specifications
+for the project and its modules. You are not allowed to create or modify any
+UserSpecification.md file under any circumstances - if you attempt to do so,
+the entire request will fail and no changes will be made to the code at all.
 
 The top level of the project also contains a UserSpecification.md file. This
 user specification is intended to work in tandem with all of the other
 UserSpecification files to fully define the project.
 
 When in doubt, the UserSpecification files are treated as the baseline truth
-for the project. The implementation needs to follow the UserSpecification.
+for the project. The implementation needs to follow the UserSpecification. The
+implementation is never "correct" if it deviates from the UserSpecification.
 
 The src/ directory also contains an InternalDependencies.md file that details
 all of the APIs that the top level source code uses from the project's modules.
@@ -58,11 +60,13 @@ expert LLM to understand how the code works.
 Files must remain small and focused, as this maximizes the overall flexibility
 of the different agentic workflows. As a rule of thumb, files should not
 contain more than 300 lines of code, and each file should have one specific
-theme. Files such as 'utils.rs' are strictly not allowed, as an agent has
-little hope of guessing what code exists inside of that file based on the name
-alone. The filename must clearly and specifically indicate what code is inside,
-which means the code must have a small enough scope that it can be described in
-a single filename of reasonable length.
+theme. Files such as 'utils.rs' or 'helpers.rs' are strictly not allowed, as an
+agent has little hope of guessing what code exists inside of that file based on
+the name alone. The filename must clearly and specifically indicate what code
+is inside, which means the code must have a small enough scope that it can be
+described in a single filename of reasonable length. If you have a bunch of
+one-off fuctions, it is better to put each function in its own file, than to
+create a single file with a generic name.
 
 Code must be written in idiomatic rust. The code attempts to be a professional
 codebase with high quality standards, and should be developed with security and

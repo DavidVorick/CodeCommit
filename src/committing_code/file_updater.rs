@@ -65,16 +65,10 @@ pub(crate) struct PathProtection {
 
 impl PathProtection {
     pub(crate) fn new() -> Result<Self, AppError> {
-        let forbidden_files = [
-            ".gitignore",
-            "Cargo.lock",
-            "build.sh",
-            "codeRollup.sh",
-            "LLMInstructions.md",
-        ]
-        .iter()
-        .map(PathBuf::from)
-        .collect();
+        let forbidden_files = [".gitignore", "Cargo.lock", "build.sh", "LLMInstructions.md"]
+            .iter()
+            .map(PathBuf::from)
+            .collect();
 
         let forbidden_filenames = [OsStr::new("UserSpecification.md")]
             .iter()

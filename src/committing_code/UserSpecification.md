@@ -74,7 +74,6 @@ attempting to modify critical files, namely:
 + .gitignore
 + Cargo.lock
 + build.sh
-+ codeRollup.sh
 + LLMInstructions.md
 + any file named UserSpecification.md
 + anything in the .git folder

@@ -39,10 +39,9 @@ Any file that appears in the .gitignore will not be mentioned in the codebase
 summary. If the top level files such as Cargo.toml appear in the .gitignore,
 that is an error.
 
-Note that any sub-folder of the src/ folder is considered a module and should
-be included in the codebase summary, even if it does not have an
-InternalDependencies.md file or a PublicAPI.md file. If those files are
-missing, they will not be included in the codebase summary.
+Note that every sub-folder of the src/ folder needs to be included in the
+codebase summary, even if it does not the required documentation files and
+therefore isn't a full module.
 
 Modules will be declared with the following syntax:
 

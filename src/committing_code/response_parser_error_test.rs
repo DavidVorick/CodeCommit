@@ -1,10 +1,7 @@
-//! Tests for the explicit error conditions in the `^^^` response parser.
-
 use super::response_parser::parse_llm_response;
 use crate::app_error::AppError;
 
 #[test]
-/// A line with exactly "^^^" and no filename must error.
 fn errors_when_filename_is_missing() {
     let input = "\
 ^^^

@@ -1,10 +1,7 @@
-//! Edge-case behavior tests for `^^^` parser.
-
 use super::response_parser::parse_llm_response;
 use std::path::PathBuf;
 
 #[test]
-/// Multi-line content is preserved with internal newlines.
 fn preserves_internal_newlines() {
     let input = "\
 ^^^src/multi.rs
@@ -20,8 +17,6 @@ line3
 }
 
 #[test]
-/// If the same file appears twice, both updates are returned in order.
-/// (Upstream code decides which wins; the parser intentionally does not dedup.)
 fn preserves_duplicate_updates_for_same_path() {
     let input = "\
 ^^^src/dup.rs
@@ -40,8 +35,6 @@ second
 }
 
 #[test]
-/// Unterminated blocks: current implementation collects to end-of-input.
-/// This test documents that behavior so accidental regressions are caught.
 fn unterminated_block_consumes_to_end() {
     let input = "\
 ^^^src/unterminated.rs

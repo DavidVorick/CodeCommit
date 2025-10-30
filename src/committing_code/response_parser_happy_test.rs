@@ -1,13 +1,7 @@
-//! Tests covering the happy-path behavior of the `^^^` response parser.
-//!
-//! Scope: ensure we correctly parse single and multiple file updates,
-//! empty-file creations, and deletes.
-
 use super::response_parser::{parse_llm_response, FileUpdate};
 use std::path::PathBuf;
 
 #[test]
-/// Parses a single file replacement with simple one-line content.
 fn parses_single_file_replacement_minimal() {
     let input = "\
 Preface text that the parser should ignore
@@ -25,7 +19,6 @@ Trailing notes are ignored too
 }
 
 #[test]
-/// Parses two sequential file blocks and preserves order.
 fn parses_two_files_in_order() {
     let input = "\
 ^^^src/a.rs
@@ -46,7 +39,6 @@ pub fn b() {}
 }
 
 #[test]
-/// An empty block creates an empty file (content is Some("")).
 fn creates_empty_file_block() {
     let input = "\
 ^^^src/lib.rs
@@ -59,7 +51,6 @@ fn creates_empty_file_block() {
 }
 
 #[test]
-/// A delete block produces a FileUpdate with `content = None`.
 fn parses_delete_file_block() {
     let input = "\
 ^^^some/old_file.txt
@@ -74,7 +65,6 @@ fn parses_delete_file_block() {
 }
 
 #[test]
-/// Trailing blank lines before ^^^end are preserved as a single newline in the joined content.
 fn preserves_trailing_blank_line_before_end() {
     let input = "\
 ^^^src/x.rs
@@ -85,6 +75,5 @@ line1
     let updates = parse_llm_response(input).expect("parser should succeed");
     assert_eq!(updates.len(), 1);
     assert_eq!(updates[0].path, PathBuf::from("src/x.rs"));
-    // `lines().join("\n")` yields "line1\n" for "line1\n\n^^^end"
     assert_eq!(updates[0].content.as_deref(), Some("line1\n"));
 }

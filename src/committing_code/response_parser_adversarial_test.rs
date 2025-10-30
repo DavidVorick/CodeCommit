@@ -1,10 +1,7 @@
-//! Adversarial and robustness tests for `^^^` parser.
-
 use super::response_parser::parse_llm_response;
 use std::path::PathBuf;
 
 #[test]
-/// Stray control lines outside a file header are ignored.
 fn ignores_stray_delete_and_end_lines() {
     let input = "\
 ^^^delete
@@ -21,8 +18,6 @@ ok
 }
 
 #[test]
-/// The sentinel only matches when the line equals "^^^end".
-/// Embedded text like `println!(\"^^^end\");` should not terminate the block.
 fn embedded_end_text_does_not_terminate() {
     let input = "\
 ^^^src/embedded.rs
@@ -38,8 +33,6 @@ still inside the block
 }
 
 #[test]
-/// Parser does not validate paths (security is enforced by file_updater).
-/// Document that raw paths—including traversal attempts—are parsed verbatim.
 fn parses_path_verbatim_even_if_suspicious() {
     let input = "\
 ^^^../etc/passwd

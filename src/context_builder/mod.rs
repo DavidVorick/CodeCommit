@@ -4,8 +4,6 @@ mod summary_builder;
 
 #[cfg(test)]
 mod path_filter_test;
-
-// New response-parser tests for `%files`:
 #[cfg(test)]
 mod response_parser_test_errors;
 #[cfg(test)]

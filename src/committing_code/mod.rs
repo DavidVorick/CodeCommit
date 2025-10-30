@@ -6,8 +6,6 @@ mod response_parser;
 mod file_updater_gitignore_tests;
 #[cfg(test)]
 mod file_updater_test;
-
-// New parser-focused test modules:
 #[cfg(test)]
 mod response_parser_adversarial_test;
 #[cfg(test)]

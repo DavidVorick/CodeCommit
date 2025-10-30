@@ -8,8 +8,7 @@ handle_error() {
 }
 trap 'handle_error' ERR
 
-# --no-test=pass causes nextest to exit with code 0 if there are no tests to
-# run
+# --no-test=pass tells nextest to exit with code 0 if there are no tests
 cargo fmt
 cargo build
 cargo nextest run --no-tests=pass --no-fail-fast
@@ -17,6 +16,7 @@ cargo nextest run --no-tests=pass --no-fail-fast -- --ignored
 # reminder: println! calls must use inline named arguments
 cargo clippy -- -D warnings
 cargo build --release
+cargo install --path .
 
 nohup bash -c '
 src="$1"

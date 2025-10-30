@@ -16,7 +16,6 @@ cargo nextest run --no-tests=pass --no-fail-fast -- --ignored
 # reminder: println! calls must use inline named arguments
 cargo clippy -- -D warnings
 cargo build --release
-cargo install --path .
 
 nohup bash -c '
 src="$1"
@@ -28,5 +27,6 @@ while ! cp "$src" "$dst" 2>/dev/null; do
   sleep 0.25
 done
 ' _ "target/debug/$BINARY" "./$BINARY" >/dev/null 2>&1 &
+cargo install --path .
 
 exit $script_status

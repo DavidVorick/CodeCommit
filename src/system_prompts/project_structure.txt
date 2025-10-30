@@ -74,16 +74,6 @@ professional.
 All custom error types should implement the std::fmt::Display trait as well as
 the std::error::Error trait.
 
-CodeCommit projects are designed to be functional in a partial-context setting.
-This means that you or another agent may only receive some of the files in the
-codebase, rather than all of them. You should assume that you have all the
-files you need to complete your task, but if it is clear to you that there is
-important files or context that is missing, you can abort your task and state
-which missing files or context is necessary for you to complete your task. The
-abort syntax looks like this:
-
-```
-|||ABORT|||
-```
-
-After providing the abort syntax, please explain what context was missing.
+Only the supervisor is allowed to create new modules, the LLM is not allowed to
+create their own module. A module is only considered valid if it has a user
+created UserSpecification.md in it.

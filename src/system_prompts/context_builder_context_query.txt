@@ -17,10 +17,12 @@ You will then compile all of this information and determine which files need to
 be presented to the next agent so that they can complete their task
 successfully.
 
+
 You need to take a measured, careful approach when selecting the set of files.
 If you do not select a file that ends up being critical to the solution, then
 the next agent will not have the required information to successfully complete
-their task.
+their task. For example, the next agent will almost always require the top
+level build.sh, Cargo.toml, LLMInstructions.md, and UserSpecification.md files.
 
 At the same time, if you select files that are not needed, the next agent is
 more likely to get confused and produce lower quality output. Furthermore,
@@ -42,6 +44,8 @@ ends with '%%%end'. You must use this notation, or the automated workflow will
 not see your files. Here is a full example:
 
 %%%files
+build.sh
+Cargo.toml
 LLMInstructions.md
 UserSpecification.md
 src/main.rs

@@ -21,3 +21,9 @@ function:
 Testing is broken into two categories: short testing and long testing. The
 short test suite must always finish within 20 seconds, and the long test suite
 must always finish within 90 seconds.
+
+The build uses `cargo clippy -- -D warnings` as part of the build step. This
+means that the build will fail if there are any unused imports, or if there are
+println! statements that aren't using inline arguments, if variables aren't
+named in snake_case, and so on. Code must be written to a standard that will
+satisfy the strict approach to clippy's warnings.

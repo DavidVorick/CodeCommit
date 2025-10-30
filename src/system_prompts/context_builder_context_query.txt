@@ -17,7 +17,6 @@ You will then compile all of this information and determine which files need to
 be presented to the next agent so that they can complete their task
 successfully.
 
-
 You need to take a measured, careful approach when selecting the set of files.
 If you do not select a file that ends up being critical to the solution, then
 the next agent will not have the required information to successfully complete

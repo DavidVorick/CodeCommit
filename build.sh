@@ -13,7 +13,6 @@ cargo fmt
 cargo build
 cargo nextest run --no-tests=pass --no-fail-fast
 cargo nextest run --no-tests=pass --no-fail-fast -- --ignored
-# reminder: println! calls must use inline named arguments
 cargo clippy -- -D warnings
 cargo build --release
 

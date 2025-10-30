@@ -27,7 +27,7 @@ impl Config {
         let query = match args.workflow {
             Workflow::CommitCode => read_file_to_string("agent-config/query.txt")?,
             Workflow::ConsistencyCheck => {
-                let path = Path::new("agent-config/consistency-query.txt");
+                let path = Path::new("agent-config/query.txt");
                 match fs::read_to_string(path) {
                     Ok(content) => content,
                     Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),

@@ -2,6 +2,8 @@ mod app_error;
 mod cli;
 mod committing_code;
 mod config;
+#[cfg(test)]
+mod config_test;
 mod consistency;
 mod context_builder;
 mod llm;

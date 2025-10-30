@@ -53,8 +53,8 @@ The consistency workflow can be triggered with the command line flag
 refers to this workflow is 'consistency'.
 
 The user can optionally provide guidance for the consistency workflow by
-writing their own query in agent-config/consistency-query.txt - if none is
-provided, an empty string will be used.
+writing their own query in agent-config/query.txt - if none is provided, an
+empty string will be used.
 
 The output of the consistency check will be placed in
 agent-config/consistency-report.txt

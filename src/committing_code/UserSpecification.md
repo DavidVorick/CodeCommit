@@ -31,10 +31,10 @@ will have the following format:
 
 The system prompts can be found in the system-prompts module.
 
-The 'query' can be found in the local project. It is assumed that the
+The supervisor query can be found in the local project. It is assumed that the
 'code-commit' binary will be stored alongside the local project as well,
-therefore the 'code-commit' binary should be able to find the 'query' at
-'agent-config/query.txt'.
+therefore the 'code-commit' binary should be able to find the supervisor query
+at 'agent-config/query.txt'.
 
 The 'codebase' will be generated using the `context_builder` module.
 
@@ -63,8 +63,8 @@ followed by the '^^^end' syntax that indicates the end of the replacement data
 for the file. This syntax can also be used to create new files, including empty
 files.
 
-To delete a file, the parser will look for '^^^[file]' followed by '^^^delete',
-which signals that the file is supposed to be removed.
+To delete a file, the parser will look for '^^^[file]' followed by a newline
+and then '^^^delete', which signals that the file is supposed to be removed.
 
 The parser needs to make sure that the [file] specified by the response does
 not do any path traversal, and also that the filepath points to some file
@@ -116,7 +116,7 @@ repair query has the following format:
 [code modification instructions system prompt]
 [repair query system prompt]
 [build.sh output]
-[query]
+[supervisor query]
 [codebase]
 [file replacements]
 

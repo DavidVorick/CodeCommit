@@ -7,6 +7,16 @@ mod file_updater_gitignore_tests;
 #[cfg(test)]
 mod file_updater_test;
 
+// New parser-focused test modules:
+#[cfg(test)]
+mod response_parser_adversarial_test;
+#[cfg(test)]
+mod response_parser_edge_test;
+#[cfg(test)]
+mod response_parser_error_test;
+#[cfg(test)]
+mod response_parser_happy_test;
+
 use crate::app_error::AppError;
 use crate::cli::CliArgs;
 use crate::config::Config;
@@ -110,7 +120,7 @@ fn build_initial_prompt(next_agent_prompt: &str, codebase: &str) -> String {
 fn build_repair_prompt(
     config: &Config,
     build_output: &str,
-    file_replacements: &HashMap<PathBuf, Option<String>>,
+    file_replacements: &std::collections::HashMap<std::path::PathBuf, Option<String>>,
     codebase: &str,
 ) -> String {
     let replacements_str = format_file_replacements(file_replacements);
@@ -123,7 +133,9 @@ fn build_repair_prompt(
     )
 }
 
-fn format_file_replacements(replacements: &HashMap<PathBuf, Option<String>>) -> String {
+fn format_file_replacements(
+    replacements: &std::collections::HashMap<std::path::PathBuf, Option<String>>,
+) -> String {
     let mut result = String::new();
     let mut sorted_replacements: Vec<_> = replacements.iter().collect();
     sorted_replacements.sort_by_key(|(path, _)| (*path).clone());

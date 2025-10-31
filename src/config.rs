@@ -5,7 +5,7 @@ use crate::system_prompts::{
     PROJECT_STRUCTURE,
 };
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub struct Config {
     pub model: Model,
@@ -16,25 +16,30 @@ pub struct Config {
 
 impl Config {
     pub fn load(args: &CliArgs) -> Result<Self, AppError> {
-        check_gitignore()?;
+        Self::load_from_dir(args, Path::new("."))
+    }
 
-        let api_key_path = match args.model {
-            Model::Gemini2_5Pro => "agent-config/gemini-key.txt",
-            Model::Gpt5 => "agent-config/openai-key.txt",
+    pub fn load_from_dir(args: &CliArgs, base_dir: &Path) -> Result<Self, AppError> {
+        check_gitignore_in_dir(base_dir)?;
+
+        let api_key_rel = match args.model {
+            Model::Gemini2_5Pro => PathBuf::from("agent-config/gemini-key.txt"),
+            Model::Gpt5 => PathBuf::from("agent-config/openai-key.txt"),
         };
-        let api_key = read_file_to_string(api_key_path)?;
+        let api_key = read_file_to_string_at(base_dir, &api_key_rel)?;
 
+        let query_rel = PathBuf::from("agent-config/query.txt");
         let query = match args.workflow {
-            Workflow::CommitCode => read_file_to_string("agent-config/query.txt")?,
+            Workflow::CommitCode => read_file_to_string_at(base_dir, &query_rel)?,
             Workflow::ConsistencyCheck => {
-                let path = Path::new("agent-config/query.txt");
-                match fs::read_to_string(path) {
+                let path = base_dir.join(&query_rel);
+                match fs::read_to_string(&path) {
                     Ok(content) => content,
                     Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
                     Err(e) => {
                         return Err(AppError::Config(format!(
                             "Failed to read file '{}': {}",
-                            path.display(),
+                            query_rel.display(),
                             e
                         )));
                     }
@@ -64,15 +69,21 @@ impl Config {
     }
 }
 
-fn read_file_to_string(path: impl AsRef<Path>) -> Result<String, AppError> {
-    let path = path.as_ref();
-    fs::read_to_string(path)
-        .map_err(|e| AppError::Config(format!("Failed to read file '{}': {}", path.display(), e)))
+fn read_file_to_string_at(base_dir: &Path, rel_path: &Path) -> Result<String, AppError> {
+    let full_path = base_dir.join(rel_path);
+    fs::read_to_string(&full_path).map_err(|e| {
+        AppError::Config(format!(
+            "Failed to read file '{}': {}",
+            rel_path.display(),
+            e
+        ))
+    })
 }
 
-fn check_gitignore() -> Result<(), AppError> {
-    let gitignore_path = Path::new(".gitignore");
-    let gitignore_content = match fs::read_to_string(gitignore_path) {
+fn check_gitignore_in_dir(base_dir: &Path) -> Result<(), AppError> {
+    let gitignore_rel = PathBuf::from(".gitignore");
+    let gitignore_path = base_dir.join(&gitignore_rel);
+    let gitignore_content = match fs::read_to_string(&gitignore_path) {
         Ok(content) => content,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             return Err(AppError::Config(
@@ -82,7 +93,7 @@ fn check_gitignore() -> Result<(), AppError> {
         Err(e) => {
             return Err(AppError::Config(format!(
                 "Failed to read file '{}': {}",
-                gitignore_path.display(),
+                gitignore_rel.display(),
                 e
             )));
         }

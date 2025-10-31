@@ -8,8 +8,12 @@ pub(crate) struct PathFilter {
 
 impl PathFilter {
     pub(crate) fn new() -> Result<Self, AppError> {
-        let mut builder = GitignoreBuilder::new(".");
-        builder.add(".gitignore");
+        Self::new_for_base_dir(Path::new("."))
+    }
+
+    pub(crate) fn new_for_base_dir(base_dir: &Path) -> Result<Self, AppError> {
+        let mut builder = GitignoreBuilder::new(base_dir);
+        builder.add(base_dir.join(".gitignore"));
         let gitignore_matcher = builder
             .build()
             .map_err(|e| AppError::Config(format!("Failed to build .gitignore matcher: {e}")))?;

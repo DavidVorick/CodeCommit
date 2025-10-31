@@ -8,6 +8,8 @@ mod path_filter_test;
 mod response_parser_test_errors;
 #[cfg(test)]
 mod response_parser_test_happy;
+#[cfg(test)]
+mod summary_builder_test;
 
 use crate::app_error::AppError;
 use crate::config::Config;

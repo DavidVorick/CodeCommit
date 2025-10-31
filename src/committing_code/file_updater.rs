@@ -11,12 +11,10 @@ use super::response_parser::FileUpdate;
 pub(crate) fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
     let protection_rules = PathProtection::new()?;
 
-    // First, validate all paths before making any changes.
     for update in updates {
         protection_rules.validate(&update.path)?;
     }
 
-    // If all validations pass, apply the updates.
     for update in updates {
         let path = update.path.clean();
 
@@ -65,6 +63,10 @@ pub(crate) struct PathProtection {
 
 impl PathProtection {
     pub(crate) fn new() -> Result<Self, AppError> {
+        Self::new_for_base_dir(Path::new("."))
+    }
+
+    pub(crate) fn new_for_base_dir(base_dir: &Path) -> Result<Self, AppError> {
         let forbidden_files = [".gitignore", "Cargo.lock", "build.sh", "LLMInstructions.md"]
             .iter()
             .map(PathBuf::from)
@@ -75,8 +77,8 @@ impl PathProtection {
             .copied()
             .collect();
 
-        let mut builder = GitignoreBuilder::new(".");
-        builder.add(".gitignore");
+        let mut builder = GitignoreBuilder::new(base_dir);
+        builder.add(base_dir.join(".gitignore"));
         let gitignore_matcher = builder
             .build()
             .map_err(|e| AppError::Config(format!("Failed to build .gitignore matcher: {e}")))?;

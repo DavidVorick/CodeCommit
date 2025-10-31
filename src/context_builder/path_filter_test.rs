@@ -7,13 +7,7 @@ use tempfile::tempdir;
 fn setup_test_env(gitignore_content: &str) -> (tempfile::TempDir, PathFilter) {
     let dir = tempdir().unwrap();
     fs::write(dir.path().join(".gitignore"), gitignore_content).unwrap();
-
-    let original_cwd = std::env::current_dir().expect("cwd");
-    std::env::set_current_dir(dir.path()).unwrap();
-
-    let filter = PathFilter::new().unwrap();
-
-    std::env::set_current_dir(original_cwd).unwrap();
+    let filter = PathFilter::new_for_base_dir(dir.path()).unwrap();
     (dir, filter)
 }
 
@@ -98,15 +92,11 @@ fn test_gitignore_recursive_wildcard_directory() {
 #[test]
 fn test_no_gitignore_file_present() {
     let dir = tempdir().unwrap();
-    let original_cwd = std::env::current_dir().unwrap();
-    std::env::set_current_dir(dir.path()).unwrap();
 
-    let filter = PathFilter::new().unwrap();
+    let filter = PathFilter::new_for_base_dir(dir.path()).unwrap();
 
     assert!(filter.validate(&PathBuf::from("any/file.txt")).is_ok());
     assert!(filter.validate(&PathBuf::from("another.log")).is_ok());
-
-    std::env::set_current_dir(original_cwd).unwrap();
 }
 
 #[test]

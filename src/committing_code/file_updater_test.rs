@@ -3,13 +3,39 @@ use super::response_parser::FileUpdate;
 use crate::app_error::AppError;
 use std::fs;
 use std::path::PathBuf;
-use tempfile::tempdir;
+use std::sync::Mutex;
+use tempfile::{tempdir, TempDir};
+
+// Mutex to ensure that tests changing the current directory don't run in parallel.
+static CWD_LOCK: Mutex<()> = Mutex::new(());
+
+struct TestEnv {
+    _dir: TempDir,
+    original_dir: std::path::PathBuf,
+}
+
+impl TestEnv {
+    fn new() -> Self {
+        let dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(dir.path()).unwrap();
+        TestEnv {
+            _dir: dir,
+            original_dir,
+        }
+    }
+}
+
+impl Drop for TestEnv {
+    fn drop(&mut self) {
+        std::env::set_current_dir(&self.original_dir).unwrap();
+    }
+}
 
 #[test]
 fn test_apply_updates_create_new_file() {
-    let dir = tempdir().unwrap();
-    let original_cwd = std::env::current_dir().unwrap();
-    std::env::set_current_dir(dir.path()).unwrap();
+    let _lock = CWD_LOCK.lock().unwrap();
+    let _env = TestEnv::new();
 
     let file_path = PathBuf::from("new_file.txt");
     let updates = vec![FileUpdate {
@@ -22,15 +48,12 @@ fn test_apply_updates_create_new_file() {
     assert!(file_path.exists());
     let content = fs::read_to_string(file_path).unwrap();
     assert_eq!(content, "Hello, world!");
-
-    std::env::set_current_dir(original_cwd).unwrap();
 }
 
 #[test]
 fn test_apply_updates_overwrite_existing_file() {
-    let dir = tempdir().unwrap();
-    let original_cwd = std::env::current_dir().unwrap();
-    std::env::set_current_dir(dir.path()).unwrap();
+    let _lock = CWD_LOCK.lock().unwrap();
+    let _env = TestEnv::new();
 
     let file_path = PathBuf::from("existing.txt");
     fs::write(&file_path, "old content").unwrap();
@@ -44,15 +67,12 @@ fn test_apply_updates_overwrite_existing_file() {
 
     let content = fs::read_to_string(file_path).unwrap();
     assert_eq!(content, "new content");
-
-    std::env::set_current_dir(original_cwd).unwrap();
 }
 
 #[test]
 fn test_apply_updates_create_empty_file() {
-    let dir = tempdir().unwrap();
-    let original_cwd = std::env::current_dir().unwrap();
-    std::env::set_current_dir(dir.path()).unwrap();
+    let _lock = CWD_LOCK.lock().unwrap();
+    let _env = TestEnv::new();
 
     let file_path = PathBuf::from("empty_file.txt");
     let updates = vec![FileUpdate {
@@ -65,15 +85,12 @@ fn test_apply_updates_create_empty_file() {
     assert!(file_path.exists());
     let content = fs::read_to_string(file_path).unwrap();
     assert_eq!(content, "");
-
-    std::env::set_current_dir(original_cwd).unwrap();
 }
 
 #[test]
 fn test_apply_updates_delete_file() {
-    let dir = tempdir().unwrap();
-    let original_cwd = std::env::current_dir().unwrap();
-    std::env::set_current_dir(dir.path()).unwrap();
+    let _lock = CWD_LOCK.lock().unwrap();
+    let _env = TestEnv::new();
 
     let file_path = PathBuf::from("to_delete.txt");
     fs::write(&file_path, "delete me").unwrap();
@@ -87,15 +104,12 @@ fn test_apply_updates_delete_file() {
     apply_updates(&updates).unwrap();
 
     assert!(!file_path.exists());
-
-    std::env::set_current_dir(original_cwd).unwrap();
 }
 
 #[test]
 fn test_apply_updates_create_nested_directory() {
-    let dir = tempdir().unwrap();
-    let original_cwd = std::env::current_dir().unwrap();
-    std::env::set_current_dir(dir.path()).unwrap();
+    let _lock = CWD_LOCK.lock().unwrap();
+    let _env = TestEnv::new();
 
     let file_path = PathBuf::from("src").join("app").join("main.rs");
 
@@ -106,8 +120,6 @@ fn test_apply_updates_create_nested_directory() {
 
     apply_updates(&updates).unwrap();
     assert!(file_path.exists());
-
-    std::env::set_current_dir(original_cwd).unwrap();
 }
 
 #[test]
@@ -181,13 +193,13 @@ fn test_validate_path_forbidden_file() {
 #[test]
 fn test_validate_path_with_gitignore() {
     let dir = tempdir().unwrap();
-    let original_cwd = std::env::current_dir().unwrap();
-    std::env::set_current_dir(dir.path()).unwrap();
+    fs::write(
+        dir.path().join(".gitignore"),
+        "# Ignore secrets\nsecrets.txt\n\n# Ignore temp files\n*.tmp\n",
+    )
+    .unwrap();
 
-    let gitignore_content = "# Ignore secrets\nsecrets.txt\n\n# Ignore temp files\n*.tmp\n";
-    fs::write(".gitignore", gitignore_content).unwrap();
-
-    let protection = PathProtection::new().unwrap();
+    let protection = PathProtection::new_for_base_dir(dir.path()).unwrap();
 
     let result1 = protection.validate(&PathBuf::from("secrets.txt"));
     assert!(matches!(result1, Err(AppError::FileUpdate(_))));
@@ -198,8 +210,6 @@ fn test_validate_path_with_gitignore() {
     assert!(result2.unwrap_err().to_string().contains(".tmp"));
 
     assert!(protection.validate(&PathBuf::from("src/main.rs")).is_ok());
-
-    std::env::set_current_dir(original_cwd).unwrap();
 }
 
 #[test]
@@ -256,9 +266,8 @@ fn test_validate_user_specification_md_is_forbidden_anywhere() {
 
 #[test]
 fn test_apply_updates_aborts_on_invalid_path_without_applying_changes() {
-    let dir = tempdir().unwrap();
-    let original_cwd = std::env::current_dir().unwrap();
-    std::env::set_current_dir(dir.path()).unwrap();
+    let _lock = CWD_LOCK.lock().unwrap();
+    let _env = TestEnv::new();
 
     let valid_path1 = PathBuf::from("valid1.txt");
     let invalid_path = PathBuf::from("build.sh"); // This is a protected file
@@ -282,7 +291,6 @@ fn test_apply_updates_aborts_on_invalid_path_without_applying_changes() {
     let result = apply_updates(&updates);
     assert!(matches!(result, Err(AppError::FileUpdate(_))));
 
-    // Verify that NO files were created
     assert!(
         !valid_path1.exists(),
         "First valid file should not be created"
@@ -291,6 +299,4 @@ fn test_apply_updates_aborts_on_invalid_path_without_applying_changes() {
         !valid_path2.exists(),
         "Second valid file should not be created"
     );
-
-    std::env::set_current_dir(original_cwd).unwrap();
 }

@@ -1,5 +1,6 @@
 use crate::app_error::AppError;
 use ignore::WalkBuilder;
+use path_clean::PathClean;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -9,6 +10,18 @@ use super::path_filter::PathFilter;
 fn read_and_format_file(path: &Path) -> Result<String, AppError> {
     let content = fs::read_to_string(path).map_err(AppError::Io)?;
     Ok(format!("--- {} ---\n{}\n\n", path.display(), content))
+}
+
+fn to_relative_string(path: &Path) -> String {
+    let cleaned = path.clean();
+    if cleaned.is_absolute() {
+        if let Ok(cwd) = std::env::current_dir() {
+            if let Ok(stripped) = cleaned.strip_prefix(&cwd) {
+                return stripped.to_string_lossy().to_string();
+            }
+        }
+    }
+    cleaned.to_string_lossy().to_string()
 }
 
 pub(crate) fn build_summary() -> Result<String, AppError> {
@@ -51,8 +64,8 @@ pub(crate) fn build_summary() -> Result<String, AppError> {
         }
     }
 
-    let mut top_level_filenames = Vec::new();
-    let mut src_top_level_filenames = Vec::new();
+    let mut top_level_filenames: Vec<String> = Vec::new();
+    let mut src_top_level_filenames: Vec<String> = Vec::new();
     let mut modules: BTreeMap<String, Vec<PathBuf>> = BTreeMap::new();
 
     for result in WalkBuilder::new("./")
@@ -66,7 +79,8 @@ pub(crate) fn build_summary() -> Result<String, AppError> {
         let entry =
             result.map_err(|e| AppError::Config(format!("Error walking directory: {e}")))?;
         if entry.depth() == 1 && entry.file_type().is_some_and(|ft| ft.is_file()) {
-            top_level_filenames.push(entry.into_path());
+            let rel = to_relative_string(&entry.into_path());
+            top_level_filenames.push(rel);
         }
     }
     top_level_filenames.sort();
@@ -83,13 +97,14 @@ pub(crate) fn build_summary() -> Result<String, AppError> {
         {
             let entry =
                 result.map_err(|e| AppError::Config(format!("Error walking directory: {e}")))?;
-            let path = entry.path();
+            let path = entry.path().clean();
             if !path.is_file() {
                 continue;
             }
 
             if entry.depth() == 1 {
-                src_top_level_filenames.push(path.to_path_buf());
+                let rel = to_relative_string(&path);
+                src_top_level_filenames.push(rel);
             } else if entry.depth() == 2 {
                 let module_name = path
                     .parent()
@@ -98,21 +113,20 @@ pub(crate) fn build_summary() -> Result<String, AppError> {
                     .unwrap()
                     .to_string_lossy()
                     .into_owned();
-                modules
-                    .entry(module_name)
-                    .or_default()
-                    .push(path.to_path_buf());
+                modules.entry(module_name).or_default().push(path);
             }
         }
     }
     src_top_level_filenames.sort();
 
     summary.push_str("--- FILENAMES ---\n");
-    for path in top_level_filenames {
-        summary.push_str(&format!("{}\n", path.display()));
+    for name in top_level_filenames {
+        summary.push_str(&name);
+        summary.push('\n');
     }
-    for path in src_top_level_filenames {
-        summary.push_str(&format!("{}\n", path.display()));
+    for name in src_top_level_filenames {
+        summary.push_str(&name);
+        summary.push('\n');
     }
     summary.push_str("--- END FILENAMES ---\n\n");
 
@@ -133,7 +147,7 @@ pub(crate) fn build_summary() -> Result<String, AppError> {
         summary.push_str("--- FILENAMES ---\n");
         files.sort();
         for file in files {
-            summary.push_str(&format!("{}\n", file.display()));
+            summary.push_str(&format!("{}\n", to_relative_string(&file)));
         }
         summary.push_str("--- END FILENAMES ---\n\n");
     }

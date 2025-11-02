@@ -93,70 +93,70 @@ context.
 
 ### What's Next?
 
-Well, there seem to be a few limitations of code-commit right now. The first is
-that the instruction set has started to become pretty large - large enough that
-instructions are being missed in an increasing percentage of flows. So one
-thought is to break the instructions into smaller pieces, and then run each of
-the sets of instructions in series. The main advantage here is that by having
-more LLM calls with fewer instructions each, the LLM will be able to make
-updates with higher fidelity.
+So far, it has worked really well to develop code-commit by focusing on the
+thing that is most immediately slowing down development. And while there are
+three general categories of things that seem to be causing issues, one clearly
+rises to the top.
 
-The thought is particularly driven by the latest challenge of creating robust
-logging and testing for each piece of production code. It took very little time
-for the LLM to write a correct pile of code, but much longer for that code to
-align with sensible logging and testing behavior. The current generation of
-frontier models seem to struggle to produce scalable code for certain tasks
-(like test suites), though they do perform a lot better with custom
-instructions.
+The least important issue is using the LLM to design modules and refactor code.
+It's been my experience that between the limitations of the context-builder and
+the LLM's natrual tendency to split things up in non-helpful ways, that the LLM
+pretty much needs heavily supervised handholding during any code refactor.
+Though this could turn into a pretty big long term bottleneck, the truth is
+that it doesn't take that much time to manage all of the module design by hand.
+So while it's probably the most obviously deficient thing about code-commit
+right now, it's also not that time consuming to work around.
 
-The thing is, as we add more instructions to the prompting, the LLM starts to
-have higher failure rates on things like getting the build to pass. I've
-noticed (perhaps incorrectly) that the LLM grows more likely to make basic
-mistakes like unused imports (despite having explicit instructions warning
-against it) when it has more instructions overall.
+The middleground issue is the context building, which works pretty well about
+70% of the time, and then otherwise falls on its face and needs clear
+instructions about which files need to be included. But, similar to the
+refactoring and module design, the LLM seems to be quite responsive to direct
+instructions about how to build the context, which means it's pretty easy to
+work around this deficiency when it pops up.
 
-So my thought is that we could create a library of available prompts for
-different parts of the coding process (prompts about strong logging design,
-prompts about good testing architecture, etc) and then either use cli flags or
-context-builder LLMs to determine which prompts belong in each task. And then
-we could use each of the different prompts in succession, doing first a pass to
-get correct code out, then a pass to get robust logging out, then a pass to
-fully fill out the test suite, etc.
+The most pressing issue is in the automated prompt / system prompt /
+LLMInstructions. The default behaviors for a lot of coding things like error
+handling, loggging, and building test suites simply don't scale well within an
+agentic codebase, and actually usually don't scale well within codebases in
+general.
 
-The other direction that CodeCommit could go from here is to make improvements
-to the context-building process. I'd say right now the context-builder LLM is
-about 30% as effective as it could be. For tasks related to expanding code, it
-does really well at only selecting files that are necessary, and that
-noticeably reduces inference time and cost, and also noticeably improves output
-quality, but it struggles a lot more selecting the right files for refactoring.
+This can pretty easily be fixed with some custom instructions, but between all
+of the different types of coding patterns that the LLM needs to know, you end
+up with a really fat stack of custom instructions, which spreads the attention
+of the LLM really thin, especially on larger codebases. The context builder
+helped a lot, but as the number of instructions increase, attention gets spread
+thin and the quality of the code that gets produced goes down. Even worse, some
+instructions are non-deterministically overlooked, and that problem grows as
+the prompt size grows.
 
-For now I'm leaning in the direction of filling out the coding prompt library
-and then dynamically including certain rules and guidelines in each prompt,
-because my general sense at the moment is that this would save me the most time
-when working on new projects and maintaining existing projects.
+The top proposed solution is to break coding into smaller steps, where each
+step refactors the code to adhere to better coding paradigms. The prompts will
+need to be constructed carefully enough that there isn't any regression each
+time a new layer of improvement is added, but by having one set of prompts for
+authoring core logic, another for authoring logging, another for authoring
+testing, and so on, allowing the set of instructions for each stage to be
+minimal and focused, while still covering the full set of quality requirements
+on each code change.
 
-And as a last remark, the other thing that could really be helpful to improving
-CodeCommit is improvements to the refactoring process and module design
-process. My experience right now is that the LLM is more or less hopeless at
-designing a module structure for a project, and I have to do that entirely by
-hand. If I ask the LLM to do it, it'll get the boundaries all wrong and create
-way too many functions and develop something really quite complex that scales
-poorly.
+This solution would likely come with the consistency check being woven into the
+full coding pipeline, once again pulling the code-commit binary down to a
+single command / workflow that produces a bunch of helpful output as it runs.
+Before the first step, a consistency prompt would run that focuses entirely on
+being certain that the UserSpecification documents made sense and were self
+consistent. And then after each coding step, a consistency check would run to
+check the quality of the code aspect that is being covered, its consistency
+with the UserSpecification, and its consistency with the system prompts for
+that coding step.
 
-Though, as I ruminate on the need for automated module design, I'm thinking:
+The consistency check in particular would be given the authority to abort the
+coding process, if it felt that something was seriously misaligned or needed
+clarification from the user. Aside from that, it would be instructed to provide
+output to the user based on what it saw with either general comments or
+suggestions, or flagging places where the implementation and the spec diverged.
+Or even flagging where the spec diverged from the prompts.
 
-1. It doesn't take **that** much time for me to do it myself
-2. Module design might fit well into the prompt library, becoming just another
-   step in the standard multi-step development flow.
-
-So, after talking it out, I'm pretty strongly leaning in the direction of
-working on prompt libraries next, including developing flows that move from
-strategy to strategy automatically, ensuring that the codebase hits a really
-robust state with minimal input from myself.
-
-And, between each flow, it'll run an introspective call which basically asks
-itself whether it did the last step at a high enough quality to move onto the
-next step, or if it needs help from the supervisor. I guess that introspective
-call can be a consistency check which looks at the quality of the codebase and
-then returns an instruction with a prompt for what step needs to be taken next
-to do cleanup.
+This upgrade would collapse everything back down to a single command, and
+perhaps the user query could even provide instructions on how many stages to
+run and which stages to run. This would both increase the utility of
+code-commit for large scale codebases, and also simplify the UX, improving the
+chances that other people find the utility useful.

@@ -15,17 +15,6 @@ cargo nextest run --no-tests=pass --no-fail-fast
 cargo nextest run --no-tests=pass --no-fail-fast -- --ignored
 cargo clippy -- -D warnings
 cargo build --release
-
-nohup bash -c '
-src="$1"
-dst="$2"
-while [ ! -f "$src" ]; do
-  sleep 0.2
-done
-while ! cp "$src" "$dst" 2>/dev/null; do
-  sleep 0.25
-done
-' _ "target/debug/$BINARY" "./$BINARY" >/dev/null 2>&1 &
 cargo install --path .
 
 exit $script_status

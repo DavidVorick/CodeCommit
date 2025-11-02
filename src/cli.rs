@@ -29,6 +29,7 @@ pub struct CliArgs {
     pub model: Model,
     pub workflow: Workflow,
     pub refactor: bool,
+    pub force: bool,
 }
 
 pub fn parse_cli_args() -> Result<CliArgs, AppError> {
@@ -39,6 +40,7 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
     let mut model = Model::default();
     let mut workflow: Option<Workflow> = None;
     let mut refactor = false;
+    let mut force = false;
 
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -59,6 +61,9 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
             "--refactor" | "--ref" => {
                 refactor = true;
             }
+            "--force" | "--f" => {
+                force = true;
+            }
             _ => {
                 return Err(AppError::Config(format!("Unknown argument: {arg}")));
             }
@@ -73,9 +78,17 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
         ));
     }
 
+    if force && final_workflow != Workflow::CommitCode {
+        return Err(AppError::Config(
+            "The --force or --f flag can only be used with the 'committing-code' workflow."
+                .to_string(),
+        ));
+    }
+
     Ok(CliArgs {
         model,
         workflow: final_workflow,
         refactor,
+        force,
     })
 }

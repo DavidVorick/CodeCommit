@@ -169,3 +169,9 @@ code-commit will enforce programatically that an LLM cannot modify any of the
 listed critical files, and will also ensure that the LLM cannot do any path
 traversal (using characters like '/../' in the filepath) and cannot modify any
 files outside of the directory that code-commit is running from.
+
+To protect the user against losing unsafe changes, the committing-code workflow
+will fail with an error if the git repo contains uncommited changes in any
+files that the LLM is allowed to modify. This safety check can be disabled with
+the `--f` flag or the `--force` flag. The error message should inform the user
+that these flags exist.

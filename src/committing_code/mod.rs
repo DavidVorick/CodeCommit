@@ -1,11 +1,14 @@
 mod build_runner;
 mod file_updater;
+mod git_status;
 mod response_parser;
 
 #[cfg(test)]
 mod file_updater_gitignore_tests;
 #[cfg(test)]
 mod file_updater_test;
+#[cfg(test)]
+mod git_status_test;
 #[cfg(test)]
 mod response_parser_adversarial_test;
 #[cfg(test)]
@@ -26,6 +29,7 @@ use crate::system_prompts::{
     COMMITTING_CODE_REPAIR_QUERY, PROJECT_STRUCTURE,
 };
 use file_updater as file_updater_impl;
+use git_status as git_status_impl;
 use response_parser as response_parser_impl;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -33,6 +37,11 @@ use std::path::PathBuf;
 const MAX_ATTEMPTS: u32 = 4;
 
 pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppError> {
+    if !cli_args.force {
+        println!("Checking for uncommitted changes...");
+        git_status_impl::check_for_uncommitted_changes()?;
+    }
+
     let config = Config::load(&cli_args)?;
 
     println!("Building codebase context for LLM...");

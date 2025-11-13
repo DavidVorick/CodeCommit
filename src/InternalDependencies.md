@@ -14,3 +14,7 @@ This document lists all APIs that the top-level `src` code (e.g., `main.rs`, `co
 
 - `logger::Logger::new(suffix: &str) -> Result<Self, AppError>`
 - `logger::Logger::log_text(&self, file_name: &str, content: &str) -> Result<(), AppError>`
+
+## `init` module
+
+- `init::run_init_command() -> Result<(), AppError>`

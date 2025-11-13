@@ -12,6 +12,25 @@ UserSpecification which outlines the major functions of the project, as well as
 smaller modules that each have their own UserSpecification. All of the
 UserSpecification documents work together to define the project.
 
+## Initialization
+
+The code-commit binary supports an 'init' instruction `code-commit init` which
+will create all of the basic files needed to kick off a new code-commit
+project. Simple/basic versions of the following files will be created:
+
++ agent-config/
++ agent-config/logs/
++ agent-config/query.txt (empty file)
++ .gitignore (matching this repo's .gitignore)
++ build.sh (matching this repo's build.sh)
++ Cargo.toml
++ src/
++ src/main.rs
++ UserSpecification.md
+
+This command is non-agentic. If any of the files already exist, they will be
+left untouched.
+
 ## Supported Workflows
 
 The code-commit binary supports multiple workflows, each of which can be

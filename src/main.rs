@@ -6,6 +6,9 @@ mod config;
 mod config_test;
 mod consistency;
 mod context_builder;
+mod init;
+#[cfg(test)]
+mod init_test;
 mod llm;
 mod logger;
 mod system_prompts;
@@ -31,6 +34,13 @@ async fn main() {
 }
 
 async fn run() -> Result<(), AppError> {
+    // Non-agentic 'init' command
+    let args_vec: Vec<String> = std::env::args().skip(1).collect();
+    if matches!(args_vec.first().map(|s| s.as_str()), Some("init")) {
+        init::run_init_command()?;
+        return Ok(());
+    }
+
     let cli_args = cli::parse_cli_args()?;
 
     let logger_suffix = match cli_args.workflow {

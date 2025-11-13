@@ -7,25 +7,6 @@ fn exists(path: &Path) -> bool {
     path.exists()
 }
 
-fn replace_binary(template: &str, project_name: &str) -> String {
-    let replaced: Vec<String> = template
-        .lines()
-        .map(|line| {
-            let trimmed = line.trim_start();
-            if trimmed.starts_with("BINARY=") {
-                format!("BINARY=\"{project_name}\"")
-            } else {
-                line.to_string()
-            }
-        })
-        .collect();
-    let mut out = replaced.join("\n");
-    if template.ends_with('\n') {
-        out.push('\n');
-    }
-    out
-}
-
 #[test]
 fn test_init_creates_all_files_and_dirs() {
     let dir = tempdir().unwrap();
@@ -46,8 +27,7 @@ fn test_init_creates_all_files_and_dirs() {
 
     // Verify copied files match this repo's templates where specified
     let expected_gitignore = include_str!("../.gitignore");
-    let expected_build_template = include_str!("../build.sh");
-    let expected_build = replace_binary(expected_build_template, project_name);
+    let expected_build = include_str!("../build.sh");
 
     let got_gitignore = fs::read_to_string(base.join(".gitignore")).unwrap();
     let got_build = fs::read_to_string(base.join("build.sh")).unwrap();
@@ -117,5 +97,6 @@ fn test_init_is_idempotent() {
 
     // If build.sh existed from first run, it should remain unchanged on second run
     let build = fs::read_to_string(base.join("build.sh")).unwrap();
-    assert!(build.contains("BINARY=\"first\"") || build.contains("echo custom"));
+    let template = include_str!("../build.sh");
+    assert!(build == template || build.contains("echo custom"));
 }

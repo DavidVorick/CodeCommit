@@ -167,3 +167,15 @@ fn test_gitignore_with_trailing_slash() {
     let config_result = Config::load_from_dir(&args, dir.path());
     assert!(config_result.is_ok());
 }
+
+#[test]
+fn test_config_implements_debug() {
+    let cfg = Config {
+        model: Model::Gemini2_5Pro,
+        api_key: "k".to_string(),
+        query: "q".to_string(),
+        system_prompts: "s".to_string(),
+    };
+    let debug_str = format!("{:?}", cfg);
+    assert!(debug_str.contains("api_key"));
+}

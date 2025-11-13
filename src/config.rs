@@ -7,6 +7,7 @@ use crate::system_prompts::{
 use std::fs;
 use std::path::{Path, PathBuf};
 
+#[derive(Debug)]
 pub struct Config {
     pub model: Model,
     pub api_key: String,

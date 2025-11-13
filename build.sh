@@ -1,7 +1,5 @@
 #!/bin/bash
 
-BINARY="code-commit"
-
 script_status=0
 handle_error() {
     script_status=1

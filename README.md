@@ -30,7 +30,7 @@ It then quickly became apparent that it was tedious to run the build script,
 figure out what the errors were, and then feed the errors back into the query.
 So code-commit became a tool that would iteratively feed build errors back to
 the LLM so that it could get things compiling and get the tests passing,
-automating a boring part of the coding process.
+automating away another boring part of the coding process.
 
 At that point, it was so easy to write code with LLMs that writing code
 yourself started to feel wasteful. Instead, most time was spent writing

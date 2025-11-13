@@ -58,6 +58,7 @@ fn test_init_creates_all_files_and_dirs() {
     let cargo = fs::read_to_string(base.join("Cargo.toml")).unwrap();
     assert!(cargo.contains("[package]"));
     assert!(cargo.contains("edition = \"2021\""));
+    assert!(cargo.contains(&format!("name = \"{project_name}\"")));
 
     let main_rs = fs::read_to_string(base.join("src/main.rs")).unwrap();
     assert!(main_rs.contains("fn main()"));

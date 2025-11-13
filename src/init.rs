@@ -5,14 +5,6 @@ use std::path::Path;
 const TEMPLATE_DOT_GITIGNORE: &str = include_str!("../.gitignore");
 const TEMPLATE_BUILD_SH: &str = include_str!("../build.sh");
 
-const TEMPLATE_CARGO_TOML: &str = r#"[package]
-name = "code-commit-project"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-"#;
-
 const TEMPLATE_SRC_MAIN_RS: &str = r#"fn main() {
     println!("Hello from your new CodeCommit project!");
 }
@@ -37,7 +29,10 @@ pub fn create_in_dir(base_dir: &Path, project_name: &str) -> Result<(), AppError
         &base_dir.join("build.sh"),
         &build_sh_with_binary(project_name),
     )?;
-    write_if_missing(&base_dir.join("Cargo.toml"), TEMPLATE_CARGO_TOML)?;
+    write_if_missing(
+        &base_dir.join("Cargo.toml"),
+        &cargo_toml_with_name(project_name),
+    )?;
     write_if_missing(&base_dir.join("src/main.rs"), TEMPLATE_SRC_MAIN_RS)?;
     write_if_missing(&base_dir.join("UserSpecification.md"), TEMPLATE_USER_SPEC)?;
     write_if_missing(&base_dir.join("agent-config/query.txt"), "")?;
@@ -79,7 +74,14 @@ fn build_sh_with_binary(project_name: &str) -> String {
     output
 }
 
-#[cfg(test)]
-fn read(path: &Path) -> String {
-    fs::read_to_string(path).unwrap()
+fn cargo_toml_with_name(project_name: &str) -> String {
+    format!(
+        r#"[package]
+name = "{project_name}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+"#
+    )
 }

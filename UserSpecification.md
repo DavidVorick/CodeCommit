@@ -35,7 +35,7 @@ Cargo.toml will need a similar modification. If the user doesn't provide a
 project name, an error will be returned without making any changes.
 
 After the command completes, instructions are given to the user to drop a
-gemini-key-.txt and an openai-key.txt into the agent-config folder.
+gemini-key.txt and an openai-key.txt into the agent-config folder.
 
 This command is non-agentic. If any of the files already exist, they will be
 left untouched.

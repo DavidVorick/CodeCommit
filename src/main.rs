@@ -44,7 +44,7 @@ async fn run() -> Result<(), AppError> {
         })?;
         init::run_init_command(project_name)?;
         println!(
-            "Place your gemini-key.txt and openai-key.txt files into the agent-config/ directory."
+            "Place your gemini-key-.txt and openai-key.txt files into the agent-config/ directory."
         );
         return Ok(());
     }

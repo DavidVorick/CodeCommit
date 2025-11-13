@@ -25,8 +25,8 @@ use crate::context_builder;
 use crate::llm;
 use crate::logger;
 use crate::system_prompts::{
-    CODE_MODIFICATION_INSTRUCTIONS, COMMITTING_CODE_INITIAL_QUERY, COMMITTING_CODE_REFACTOR_QUERY,
-    COMMITTING_CODE_REPAIR_QUERY, PROJECT_STRUCTURE,
+    CODE_MODIFICATION_INSTRUCTIONS, COMMITTING_CODE_INITIAL_QUERY, COMMITTING_CODE_REPAIR_QUERY,
+    PROJECT_STRUCTURE,
 };
 use file_updater as file_updater_impl;
 use git_status as git_status_impl;
@@ -45,11 +45,7 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
     let config = Config::load(&cli_args)?;
 
     println!("Building codebase context for LLM...");
-    let initial_query_prompt = if cli_args.refactor {
-        COMMITTING_CODE_REFACTOR_QUERY
-    } else {
-        COMMITTING_CODE_INITIAL_QUERY
-    };
+    let initial_query_prompt = COMMITTING_CODE_INITIAL_QUERY;
     let system_prompt_part =
         format!("{PROJECT_STRUCTURE}\n{CODE_MODIFICATION_INSTRUCTIONS}\n{initial_query_prompt}");
     let next_agent_prompt = format!(

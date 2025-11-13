@@ -22,7 +22,6 @@ fn test_load_config_commit_code_workflow() {
     let args = CliArgs {
         model: Model::Gemini2_5Pro,
         workflow: Workflow::CommitCode,
-        refactor: false,
         force: false,
     };
 
@@ -33,29 +32,12 @@ fn test_load_config_commit_code_workflow() {
 }
 
 #[test]
-fn test_load_config_commit_code_refactor() {
-    let dir = tempdir().unwrap();
-    setup_test_env(&dir, "/agent-config", Some("refactor this"));
-    let args = CliArgs {
-        model: Model::Gpt5,
-        workflow: Workflow::CommitCode,
-        refactor: true,
-        force: false,
-    };
-
-    let config = Config::load_from_dir(&args, dir.path()).unwrap();
-    assert_eq!(config.api_key, "openai-key-456");
-    assert_eq!(config.query, "refactor this");
-}
-
-#[test]
 fn test_load_config_consistency_check_with_query() {
     let dir = tempdir().unwrap();
     setup_test_env(&dir, "/agent-config", Some("check consistency"));
     let args = CliArgs {
         model: Model::default(),
         workflow: Workflow::ConsistencyCheck,
-        refactor: false,
         force: false,
     };
 
@@ -70,7 +52,6 @@ fn test_load_config_consistency_check_without_query() {
     let args = CliArgs {
         model: Model::default(),
         workflow: Workflow::ConsistencyCheck,
-        refactor: false,
         force: false,
     };
 
@@ -88,7 +69,6 @@ fn test_load_config_missing_gitignore() {
     let args = CliArgs {
         model: Model::default(),
         workflow: Workflow::default(),
-        refactor: false,
         force: false,
     };
 
@@ -105,7 +85,6 @@ fn test_load_config_gitignore_missing_agent_config() {
     let args = CliArgs {
         model: Model::default(),
         workflow: Workflow::default(),
-        refactor: false,
         force: false,
     };
 
@@ -126,7 +105,6 @@ fn test_load_config_missing_api_key_file() {
     let args = CliArgs {
         model: Model::Gemini2_5Pro,
         workflow: Workflow::default(),
-        refactor: false,
         force: false,
     };
 
@@ -143,7 +121,6 @@ fn test_load_config_missing_query_file_for_commit_code() {
     let args = CliArgs {
         model: Model::default(),
         workflow: Workflow::CommitCode,
-        refactor: false,
         force: false,
     };
 
@@ -160,7 +137,6 @@ fn test_gitignore_with_trailing_slash() {
     let args = CliArgs {
         model: Model::Gemini2_5Pro,
         workflow: Workflow::CommitCode,
-        refactor: false,
         force: false,
     };
 

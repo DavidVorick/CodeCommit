@@ -29,10 +29,10 @@ created:
 + src/main.rs
 + UserSpecification.md (word wrapped to 80 characters)
 
-When the build.sh file is created, the BINARY="code-commit" line will need to
-be replaced with the appropriate project name based on the input command.
-Cargo.toml will need a similar modification. If the user doesn't provide a
-project name, an error will be returned without making any changes.
+When the Cargo.toml file is created, the `name = "code-commit"` line will need
+to be replaced with the appropriate project name based on the input command.
+If the user doesn't provide a project name, an error will be returned without
+making any changes.
 
 After the command completes, instructions are given to the user to drop a
 gemini-key.txt and an openai-key.txt into the agent-config folder.
@@ -54,11 +54,6 @@ with flags, and if no workflow flags are provided the binary will assume that
 it is supposed to execute the workflow for committing code.
 
 The programmatic slug that refers to this workflow is 'committing-code'.
-
-The committing code workflow has a 'refactor' modification which can be
-triggered by the flags '--refactor' or '--ref'. If either of these flags are
-used, the [initial query system prompt] will be replaced by the [refactor query
-system prompt].
 
 The user must provide guidance for the committing-code workflow by writing
 their own query in agent-config/query.txt

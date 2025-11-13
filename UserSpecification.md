@@ -14,9 +14,10 @@ UserSpecification documents work together to define the project.
 
 ## Initialization
 
-The code-commit binary supports an 'init' instruction `code-commit init` which
-will create all of the basic files needed to kick off a new code-commit
-project. Simple/basic versions of the following files will be created:
+The code-commit binary supports an 'init' instruction `code-commit init
+[project-name]` which will create all of the basic files needed to kick off a
+new code-commit project. Simple/basic versions of the following files will be
+created:
 
 + agent-config/
 + agent-config/logs/
@@ -26,7 +27,15 @@ project. Simple/basic versions of the following files will be created:
 + Cargo.toml
 + src/
 + src/main.rs
-+ UserSpecification.md
++ UserSpecification.md (word wrapped to 80 characters)
+
+When the build.sh file is created, the BINARY="code-commit" line will need to
+be replaced with the appropriate project name based on the input command.
+Cargo.toml will need a similar modification. If the user doesn't provide a
+project name, an error will be returned without making any changes.
+
+After the command completes, instructions are given to the user to drop a
+gemini-key-.txt and an openai-key.txt into the agent-config folder.
 
 This command is non-agentic. If any of the files already exist, they will be
 left untouched.

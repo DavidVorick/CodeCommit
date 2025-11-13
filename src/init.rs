@@ -23,20 +23,24 @@ const TEMPLATE_USER_SPEC: &str = r#"# User Specification
 Describe your project here. This document defines your project's requirements and must remain the source of truth for your implementation.
 "#;
 
-pub fn run_init_command() -> Result<(), AppError> {
-    create_in_dir(Path::new("."))
+pub fn run_init_command(project_name: &str) -> Result<(), AppError> {
+    create_in_dir(Path::new("."), project_name)
 }
 
-pub fn create_in_dir(base_dir: &Path) -> Result<(), AppError> {
+pub fn create_in_dir(base_dir: &Path, project_name: &str) -> Result<(), AppError> {
     ensure_dir(&base_dir.join("agent-config"))?;
     ensure_dir(&base_dir.join("agent-config/logs"))?;
     ensure_dir(&base_dir.join("src"))?;
 
     write_if_missing(&base_dir.join(".gitignore"), TEMPLATE_DOT_GITIGNORE)?;
-    write_if_missing(&base_dir.join("build.sh"), TEMPLATE_BUILD_SH)?;
+    write_if_missing(
+        &base_dir.join("build.sh"),
+        &build_sh_with_binary(project_name),
+    )?;
     write_if_missing(&base_dir.join("Cargo.toml"), TEMPLATE_CARGO_TOML)?;
     write_if_missing(&base_dir.join("src/main.rs"), TEMPLATE_SRC_MAIN_RS)?;
     write_if_missing(&base_dir.join("UserSpecification.md"), TEMPLATE_USER_SPEC)?;
+    write_if_missing(&base_dir.join("agent-config/query.txt"), "")?;
     Ok(())
 }
 
@@ -54,6 +58,25 @@ fn write_if_missing(path: &Path, content: &str) -> Result<bool, AppError> {
     }
     fs::write(path, content)?;
     Ok(true)
+}
+
+fn build_sh_with_binary(project_name: &str) -> String {
+    let replaced: Vec<String> = TEMPLATE_BUILD_SH
+        .lines()
+        .map(|line| {
+            let trimmed = line.trim_start();
+            if trimmed.starts_with("BINARY=") {
+                format!("BINARY=\"{project_name}\"")
+            } else {
+                line.to_string()
+            }
+        })
+        .collect();
+    let mut output = replaced.join("\n");
+    if TEMPLATE_BUILD_SH.ends_with('\n') {
+        output.push('\n');
+    }
+    output
 }
 
 #[cfg(test)]

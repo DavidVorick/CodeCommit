@@ -14,6 +14,7 @@ fn test_no_args() {
             model: Model::Gemini2_5Pro,
             workflow: Workflow::CommitCode,
             refactor: false,
+            force: false,
         }
     );
 }
@@ -28,6 +29,7 @@ fn test_model_arg() {
             model: Model::Gpt5,
             workflow: Workflow::CommitCode,
             refactor: false,
+            force: false,
         }
     );
 }
@@ -108,6 +110,7 @@ fn test_model_and_refactor() {
             model: Model::Gpt5,
             workflow: Workflow::CommitCode,
             refactor: true,
+            force: false,
         }
     );
 
@@ -119,6 +122,7 @@ fn test_model_and_refactor() {
             model: Model::Gpt5,
             workflow: Workflow::CommitCode,
             refactor: true,
+            force: false,
         }
     );
 }

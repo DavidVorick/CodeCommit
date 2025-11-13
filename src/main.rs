@@ -37,7 +37,15 @@ async fn run() -> Result<(), AppError> {
     // Non-agentic 'init' command
     let args_vec: Vec<String> = std::env::args().skip(1).collect();
     if matches!(args_vec.first().map(|s| s.as_str()), Some("init")) {
-        init::run_init_command()?;
+        let project_name = args_vec.get(1).ok_or_else(|| {
+            AppError::Config(
+                "Please provide a project name: code-commit init <project-name>".to_string(),
+            )
+        })?;
+        init::run_init_command(project_name)?;
+        println!(
+            "Place your gemini-key.txt and openai-key.txt files into the agent-config/ directory."
+        );
         return Ok(());
     }
 

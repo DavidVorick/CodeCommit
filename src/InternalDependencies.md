@@ -17,4 +17,4 @@ This document lists all APIs that the top-level `src` code (e.g., `main.rs`, `co
 
 ## `init` module
 
-- `init::run_init_command() -> Result<(), AppError>`
+- `init::run_init_command(project_name: &str) -> Result<(), AppError>`

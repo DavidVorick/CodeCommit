@@ -11,12 +11,21 @@ use super::response_parser::FileUpdate;
 pub(crate) fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
     let protection_rules = PathProtection::new()?;
 
+    // Clean paths first, then validate all of them before applying any changes
+    let mut cleaned_updates: Vec<FileUpdate> = Vec::with_capacity(updates.len());
     for update in updates {
-        protection_rules.validate(&update.path)?;
+        let cleaned_path = update.path.clean();
+        // Validate using both original and cleaned paths to ensure adversarial attempts are caught
+        protection_rules.validate_paths(&update.path, &cleaned_path)?;
+        cleaned_updates.push(FileUpdate {
+            path: cleaned_path,
+            content: update.content.clone(),
+        });
     }
 
-    for update in updates {
-        let path = update.path.clean();
+    // Apply updates only after all validations pass
+    for update in &cleaned_updates {
+        let path = &update.path;
 
         match &update.content {
             Some(content_str) => {
@@ -31,7 +40,7 @@ pub(crate) fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
                         })?;
                     }
                 }
-                fs::write(&path, content_str).map_err(|e| {
+                fs::write(path, content_str).map_err(|e| {
                     AppError::FileUpdate(format!(
                         "Failed to write to file {}: {}",
                         path.display(),
@@ -41,7 +50,7 @@ pub(crate) fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
             }
             None => {
                 if path.exists() {
-                    fs::remove_file(&path).map_err(|e| {
+                    fs::remove_file(path).map_err(|e| {
                         AppError::FileUpdate(format!(
                             "Failed to delete file {}: {}",
                             path.display(),
@@ -90,8 +99,18 @@ impl PathProtection {
         })
     }
 
+    // Primary validation entry point: cleans, then validates.
     pub(crate) fn validate(&self, path: &Path) -> Result<(), AppError> {
-        for component in path.components() {
+        let cleaned = path.clean();
+        self.validate_paths(path, &cleaned)
+    }
+
+    // Validate using both the original and cleaned paths.
+    // The original is used to detect traversal/absolute attempts,
+    // while the cleaned path is used for policy checks.
+    pub(crate) fn validate_paths(&self, original: &Path, cleaned: &Path) -> Result<(), AppError> {
+        // Detect traversal/absolute on the original input
+        for component in original.components() {
             match component {
                 Component::RootDir => {
                     return Err(AppError::FileUpdate(
@@ -107,25 +126,27 @@ impl PathProtection {
             }
         }
 
-        if self.forbidden_files.contains(path) {
+        // Use cleaned path for all subsequent validations
+        if self.forbidden_files.contains(cleaned) {
             return Err(AppError::FileUpdate(format!(
                 "Modification of critical file '{}' is not allowed.",
-                path.display()
+                cleaned.display()
             )));
         }
 
-        if let Some(file_name) = path.file_name() {
+        if let Some(file_name) = cleaned.file_name() {
             if self.forbidden_filenames.contains(file_name) {
                 return Err(AppError::FileUpdate(format!(
                     "Modification of critical file '{}' is not allowed.",
-                    path.display()
+                    cleaned.display()
                 )));
             }
         }
 
-        if let Some(Component::Normal(first_comp)) = path.components().next() {
+        if let Some(Component::Normal(first_comp)) = cleaned.components().next() {
             if let Some(name) = first_comp.to_str() {
-                if matches!(name, ".git" | "target" | "agent-config") {
+                // Protect .git, target, agent-config, and app-data directories
+                if matches!(name, ".git" | "target" | "agent-config" | "app-data") {
                     return Err(AppError::FileUpdate(format!(
                         "Modification of directory '{name}/' is not allowed."
                     )));
@@ -135,12 +156,12 @@ impl PathProtection {
 
         match self
             .gitignore_matcher
-            .matched_path_or_any_parents(path, false)
+            .matched_path_or_any_parents(cleaned, false)
         {
             ignore::Match::Ignore(_) => {
                 return Err(AppError::FileUpdate(format!(
                     "File '{}' matches a rule in .gitignore and cannot be modified.",
-                    path.display()
+                    cleaned.display()
                 )));
             }
             ignore::Match::Whitelist(_) | ignore::Match::None => {}

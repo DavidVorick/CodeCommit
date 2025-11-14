@@ -300,3 +300,27 @@ fn test_apply_updates_aborts_on_invalid_path_without_applying_changes() {
         "Second valid file should not be created"
     );
 }
+
+#[test]
+fn test_validate_blocks_dot_slash_on_protected_files() {
+    let protection = PathProtection::new().unwrap();
+    let original = PathBuf::from("./build.sh");
+    let result = protection.validate(&original);
+    assert!(matches!(result, Err(AppError::FileUpdate(_))));
+    assert!(result
+        .unwrap_err()
+        .to_string()
+        .contains("Modification of critical file 'build.sh' is not allowed."));
+}
+
+#[test]
+fn test_forbid_app_data_dir_modification() {
+    let protection = PathProtection::new().unwrap();
+
+    let res = protection.validate(&PathBuf::from("app-data/secret.txt"));
+    assert!(matches!(res, Err(AppError::FileUpdate(_))));
+    assert!(res
+        .unwrap_err()
+        .to_string()
+        .contains("Modification of directory 'app-data/' is not allowed."));
+}

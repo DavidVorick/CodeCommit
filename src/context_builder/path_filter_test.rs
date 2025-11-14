@@ -114,3 +114,27 @@ fn test_absolute_and_traversal_blocked() {
         .to_string()
         .contains("Path traversal ('..')"));
 }
+
+#[test]
+fn test_agent_config_query_txt_allowed_even_if_ignored() {
+    // Simulate project with agent-config ignored
+    let (_dir, filter) = setup_test_env("/agent-config\n");
+
+    // agent-config/query.txt should be allowed in context
+    assert!(filter
+        .validate(&PathBuf::from("agent-config/query.txt"))
+        .is_ok());
+
+    // other files in agent-config should still be rejected
+    let res = filter.validate(&PathBuf::from("agent-config/other.txt"));
+    assert!(matches!(res, Err(AppError::FileUpdate(_))));
+    assert!(res.unwrap_err().to_string().contains("protected directory"));
+}
+
+#[test]
+fn test_app_data_is_blocked_from_context() {
+    let (_dir, filter) = setup_test_env("");
+    let res = filter.validate(&PathBuf::from("app-data/secret.json"));
+    assert!(matches!(res, Err(AppError::FileUpdate(_))));
+    assert!(res.unwrap_err().to_string().contains("protected directory"));
+}

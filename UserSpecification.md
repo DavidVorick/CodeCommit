@@ -109,3 +109,11 @@ When any of the agentic workflows are running, they will be logging their
 activity in the agent-config/logs/ directory.
 
 The core logic for interfacing with the logs is in the 'logging' module.
+
+## Safety
+
+To ensure that the private data of code-commit projects is never exfiltrated or
+exposed, files in the app-data/ folder and agent-config/ folder are never
+allowed to be directly modified by an LLM, and they are never included in the
+context that is provided to an LLM. The one exception is
+agent-config/query.txt, which is allowed to be part of the context.

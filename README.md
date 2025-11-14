@@ -1,7 +1,7 @@
 # code-commit
 
 code-commit is an agentic workflow tool that helps developers interface more
-seemlessly with LLMs. It is currently targeted at rust codebases, but could
+seamlessly with LLMs. It is currently targeted at rust codebases, but could
 easily be adapted for other codebases.
 
 code-commit is very specification focused. It depends on two files -
@@ -53,7 +53,7 @@ that for simpler projects, writing the specification was the bottleneck on
 getting a working codebase.
 
 This allowed codebases to start to get more ambitious, and instead of one-off
-projects to use for tirival matters, code-commit projects became products that
+projects to use for trivial matters, code-commit projects became products that
 could evolve over time. At least... up until a point. Unless the user was hyper
 diligent about updating the specification and implementation in tandem, some
 drift would start to occur over time, which put a ceiling on how much a
@@ -100,7 +100,7 @@ rises to the top.
 
 The least important issue is using the LLM to design modules and refactor code.
 It's been my experience that between the limitations of the context-builder and
-the LLM's natrual tendency to split things up in non-helpful ways, that the LLM
+the LLM's natural tendency to split things up in non-helpful ways, that the LLM
 pretty much needs heavily supervised handholding during any code refactor.
 Though this could turn into a pretty big long term bottleneck, the truth is
 that it doesn't take that much time to manage all of the module design by hand.
@@ -116,7 +116,7 @@ work around this deficiency when it pops up.
 
 The most pressing issue is in the automated prompt / system prompt /
 LLMInstructions. The default behaviors for a lot of coding things like error
-handling, loggging, and building test suites simply don't scale well within an
+handling, logging, and building test suites simply don't scale well within an
 agentic codebase, and actually usually don't scale well within codebases in
 general.
 

@@ -7,8 +7,8 @@ use path_clean::PathClean;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
-pub async fn run(_logger: &Logger, _cli_args: CliArgs) -> Result<(), AppError> {
-    let rollup = build_rollup_for_base_dir(Path::new("."))?;
+pub async fn run(_logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
+    let rollup = build_rollup_for_base_dir(Path::new("."), cli_args.light_roll)?;
     let out_dir = Path::new("agent-config");
     fs::create_dir_all(out_dir)?;
     let out_path = out_dir.join("codebase.txt");
@@ -81,7 +81,10 @@ fn validate_path(path: &Path, base_dir: &Path, ignore: &Gitignore) -> Result<boo
     Ok(true)
 }
 
-pub(crate) fn build_rollup_for_base_dir(base_dir: &Path) -> Result<String, AppError> {
+pub(crate) fn build_rollup_for_base_dir(
+    base_dir: &Path,
+    light_roll: bool,
+) -> Result<String, AppError> {
     let matcher = build_gitignore_matcher(base_dir)?;
     let mut files: Vec<PathBuf> = Vec::new();
 
@@ -99,6 +102,9 @@ pub(crate) fn build_rollup_for_base_dir(base_dir: &Path) -> Result<String, AppEr
         if entry.file_type().is_some_and(|ft| ft.is_file())
             && validate_path(&path, base_dir, &matcher)?
         {
+            if light_roll && path.file_name().and_then(|s| s.to_str()) == Some("Cargo.lock") {
+                continue;
+            }
             files.push(path);
         }
     }

@@ -14,6 +14,7 @@ fn test_no_args() {
             model: Model::Gemini2_5Pro,
             workflow: Workflow::CommitCode,
             force: false,
+            light_roll: false,
         }
     );
 }
@@ -28,6 +29,7 @@ fn test_model_arg() {
             model: Model::Gpt5,
             workflow: Workflow::CommitCode,
             force: false,
+            light_roll: false,
         }
     );
 }
@@ -66,6 +68,7 @@ fn test_rollup_workflow() {
     let args = to_string_vec(&["--rollup"]);
     let result = parse_args(args.into_iter()).unwrap();
     assert_eq!(result.workflow, Workflow::Rollup);
+    assert!(!result.light_roll);
 }
 
 #[test]
@@ -127,6 +130,7 @@ fn test_model_and_force() {
             model: Model::Gpt5,
             workflow: Workflow::CommitCode,
             force: true,
+            light_roll: false,
         }
     );
 
@@ -138,6 +142,47 @@ fn test_model_and_force() {
             model: Model::Gpt5,
             workflow: Workflow::CommitCode,
             force: true,
+            light_roll: false,
         }
     );
+}
+
+#[test]
+fn test_light_roll_with_rollup() {
+    let args = to_string_vec(&["--rollup", "--light-roll"]);
+    let result = parse_args(args.into_iter()).unwrap();
+    assert_eq!(result.workflow, Workflow::Rollup);
+    assert!(result.light_roll);
+
+    let args = to_string_vec(&["--light-roll", "--rollup"]);
+    let result = parse_args(args.into_iter()).unwrap();
+    assert_eq!(result.workflow, Workflow::Rollup);
+    assert!(result.light_roll);
+
+    let args = to_string_vec(&["--rollup", "--lr"]);
+    let result = parse_args(args.into_iter()).unwrap();
+    assert_eq!(result.workflow, Workflow::Rollup);
+    assert!(result.light_roll);
+}
+
+#[test]
+fn test_light_roll_without_rollup_is_error() {
+    let args = to_string_vec(&["--light-roll"]);
+    let result = parse_args(args.into_iter());
+    assert!(result.is_err());
+
+    let args = to_string_vec(&["--lr"]);
+    let result = parse_args(args.into_iter());
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_light_roll_with_other_workflow_is_error() {
+    let args = to_string_vec(&["--light-roll", "--cc"]);
+    let result = parse_args(args.into_iter());
+    assert!(result.is_err());
+
+    let args = to_string_vec(&["--lr", "--cc"]);
+    let result = parse_args(args.into_iter());
+    assert!(result.is_err());
 }

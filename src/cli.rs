@@ -30,6 +30,7 @@ pub struct CliArgs {
     pub model: Model,
     pub workflow: Workflow,
     pub force: bool,
+    pub light_roll: bool,
 }
 
 pub fn parse_cli_args() -> Result<CliArgs, AppError> {
@@ -40,6 +41,7 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
     let mut model = Model::default();
     let mut workflow: Option<Workflow> = None;
     let mut force = false;
+    let mut light_roll = false;
 
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -65,6 +67,9 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
                 }
                 workflow = Some(Workflow::Rollup);
             }
+            "--light-roll" | "--lr" => {
+                light_roll = true;
+            }
             "--force" | "--f" => {
                 force = true;
             }
@@ -83,9 +88,16 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
         ));
     }
 
+    if light_roll && final_workflow != Workflow::Rollup {
+        return Err(AppError::Config(
+            "The --light-roll flag can only be used with the --rollup workflow.".to_string(),
+        ));
+    }
+
     Ok(CliArgs {
         model,
         workflow: final_workflow,
         force,
+        light_roll,
     })
 }

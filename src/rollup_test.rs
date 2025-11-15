@@ -53,7 +53,7 @@ fn rollup_includes_all_non_ignored_files_and_respects_protections() {
     // Exception: include agent-config/query.txt even if ignored
     env.write("agent-config/query.txt", "user query\n");
 
-    let rollup = build_rollup_for_base_dir(env.base()).unwrap();
+    let rollup = build_rollup_for_base_dir(env.base(), false).unwrap();
 
     assert!(rollup.contains("--- Cargo.toml ---\n[package]\nname = \"x\"\n\n"));
     assert!(rollup.contains("--- src/main.rs ---\nfn main() {}\n\n"));
@@ -82,8 +82,27 @@ fn rollup_skips_non_utf8_files_safely() {
 
     env.write("src/lib.rs", "pub fn f() {}\n");
 
-    let rollup = build_rollup_for_base_dir(env.base()).unwrap();
+    let rollup = build_rollup_for_base_dir(env.base(), false).unwrap();
     assert!(rollup.contains("--- src/lib.rs ---\npub fn f() {}\n\n"));
     // Ensure binary file doesn't cause inclusion or crash
     assert!(!rollup.contains("--- bin.dat ---"));
+}
+
+#[test]
+fn light_roll_excludes_cargo_lock() {
+    let env = TestEnv::new();
+    env.write(".gitignore", "");
+    env.write("Cargo.toml", "[package]\n");
+    env.write("Cargo.lock", "lock file content\n");
+    env.write("src/main.rs", "fn main() {}\n");
+
+    // Regular rollup should include Cargo.lock
+    let rollup = build_rollup_for_base_dir(env.base(), false).unwrap();
+    assert!(rollup.contains("--- Cargo.lock ---"));
+
+    // Light roll should exclude Cargo.lock
+    let light_rollup = build_rollup_for_base_dir(env.base(), true).unwrap();
+    assert!(!light_rollup.contains("--- Cargo.lock ---"));
+    assert!(light_rollup.contains("--- Cargo.toml ---"));
+    assert!(light_rollup.contains("--- src/main.rs ---"));
 }

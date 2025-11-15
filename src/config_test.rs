@@ -23,6 +23,7 @@ fn test_load_config_commit_code_workflow() {
         model: Model::Gemini2_5Pro,
         workflow: Workflow::CommitCode,
         force: false,
+        light_roll: false,
     };
 
     let config = Config::load_from_dir(&args, dir.path()).unwrap();
@@ -39,6 +40,7 @@ fn test_load_config_consistency_check_with_query() {
         model: Model::default(),
         workflow: Workflow::ConsistencyCheck,
         force: false,
+        light_roll: false,
     };
 
     let config = Config::load_from_dir(&args, dir.path()).unwrap();
@@ -53,6 +55,7 @@ fn test_load_config_consistency_check_without_query() {
         model: Model::default(),
         workflow: Workflow::ConsistencyCheck,
         force: false,
+        light_roll: false,
     };
 
     let config = Config::load_from_dir(&args, dir.path()).unwrap();
@@ -70,6 +73,7 @@ fn test_load_config_missing_gitignore() {
         model: Model::default(),
         workflow: Workflow::default(),
         force: false,
+        light_roll: false,
     };
 
     let result = Config::load_from_dir(&args, dir.path());
@@ -86,6 +90,7 @@ fn test_load_config_gitignore_missing_agent_config() {
         model: Model::default(),
         workflow: Workflow::default(),
         force: false,
+        light_roll: false,
     };
 
     let result = Config::load_from_dir(&args, dir.path());
@@ -106,6 +111,7 @@ fn test_load_config_missing_api_key_file() {
         model: Model::Gemini2_5Pro,
         workflow: Workflow::default(),
         force: false,
+        light_roll: false,
     };
 
     let result = Config::load_from_dir(&args, dir.path());
@@ -122,6 +128,7 @@ fn test_load_config_missing_query_file_for_commit_code() {
         model: Model::default(),
         workflow: Workflow::CommitCode,
         force: false,
+        light_roll: false,
     };
 
     let result = Config::load_from_dir(&args, dir.path());
@@ -138,6 +145,7 @@ fn test_gitignore_with_trailing_slash() {
         model: Model::Gemini2_5Pro,
         workflow: Workflow::CommitCode,
         force: false,
+        light_roll: false,
     };
 
     let config_result = Config::load_from_dir(&args, dir.path());

@@ -89,6 +89,8 @@ the codebase and create a context file that gets placed in
 agent-config/codebase.txt - this file can then by copy-pasted into an LLM UI
 for advanced debugging.
 
+If the flag `--light-roll` is passed in, it will ignore the Cargo.lock file.
+
 ## LLMs
 
 CodeCommit supports multiple LLMs. The default LLM is gemini-2.5-pro, and other

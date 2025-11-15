@@ -8,7 +8,23 @@ use crate::cli::Model;
 use crate::logger::Logger;
 use api::LlmApiClient;
 use serde_json::json;
-use std::time::Instant;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
+
+static IDEMPOTENCY_COUNTER: AtomicU64 = AtomicU64::new(1);
+
+fn generate_request_id(prefix: &str) -> String {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let n = IDEMPOTENCY_COUNTER.fetch_add(1, Ordering::Relaxed);
+    if prefix.is_empty() {
+        format!("req-{now}-{n}")
+    } else {
+        format!("{prefix}-{now}-{n}")
+    }
+}
 
 pub async fn query(
     model: Model,
@@ -25,14 +41,24 @@ pub async fn query(
     logger.log_text(&format!("{log_prefix}-query.txt"), prompt)?;
     let request_body = api_client.build_request_body(prompt);
     let url = api_client.get_url();
+    let request_id = generate_request_id("llm");
     let log_body = json!({
         "url": url,
-        "body": &request_body
+        "body": &request_body,
+        "requestId": request_id
     });
     logger.log_json(&format!("{log_prefix}-query.json"), &log_body)?;
 
     let start_time = Instant::now();
-    let response_result = api_client.query(&request_body).await;
+    let idempotency_key = match &api_client {
+        // OpenAI supports idempotency; use stable unique key.
+        LlmApiClient::Gpt(_) => Some(request_id.as_str()),
+        // Gemini does not document idempotency for this endpoint; do not rely on resubmission.
+        LlmApiClient::Gemini(_) => None,
+    };
+    let response_result = api_client
+        .query_with_retries(&request_body, idempotency_key)
+        .await;
     let duration = start_time.elapsed();
 
     println!(

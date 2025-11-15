@@ -2,6 +2,18 @@
 
 This is a module that contains all of the logic for interfacing with LLMs.
 
+## Reliability
+
+code-commit is frequently used in circumstances where the Internet may be
+unstable (such as airplanes, conferences events with more people than Internet
+infrastructure, remote areas with unstable cell coverage, etc), and therefore
+the libraries that connect to the LLM APIs must be as robust as possible, so
+that a query is given every chance to succeed even when the networking is very
+unstable. The goal is to ensure that if a remote API is running inference,
+code-commit has the greatest possible chance of receiveing the result of that
+inference, without needing to submit the query again or incur additional
+inference costs.
+
 ## LLM Logging
 
 LLMs create logs using the logging module.

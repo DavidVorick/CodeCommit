@@ -22,6 +22,7 @@ pub enum Workflow {
     #[default]
     CommitCode,
     ConsistencyCheck,
+    Rollup,
 }
 
 #[derive(Debug, PartialEq, Default)]
@@ -55,6 +56,14 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
                     ));
                 }
                 workflow = Some(Workflow::ConsistencyCheck);
+            }
+            "--rollup" => {
+                if workflow.is_some() {
+                    return Err(AppError::Config(
+                        "It is an error to trigger more than one workflow at a time.".to_string(),
+                    ));
+                }
+                workflow = Some(Workflow::Rollup);
             }
             "--force" | "--f" => {
                 force = true;

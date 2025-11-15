@@ -11,6 +11,7 @@ mod init;
 mod init_test;
 mod llm;
 mod logger;
+mod rollup;
 mod system_prompts;
 
 use crate::app_error::AppError;
@@ -54,12 +55,14 @@ async fn run() -> Result<(), AppError> {
     let logger_suffix = match cli_args.workflow {
         Workflow::CommitCode => "committing-code",
         Workflow::ConsistencyCheck => "consistency",
+        Workflow::Rollup => "rollup",
     };
     let logger = logger::Logger::new(logger_suffix)?;
 
     let result = match cli_args.workflow {
         Workflow::CommitCode => committing_code::run(&logger, cli_args).await,
         Workflow::ConsistencyCheck => consistency::run(&logger, cli_args).await,
+        Workflow::Rollup => rollup::run(&logger, cli_args).await,
     };
 
     if let Err(e) = &result {

@@ -82,6 +82,13 @@ empty string will be used.
 The output of the consistency check will be placed in
 agent-config/consistency-report.txt
 
+## Rolling Up Code
+
+If code-commit is run with the `--rollup` flag, it will roll up every file in
+the codebase and create a context file that gets placed in
+agent-config/codebase.txt - this file can then by copy-pasted into an LLM UI
+for advanced debugging.
+
 ## LLMs
 
 CodeCommit supports multiple LLMs. The default LLM is gemini-2.5-pro, and other

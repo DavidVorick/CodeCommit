@@ -18,3 +18,7 @@ This document lists all APIs that the top-level `src` code (e.g., `main.rs`, `co
 ## `init` module
 
 - `init::run_init_command(project_name: &str) -> Result<(), AppError>`
+
+## `rollup` module
+
+- `rollup::run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppError>`

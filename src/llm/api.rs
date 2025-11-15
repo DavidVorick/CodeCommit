@@ -2,6 +2,8 @@ use crate::app_error::AppError;
 use reqwest::header::{HeaderMap, HeaderValue, RETRY_AFTER};
 use reqwest::{Client, StatusCode};
 use serde_json::{json, Value};
+use std::future::Future;
+use std::pin::Pin;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const GEMINI_API_URL_BASE: &str =
@@ -221,6 +223,57 @@ impl LlmApiClient {
             LlmApiClient::Gpt(_) => extract_text_from_gpt_response(response),
         }
     }
+
+    pub(crate) fn supports_idempotency(&self) -> bool {
+        matches!(self, LlmApiClient::Gpt(_))
+    }
+}
+
+pub(crate) trait LlmApi: Send + Sync {
+    fn get_model_name(&self) -> &'static str;
+    fn get_url(&self) -> &'static str;
+    fn build_request_body(&self, prompt: &str) -> Value;
+    fn query_with_retries<'a>(
+        &'a self,
+        request_body: &'a Value,
+        idempotency_key: Option<&'a str>,
+    ) -> Pin<Box<dyn Future<Output = Result<Value, AppError>> + Send + 'a>>;
+    fn extract_text_from_response(&self, response: &Value) -> Result<String, AppError>;
+    fn supports_idempotency(&self) -> bool;
+}
+
+impl LlmApi for LlmApiClient {
+    fn get_model_name(&self) -> &'static str {
+        LlmApiClient::get_model_name(self)
+    }
+
+    fn get_url(&self) -> &'static str {
+        LlmApiClient::get_url(self)
+    }
+
+    fn build_request_body(&self, prompt: &str) -> Value {
+        LlmApiClient::build_request_body(self, prompt)
+    }
+
+    fn query_with_retries<'a>(
+        &'a self,
+        request_body: &'a Value,
+        idempotency_key: Option<&'a str>,
+    ) -> Pin<Box<dyn Future<Output = Result<Value, AppError>> + Send + 'a>> {
+        Box::pin(LlmApiClient::query_with_retries(
+            self,
+            request_body,
+            idempotency_key,
+        ))
+    }
+
+    fn extract_text_from_response(&self, response: &Value) -> Result<String, AppError> {
+        LlmApiClient::extract_text_from_response(self, response)
+    }
+
+    fn supports_idempotency(&self) -> bool {
+        LlmApiClient::supports_idempotency(self)
+    }
 }
 
 // Retry policy tuned to avoid double-inference while maximizing delivery.
@@ -316,19 +369,21 @@ fn map_query_error_to_app_error(e: QueryError) -> AppError {
     }
 }
 
-fn censor_api_key_in_error_string(e: reqwest::Error, api_key: &str) -> String {
-    let error_string = e.to_string();
+pub(crate) fn censor_api_key(text: &str, api_key: &str) -> String {
     if api_key.is_empty() {
-        return error_string;
+        return text.to_string();
     }
-
-    let censored_key = if api_key.len() > 2 {
-        format!("...{}", &api_key[api_key.len() - 2..])
+    // Only censor things that look like keys. Very short strings are unlikely to be keys.
+    let censored_key = if api_key.len() > 8 {
+        format!("...{}", &api_key[api_key.len() - 4..])
     } else {
         "...".to_string()
     };
+    text.replace(api_key, &censored_key)
+}
 
-    error_string.replace(api_key, &censored_key)
+fn censor_api_key_in_error_string(e: reqwest::Error, api_key: &str) -> String {
+    censor_api_key(&e.to_string(), api_key)
 }
 
 async fn handle_response_to_json(
@@ -338,8 +393,7 @@ async fn handle_response_to_json(
     let status = resp.status();
     let retry_after = parse_retry_after(resp.headers());
 
-    let text_res = resp.text().await;
-    let text = match text_res {
+    let text = match resp.text().await {
         Ok(t) => t,
         Err(e) => {
             return Err(QueryError::Transport {
@@ -351,18 +405,9 @@ async fn handle_response_to_json(
     };
 
     if !status.is_success() {
-        let mut body = text;
-        if !api_key.is_empty() {
-            if api_key.len() > 2 {
-                let censored_key = format!("...{}", &api_key[api_key.len() - 2..]);
-                body = body.replace(api_key, &censored_key);
-            } else {
-                body = body.replace(api_key, "...");
-            }
-        }
         return Err(QueryError::Http {
             status,
-            body,
+            body: censor_api_key(&text, api_key),
             retry_after,
         });
     }

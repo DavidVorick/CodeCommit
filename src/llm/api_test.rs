@@ -1,5 +1,6 @@
 use super::api::{
-    extract_text_from_gemini_response, extract_text_from_gpt_response, LlmApiClient, QueryError,
+    self, extract_text_from_gemini_response, extract_text_from_gpt_response, LlmApiClient,
+    QueryError,
 };
 use crate::app_error::AppError;
 use reqwest::StatusCode;
@@ -231,6 +232,38 @@ fn test_backoff_increases_with_attempts() {
     let d3 = policy.backoff_delay(3);
     assert!(d2 >= d1);
     assert!(d3 >= d2);
+}
+
+#[test]
+fn test_censor_api_key_long_key() {
+    let text = "The key is a-very-long-api-key-string";
+    let key = "a-very-long-api-key-string";
+    let censored = api::censor_api_key(text, key);
+    assert_eq!(censored, "The key is ...ring");
+}
+
+#[test]
+fn test_censor_api_key_short_key() {
+    let text = "The key is short";
+    let key = "short";
+    let censored = api::censor_api_key(text, key);
+    assert_eq!(censored, "The key is ...");
+}
+
+#[test]
+fn test_censor_api_key_empty_key() {
+    let text = "The key is ";
+    let key = "";
+    let censored = api::censor_api_key(text, key);
+    assert_eq!(censored, "The key is ");
+}
+
+#[test]
+fn test_censor_api_key_no_match() {
+    let text = "The key is not present";
+    let key = "secret";
+    let censored = api::censor_api_key(text, key);
+    assert_eq!(censored, "The key is not present");
 }
 
 fn fake_gpt_client() -> LlmApiClient {

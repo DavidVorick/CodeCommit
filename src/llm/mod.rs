@@ -2,18 +2,20 @@ pub mod api;
 
 #[cfg(test)]
 mod api_test;
+#[cfg(test)]
+mod mod_test;
 
 use crate::app_error::AppError;
 use crate::cli::Model;
 use crate::logger::Logger;
-use api::LlmApiClient;
+use api::{LlmApi, LlmApiClient};
 use serde_json::json;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 static IDEMPOTENCY_COUNTER: AtomicU64 = AtomicU64::new(1);
 
-fn generate_request_id(prefix: &str) -> String {
+pub(crate) fn generate_request_id(prefix: &str) -> String {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_millis())
@@ -37,11 +39,21 @@ pub async fn query(
         Model::Gemini2_5Pro => LlmApiClient::Gemini(api::GeminiClient::new(api_key)),
         Model::Gpt5 => LlmApiClient::Gpt(api::GptClient::new(api_key)),
     };
+    query_internal(&api_client, prompt, logger, log_prefix).await
+}
 
+async fn query_internal(
+    api_client: &dyn LlmApi,
+    prompt: &str,
+    logger: &Logger,
+    log_prefix: &str,
+) -> Result<String, AppError> {
     logger.log_text(&format!("{log_prefix}-query.txt"), prompt)?;
+
     let request_body = api_client.build_request_body(prompt);
     let url = api_client.get_url();
     let request_id = generate_request_id("llm");
+
     let log_body = json!({
         "url": url,
         "body": &request_body,
@@ -50,12 +62,12 @@ pub async fn query(
     logger.log_json(&format!("{log_prefix}-query.json"), &log_body)?;
 
     let start_time = Instant::now();
-    let idempotency_key = match &api_client {
-        // OpenAI supports idempotency; use stable unique key.
-        LlmApiClient::Gpt(_) => Some(request_id.as_str()),
-        // Gemini does not document idempotency for this endpoint; do not rely on resubmission.
-        LlmApiClient::Gemini(_) => None,
+    let idempotency_key = if api_client.supports_idempotency() {
+        Some(request_id.as_str())
+    } else {
+        None
     };
+
     let response_result = api_client
         .query_with_retries(&request_body, idempotency_key)
         .await;

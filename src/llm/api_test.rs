@@ -273,6 +273,6 @@ fn fake_gpt_client() -> LlmApiClient {
 }
 
 fn fake_gemini_client() -> LlmApiClient {
-    let inner = super::api::GeminiClient::new(String::new());
+    let inner = super::api::GeminiClient::new(String::new(), "gemini-test-model");
     LlmApiClient::Gemini(inner)
 }

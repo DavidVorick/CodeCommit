@@ -36,7 +36,10 @@ pub async fn query(
     log_prefix: &str,
 ) -> Result<String, AppError> {
     let api_client = match model {
-        Model::Gemini2_5Pro => LlmApiClient::Gemini(api::GeminiClient::new(api_key)),
+        Model::Gemini3Pro => LlmApiClient::Gemini(api::GeminiClient::new(api_key, "gemini-3-pro")),
+        Model::Gemini2_5Pro => {
+            LlmApiClient::Gemini(api::GeminiClient::new(api_key, "gemini-2.5-pro"))
+        }
         Model::Gpt5 => LlmApiClient::Gpt(api::GptClient::new(api_key)),
     };
     query_internal(&api_client, prompt, logger, log_prefix).await

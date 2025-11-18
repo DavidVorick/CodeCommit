@@ -23,7 +23,9 @@ impl Config {
         match args.workflow {
             Workflow::CommitCode | Workflow::ConsistencyCheck => {
                 let api_key_rel = match args.model {
-                    Model::Gemini2_5Pro => PathBuf::from("agent-config/gemini-key.txt"),
+                    Model::Gemini3Pro | Model::Gemini2_5Pro => {
+                        PathBuf::from("agent-config/gemini-key.txt")
+                    }
                     Model::Gpt5 => PathBuf::from("agent-config/openai-key.txt"),
                 };
                 let api_key = read_file_to_string_at(base_dir, &api_key_rel)?;

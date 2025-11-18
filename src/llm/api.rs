@@ -6,9 +6,6 @@ use std::future::Future;
 use std::pin::Pin;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-const GEMINI_API_URL_BASE: &str =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent";
-const GEMINI_MODEL_NAME: &str = "gemini-2.5-pro";
 const GPT_API_URL: &str = "https://api.openai.com/v1/chat/completions";
 const GPT_MODEL_NAME: &str = "gpt-5";
 
@@ -34,10 +31,12 @@ pub(crate) enum QueryError {
 pub(crate) struct GeminiClient {
     client: Client,
     api_key: String,
+    model_name: &'static str,
+    api_url: String,
 }
 
 impl GeminiClient {
-    pub(crate) fn new(api_key: String) -> Self {
+    pub(crate) fn new(api_key: String, model_name: &'static str) -> Self {
         let client = Client::builder()
             .connect_timeout(Duration::from_secs(15))
             .tcp_keepalive(Some(Duration::from_secs(30)))
@@ -45,12 +44,20 @@ impl GeminiClient {
             .pool_max_idle_per_host(8)
             .build()
             .unwrap_or_else(|_| Client::new());
-        Self { client, api_key }
+        let api_url = format!(
+            "https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
+        );
+        Self {
+            client,
+            api_key,
+            model_name,
+            api_url,
+        }
     }
 
     // Single attempt. No retries here; higher-level logic decides retries.
     async fn query_once(&self, request_body: &Value) -> Result<Value, QueryError> {
-        let url = GEMINI_API_URL_BASE;
+        let url = &self.api_url;
 
         let resp_res = self
             .client
@@ -139,14 +146,14 @@ pub(crate) enum LlmApiClient {
 impl LlmApiClient {
     pub(crate) fn get_model_name(&self) -> &'static str {
         match self {
-            LlmApiClient::Gemini(_) => GEMINI_MODEL_NAME,
+            LlmApiClient::Gemini(c) => c.model_name,
             LlmApiClient::Gpt(_) => GPT_MODEL_NAME,
         }
     }
 
-    pub(crate) fn get_url(&self) -> &'static str {
+    pub(crate) fn get_url(&self) -> &str {
         match self {
-            LlmApiClient::Gemini(_) => GEMINI_API_URL_BASE,
+            LlmApiClient::Gemini(c) => &c.api_url,
             LlmApiClient::Gpt(_) => GPT_API_URL,
         }
     }
@@ -231,7 +238,7 @@ impl LlmApiClient {
 
 pub(crate) trait LlmApi: Send + Sync {
     fn get_model_name(&self) -> &'static str;
-    fn get_url(&self) -> &'static str;
+    fn get_url(&self) -> &str;
     fn build_request_body(&self, prompt: &str) -> Value;
     fn query_with_retries<'a>(
         &'a self,
@@ -247,7 +254,7 @@ impl LlmApi for LlmApiClient {
         LlmApiClient::get_model_name(self)
     }
 
-    fn get_url(&self) -> &'static str {
+    fn get_url(&self) -> &str {
         LlmApiClient::get_url(self)
     }
 

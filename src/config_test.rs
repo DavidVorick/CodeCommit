@@ -20,7 +20,7 @@ fn test_load_config_commit_code_workflow() {
     let dir = tempdir().unwrap();
     setup_test_env(&dir, "/agent-config", Some("test query"));
     let args = CliArgs {
-        model: Model::Gemini2_5Pro,
+        model: Model::Gemini3Pro,
         workflow: Workflow::CommitCode,
         force: false,
         light_roll: false,
@@ -30,6 +30,22 @@ fn test_load_config_commit_code_workflow() {
     assert_eq!(config.api_key, "gemini-key-123");
     assert_eq!(config.query, "test query");
     assert!(!config.system_prompts.contains("refactor"));
+}
+
+#[test]
+fn test_load_config_gemini2_5_pro_workflow() {
+    let dir = tempdir().unwrap();
+    setup_test_env(&dir, "/agent-config", Some("test query for gemini 2.5"));
+    let args = CliArgs {
+        model: Model::Gemini2_5Pro,
+        workflow: Workflow::CommitCode,
+        force: false,
+        light_roll: false,
+    };
+
+    let config = Config::load_from_dir(&args, dir.path()).unwrap();
+    assert_eq!(config.api_key, "gemini-key-123");
+    assert_eq!(config.query, "test query for gemini 2.5");
 }
 
 #[test]
@@ -155,7 +171,7 @@ fn test_gitignore_with_trailing_slash() {
 #[test]
 fn test_config_implements_debug() {
     let cfg = Config {
-        model: Model::Gemini2_5Pro,
+        model: Model::Gemini3Pro,
         api_key: "k".to_string(),
         query: "q".to_string(),
         system_prompts: "s".to_string(),

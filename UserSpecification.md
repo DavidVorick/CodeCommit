@@ -93,12 +93,18 @@ If the flag `--light-roll` is passed in, it will ignore the Cargo.lock file.
 
 ## LLMs
 
-CodeCommit supports multiple LLMs. The default LLM is gemini-2.5-pro, and other
+CodeCommit supports multiple LLMs. The default LLM is gemini-3-pro, and other
 LLMs are also supported. To run a different model, the user should pass a
 '--model' flag. Unrecognized models and unrecognized flags should produce an
 error.
 
 The core logic for interfacing with llms is in the 'llm' module.
+
+### Gemini 3
+
+User flag: '--model gemini-3-pro'
+
+API Key Location: agent-config/gemini-key.txt
 
 ### Gemini 2.5 Pro
 

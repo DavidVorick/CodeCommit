@@ -3,6 +3,7 @@ use crate::app_error::AppError;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Model {
     #[default]
+    Gemini3Pro,
     Gemini2_5Pro,
     Gpt5,
 }
@@ -10,6 +11,7 @@ pub enum Model {
 impl Model {
     fn from_str(s: &str) -> Result<Self, AppError> {
         match s {
+            "gemini-3-pro" => Ok(Model::Gemini3Pro),
             "gemini-2.5-pro" => Ok(Model::Gemini2_5Pro),
             "gpt-5" => Ok(Model::Gpt5),
             _ => Err(AppError::Config(format!("Unsupported model: {s}"))),

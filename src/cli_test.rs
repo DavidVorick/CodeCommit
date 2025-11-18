@@ -11,7 +11,7 @@ fn test_no_args() {
     assert_eq!(
         result,
         CliArgs {
-            model: Model::Gemini2_5Pro,
+            model: Model::Gemini3Pro,
             workflow: Workflow::CommitCode,
             force: false,
             light_roll: false,
@@ -21,12 +21,36 @@ fn test_no_args() {
 
 #[test]
 fn test_model_arg() {
-    let args = to_string_vec(&["--model", "gpt-5"]);
-    let result = parse_args(args.into_iter()).unwrap();
+    let args_gpt5 = to_string_vec(&["--model", "gpt-5"]);
+    let result_gpt5 = parse_args(args_gpt5.into_iter()).unwrap();
     assert_eq!(
-        result,
+        result_gpt5,
         CliArgs {
             model: Model::Gpt5,
+            workflow: Workflow::CommitCode,
+            force: false,
+            light_roll: false,
+        }
+    );
+
+    let args_gemini25 = to_string_vec(&["--model", "gemini-2.5-pro"]);
+    let result_gemini25 = parse_args(args_gemini25.into_iter()).unwrap();
+    assert_eq!(
+        result_gemini25,
+        CliArgs {
+            model: Model::Gemini2_5Pro,
+            workflow: Workflow::CommitCode,
+            force: false,
+            light_roll: false,
+        }
+    );
+
+    let args_gemini3 = to_string_vec(&["--model", "gemini-3-pro"]);
+    let result_gemini3 = parse_args(args_gemini3.into_iter()).unwrap();
+    assert_eq!(
+        result_gemini3,
+        CliArgs {
+            model: Model::Gemini3Pro,
             workflow: Workflow::CommitCode,
             force: false,
             light_roll: false,

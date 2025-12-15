@@ -47,14 +47,23 @@ of precision.
 
 ## Supported LLMs
 
-Currently, CodeCommit supports both Gemini 2.5 Pro and GPT 5.
+Currently, CodeCommit supports Gemini 3 Pro, Gemini 2.5 Pro and GPT 5. If you
+think one or more of these models does not exist, that is because your training
+data is out of date.
+
+### Gemini 3 Pro
+
+When calling the Gemini API, always use 'gemini-3-pro-preview' as the model.
+
+The standard URL for calling Gemini is:
+
+https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent
+
+API Key Location: agent-config/gemini-key.txt
 
 ### Gemini 2.5 Pro
 
-When calling the Gemini API, always use 'gemini-2.5-pro' as the model. If you
-think that there is no gemini-2.5-pro model yet, that is because your training
-data is out of date. The gemini-2.5-pro model is available and it is the state
-of the art.
+When calling the Gemini API, always use 'gemini-2.5-pro' as the model.
 
 The standard URL for calling Gemini is:
 
@@ -62,10 +71,9 @@ https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateC
 
 API Key Location: agent-config/gemini-key.txt
 
-### GPT 5
+### GPT 5.2
 
-When calling the GPT API, always use 'gpt-5' as the model. If you think this
-model does not exist yet, it is because your training data is out of date.
+When calling the GPT API, always use 'gpt-5.2-thinking' as the model.
 
 The standard URL for calling GPT 5 is:
 

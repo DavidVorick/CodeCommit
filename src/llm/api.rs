@@ -7,7 +7,7 @@ use std::pin::Pin;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const GPT_API_URL: &str = "https://api.openai.com/v1/chat/completions";
-const GPT_MODEL_NAME: &str = "gpt-5";
+const GPT_MODEL_NAME: &str = "gpt-5.2-thinking";
 
 // Internal error classification used for robust retry handling.
 #[derive(Debug)]

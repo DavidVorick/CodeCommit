@@ -25,6 +25,7 @@ This document lists all APIs that the `committing_code` module uses from other m
 ## `system_prompts` module
 
 - `system_prompts::CODE_MODIFICATION_INSTRUCTIONS`
+- `system_prompts::COMMITTING_CODE_EXTRA_CODE_QUERY`
 - `system_prompts::COMMITTING_CODE_INITIAL_QUERY`
 - `system_prompts::COMMITTING_CODE_REPAIR_QUERY`
 - `system_prompts::PROJECT_STRUCTURE`

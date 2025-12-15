@@ -198,8 +198,7 @@ fn test_retryable_http_statuses() {
         };
         assert!(
             policy_gpt.is_retryable(&fake_gpt_client(), &e),
-            "code {} should be retryable",
-            code
+            "code {code} should be retryable"
         );
     }
     let e400 = QueryError::Http {

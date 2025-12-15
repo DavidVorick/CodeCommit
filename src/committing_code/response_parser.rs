@@ -40,3 +40,25 @@ pub(crate) fn parse_llm_response(text: &str) -> Result<Vec<FileUpdate>, AppError
     }
     Ok(updates)
 }
+
+pub(crate) fn parse_extra_files_response(text: &str) -> Result<Vec<PathBuf>, AppError> {
+    let mut files = Vec::new();
+    let lines = text.lines();
+    let mut inside_block = false;
+
+    for line in lines {
+        let trimmed = line.trim();
+        if trimmed == "%%%files" {
+            inside_block = true;
+            continue;
+        }
+        if trimmed == "%%%end" {
+            inside_block = false;
+            continue;
+        }
+        if inside_block && !trimmed.is_empty() {
+            files.push(PathBuf::from(trimmed));
+        }
+    }
+    Ok(files)
+}

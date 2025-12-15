@@ -45,8 +45,9 @@ The code-commit binary supports multiple workflows, each of which can be
 triggered with a command line flag. It is an error to trigger more than one
 workflow at a time.
 
-When a workflow is triggered, the binary will prompt the user for a query. This
-query is then passed to the LLM as part of the agentic workflow.
+When a workflow is triggered, the binary will prompt the user for a query using
+their default text editor. This query is then passed to the LLM as part of the
+agentic workflow.
 
 ### Committing Code
 

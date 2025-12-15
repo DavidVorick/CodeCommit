@@ -1,0 +1,19 @@
+You are performing a preprocessing task for a future LLM agent that will be
+attempting to repair an agentic codebase. Your task is look at the build.sh
+output and determine if any extra context is needed for the repair agent to
+succeed.
+
+In a moment, you will be provided with the list of files that are already going
+to be presented to the repair agent. After that, you will be provided with the
+build.sh output.
+
+In your response, you should use file selection notation to indicate which
+files should be added to the set of files being sent to the repair agent. File
+selection notation starts with '%%%files' and ends with '%%%end'. You must use
+this notation, or the automated workflow will not see your files. Here is a
+full example:
+
+%%%files
+src/config_test.rs
+src/init_test.rs
+%%%end

@@ -31,7 +31,7 @@ impl TestEnv {
             fs::create_dir_all(parent).unwrap();
         }
         let mut file = fs::File::create(&path).unwrap();
-        write!(file, "{}", content).unwrap();
+        write!(file, "{content}").unwrap();
     }
 
     fn path(&self) -> &Path {
@@ -58,7 +58,7 @@ fn test_build_summary_mandatory_file_ignored() {
     if let Err(AppError::Config(msg)) = result {
         assert!(msg.contains("Mandatory file 'Cargo.toml' is ignored by .gitignore"));
     } else {
-        panic!("Expected a Config error, got {:?}", result);
+        panic!("Expected a Config error, got {result:?}");
     }
 }
 

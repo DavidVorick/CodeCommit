@@ -16,6 +16,8 @@ mod response_parser_edge_test;
 #[cfg(test)]
 mod response_parser_error_test;
 #[cfg(test)]
+mod response_parser_extra_test;
+#[cfg(test)]
 mod response_parser_happy_test;
 
 use crate::app_error::AppError;
@@ -25,13 +27,14 @@ use crate::context_builder;
 use crate::llm;
 use crate::logger;
 use crate::system_prompts::{
-    CODE_MODIFICATION_INSTRUCTIONS, COMMITTING_CODE_INITIAL_QUERY, COMMITTING_CODE_REPAIR_QUERY,
-    PROJECT_STRUCTURE,
+    CODE_MODIFICATION_INSTRUCTIONS, COMMITTING_CODE_EXTRA_CODE_QUERY,
+    COMMITTING_CODE_INITIAL_QUERY, COMMITTING_CODE_REPAIR_QUERY, PROJECT_STRUCTURE,
 };
 use file_updater as file_updater_impl;
 use git_status as git_status_impl;
 use response_parser as response_parser_impl;
 use std::collections::HashMap;
+use std::fs;
 use std::path::PathBuf;
 
 const MAX_ATTEMPTS: u32 = 4;
@@ -53,7 +56,7 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
         system_prompt_part, config.query
     );
 
-    let codebase =
+    let mut codebase =
         context_builder::build_codebase_context(&next_agent_prompt, &config, logger).await?;
     logger.log_text("codebase.txt", &codebase)?;
 
@@ -108,12 +111,99 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
                 logger.log_text(&format!("{log_prefix}-build.txt"), &build_failure.output)?;
                 println!("Build failed. Preparing for repair attempt...");
                 last_build_output = Some(build_failure.output);
+
+                if attempt < MAX_ATTEMPTS {
+                    let build_output = last_build_output.as_ref().unwrap();
+                    run_extra_code_query(&config, logger, build_output, &mut codebase, attempt)
+                        .await?;
+                }
             }
         }
     }
 
     println!("Build did not pass after {MAX_ATTEMPTS} attempts. Aborting.");
     Err(AppError::MaxAttemptsReached)
+}
+
+async fn run_extra_code_query(
+    config: &Config,
+    logger: &logger::Logger,
+    build_output: &str,
+    codebase: &mut String,
+    attempt: u32,
+) -> Result<(), AppError> {
+    println!("Running extra code query to check for missing context...");
+    let existing_files = extract_filenames_from_codebase(codebase);
+    let existing_files_list = existing_files.join("\n");
+
+    let extra_code_prompt = format!(
+        "{COMMITTING_CODE_EXTRA_CODE_QUERY}\n[codebase file list]\n{existing_files_list}\n[build.sh output]\n{build_output}"
+    );
+
+    let response = llm::query(
+        config.model,
+        config.api_key.clone(),
+        &extra_code_prompt,
+        logger,
+        &format!("{attempt}-extra-code"),
+    )
+    .await?;
+
+    let extra_files = response_parser_impl::parse_extra_files_response(&response)?;
+    let mut files_added = 0;
+
+    for path in extra_files {
+        let path_str = path.to_string_lossy().to_string();
+        if existing_files.contains(&path_str) {
+            continue;
+        }
+
+        if path.is_absolute()
+            || path
+                .components()
+                .any(|c| matches!(c, std::path::Component::ParentDir))
+        {
+            continue;
+        }
+
+        if let Ok(content) = fs::read_to_string(&path) {
+            codebase.push_str(&format!("--- {path_str} ---\n"));
+            codebase.push_str(&content);
+            if !content.ends_with('\n') {
+                codebase.push('\n');
+            }
+            codebase.push('\n');
+            files_added += 1;
+        }
+    }
+
+    if files_added > 0 {
+        println!("Added {files_added} extra files to context.");
+    }
+
+    Ok(())
+}
+
+fn extract_filenames_from_codebase(codebase: &str) -> Vec<String> {
+    codebase
+        .lines()
+        .filter_map(|line| {
+            if line.starts_with("--- ") && line.ends_with(" ---") {
+                let name = line.trim_start_matches("--- ").trim_end_matches(" ---");
+                if name == "FILENAMES"
+                    || name == "END FILENAMES"
+                    || name.starts_with("FILE REPLACEMENT")
+                    || name.starts_with("FILE REMOVED")
+                {
+                    None
+                } else {
+                    Some(name.to_string())
+                }
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 fn build_initial_prompt(next_agent_prompt: &str, codebase: &str) -> String {

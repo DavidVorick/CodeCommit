@@ -103,15 +103,40 @@ If the build script exits successfully, 'code-commit' stops there. The build is
 considered to have exited successfully if the exit code is 0, even if there is
 output to stderr; some build processes provide non-warning informational output
 to stderr. If the build did not exit successfully, 'code-commit' needs to make
-a series of up to three repair queries to attempt to repair the file.  Each
-repair query has the following format:
+a series of up to three repair queries to attempt to repair the file.
+
+### Extra Code Query
+
+Before the repair query is made, an 'extra code' query is made, to determine
+whether any additional code needs to be provided in the repair query. The extra
+code query has the following format:
+
+[extra code query system prompt]
+[codebase file list]
+[build.sh output]
+
+The system prompts can all be found in the system-prompts module. The build.sh
+output is the entire output (including both stdout and stderr) provided when
+running build.sh. The codebase file list is the list of files that were
+included in the codebase. Notably, we are not including the files themselves,
+we are only listing out the filenames.
+
+The LLM will respond with a list of new files that should be added to the
+codebase to ensure that the repair attempt can be successful. That list should
+be parsed, and the extra files should be added to the codebase that gets
+provided to the repair query. These files will be part of the context for all
+future repair queries.
+
+### Repair Query
+
+Each repair query has the following format:
 
 [project structure system prompt]
 [code modification instructions system prompt]
 [repair query system prompt]
 [build.sh output]
 [supervisor query]
-[codebase]
+[codebase, including extra code]
 [file replacements]
 
 The repair query system prompt can be found in the system-prompts module. The

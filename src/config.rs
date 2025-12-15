@@ -2,8 +2,9 @@ use crate::app_error::AppError;
 use crate::cli::{CliArgs, Model, Workflow};
 use crate::system_prompts::{COMMITTING_CODE_INITIAL_QUERY, CONSISTENCY_CHECK, PROJECT_STRUCTURE};
 use std::fs;
-use std::io::{self, Read};
+use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 #[derive(Debug)]
 pub struct Config {
@@ -16,18 +17,43 @@ pub struct Config {
 impl Config {
     pub fn load(args: &CliArgs) -> Result<Self, AppError> {
         let query = match args.workflow {
-            Workflow::CommitCode | Workflow::ConsistencyCheck => {
-                println!("Please enter your query (end with Ctrl+D):");
-                let mut buffer = String::new();
-                io::stdin()
-                    .read_to_string(&mut buffer)
-                    .map_err(AppError::Io)?;
-                buffer.trim().to_string()
-            }
+            Workflow::CommitCode | Workflow::ConsistencyCheck => Self::get_query_from_editor()?,
             Workflow::Rollup => String::new(),
         };
 
         Self::load_from_dir(args, Path::new("."), query)
+    }
+
+    pub(crate) fn get_query_from_editor() -> Result<String, AppError> {
+        let editor = std::env::var("VISUAL")
+            .or_else(|_| std::env::var("EDITOR"))
+            .unwrap_or_else(|_| "vi".to_string());
+
+        let file = tempfile::Builder::new()
+            .suffix(".md")
+            .tempfile()
+            .map_err(AppError::Io)?;
+
+        let file_path = file.path();
+
+        let status = Command::new(&editor)
+            .arg(file_path)
+            .status()
+            .map_err(|e| AppError::Config(format!("Failed to launch editor '{editor}': {e}")))?;
+
+        if !status.success() {
+            return Err(AppError::Config(
+                "Editor exited with non-zero status.".to_string(),
+            ));
+        }
+
+        let mut buffer = String::new();
+        // Open file path freshly to handle atomic saves by editors
+        let mut f = fs::File::open(file_path).map_err(AppError::Io)?;
+        f.read_to_string(&mut buffer).map_err(AppError::Io)?;
+
+        let query = buffer.trim().to_string();
+        Ok(query)
     }
 
     pub fn load_from_dir(args: &CliArgs, base_dir: &Path, query: String) -> Result<Self, AppError> {

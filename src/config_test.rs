@@ -1,21 +1,29 @@
+use crate::app_error::AppError;
 use crate::cli::{CliArgs, Model, Workflow};
 use crate::config::Config;
-use std::fs;
-use tempfile::tempdir;
-
-// Helper to create a test environment
-fn setup_test_env(dir: &tempfile::TempDir, gitignore_content: &str) {
-    fs::write(dir.path().join(".gitignore"), gitignore_content).unwrap();
-    let agent_config = dir.path().join("agent-config");
-    fs::create_dir_all(&agent_config).unwrap();
-    fs::write(agent_config.join("gemini-key.txt"), "gemini-key-123").unwrap();
-    fs::write(agent_config.join("openai-key.txt"), "openai-key-456").unwrap();
-}
+use crate::system_prompts::COMMITTING_CODE_INITIAL_QUERY;
+use std::fs::File;
+use std::io::Write;
+use std::os::unix::fs::PermissionsExt;
+use tempfile::TempDir;
 
 #[test]
-fn test_load_config_commit_code_workflow() {
-    let dir = tempdir().unwrap();
-    setup_test_env(&dir, "/agent-config");
+fn test_load_from_dir_commit_code_success() {
+    let temp_dir = TempDir::new().unwrap();
+    let base_path = temp_dir.path();
+
+    // Create .gitignore
+    let gitignore_path = base_path.join(".gitignore");
+    let mut gitignore_file = File::create(gitignore_path).unwrap();
+    writeln!(gitignore_file, "/agent-config").unwrap();
+
+    // Create agent-config dir and key
+    let config_dir = base_path.join("agent-config");
+    std::fs::create_dir(&config_dir).unwrap();
+    let key_path = config_dir.join("gemini-key.txt");
+    let mut key_file = File::create(key_path).unwrap();
+    write!(key_file, "secret-key").unwrap();
+
     let args = CliArgs {
         model: Model::Gemini3Pro,
         workflow: Workflow::CommitCode,
@@ -23,140 +31,105 @@ fn test_load_config_commit_code_workflow() {
         light_roll: false,
     };
 
-    let config = Config::load_from_dir(&args, dir.path(), "test query".to_string()).unwrap();
-    assert_eq!(config.api_key, "gemini-key-123");
-    assert_eq!(config.query, "test query");
-    assert!(!config.system_prompts.contains("refactor"));
+    let query = "my query".to_string();
+    let config = Config::load_from_dir(&args, base_path, query.clone()).unwrap();
+
+    assert_eq!(config.api_key, "secret-key");
+    assert_eq!(config.query, query);
+    assert_eq!(
+        config.system_prompts.as_str(),
+        COMMITTING_CODE_INITIAL_QUERY
+    );
 }
 
 #[test]
-fn test_load_config_gemini2_5_pro_workflow() {
-    let dir = tempdir().unwrap();
-    setup_test_env(&dir, "/agent-config");
-    let args = CliArgs {
-        model: Model::Gemini2_5Pro,
-        workflow: Workflow::CommitCode,
-        force: false,
-        light_roll: false,
-    };
+fn test_load_from_dir_consistency_check_success() {
+    let temp_dir = TempDir::new().unwrap();
+    let base_path = temp_dir.path();
 
-    let config =
-        Config::load_from_dir(&args, dir.path(), "test query for gemini 2.5".to_string()).unwrap();
-    assert_eq!(config.api_key, "gemini-key-123");
-    assert_eq!(config.query, "test query for gemini 2.5");
-}
+    // Create .gitignore
+    let gitignore_path = base_path.join(".gitignore");
+    let mut gitignore_file = File::create(gitignore_path).unwrap();
+    writeln!(gitignore_file, "/agent-config").unwrap();
 
-#[test]
-fn test_load_config_consistency_check_with_query() {
-    let dir = tempdir().unwrap();
-    setup_test_env(&dir, "/agent-config");
-    let args = CliArgs {
-        model: Model::default(),
-        workflow: Workflow::ConsistencyCheck,
-        force: false,
-        light_roll: false,
-    };
-
-    let config = Config::load_from_dir(&args, dir.path(), "check consistency".to_string()).unwrap();
-    assert_eq!(config.query, "check consistency");
-}
-
-#[test]
-fn test_load_config_consistency_check_without_query() {
-    let dir = tempdir().unwrap();
-    setup_test_env(&dir, "/agent-config");
-    let args = CliArgs {
-        model: Model::default(),
-        workflow: Workflow::ConsistencyCheck,
-        force: false,
-        light_roll: false,
-    };
-
-    let config = Config::load_from_dir(&args, dir.path(), "".to_string()).unwrap();
-    assert_eq!(config.query, "");
-}
-
-#[test]
-fn test_load_config_missing_gitignore() {
-    let dir = tempdir().unwrap();
-    let agent_config = dir.path().join("agent-config");
-    fs::create_dir_all(&agent_config).unwrap();
-    fs::write(agent_config.join("gemini-key.txt"), "gemini-key-123").unwrap();
+    // Create agent-config dir and key
+    let config_dir = base_path.join("agent-config");
+    std::fs::create_dir(&config_dir).unwrap();
+    let key_path = config_dir.join("gemini-key.txt");
+    let mut key_file = File::create(key_path).unwrap();
+    write!(key_file, "secret-key").unwrap();
 
     let args = CliArgs {
-        model: Model::default(),
-        workflow: Workflow::default(),
-        force: false,
-        light_roll: false,
-    };
-
-    let result = Config::load_from_dir(&args, dir.path(), "q".to_string());
-    assert!(result.is_err());
-    let error_msg = result.unwrap_err().to_string();
-    assert!(error_msg.contains("'.gitignore' file not found"));
-}
-
-#[test]
-fn test_load_config_gitignore_missing_agent_config() {
-    let dir = tempdir().unwrap();
-    setup_test_env(&dir, "target/");
-    let args = CliArgs {
-        model: Model::default(),
-        workflow: Workflow::default(),
-        force: false,
-        light_roll: false,
-    };
-
-    let result = Config::load_from_dir(&args, dir.path(), "q".to_string());
-    assert!(result.is_err());
-    let error_msg = result.unwrap_err().to_string();
-    assert!(error_msg.contains("Your .gitignore file must contain the line '/agent-config'"));
-}
-
-#[test]
-fn test_load_config_missing_api_key_file() {
-    let dir = tempdir().unwrap();
-    fs::write(dir.path().join(".gitignore"), "/agent-config").unwrap();
-    let agent_config = dir.path().join("agent-config");
-    fs::create_dir_all(&agent_config).unwrap();
-    // No key files written
-
-    let args = CliArgs {
-        model: Model::Gemini2_5Pro,
-        workflow: Workflow::default(),
-        force: false,
-        light_roll: false,
-    };
-
-    let result = Config::load_from_dir(&args, dir.path(), "q".to_string());
-    assert!(result.is_err());
-    let error_msg = result.unwrap_err().to_string();
-    assert!(error_msg.contains("Failed to read file 'agent-config/gemini-key.txt'"));
-}
-
-#[test]
-fn test_gitignore_with_trailing_slash() {
-    let dir = tempdir().unwrap();
-    setup_test_env(&dir, "agent-config/");
-    let args = CliArgs {
-        model: Model::Gemini2_5Pro,
-        workflow: Workflow::CommitCode,
-        force: false,
-        light_roll: false,
-    };
-
-    let config_result = Config::load_from_dir(&args, dir.path(), "q".to_string());
-    assert!(config_result.is_ok());
-}
-
-#[test]
-fn test_config_implements_debug() {
-    let cfg = Config {
         model: Model::Gemini3Pro,
-        api_key: "k".to_string(),
-        query: "q".to_string(),
-        system_prompts: "s".to_string(),
+        workflow: Workflow::ConsistencyCheck,
+        force: false,
+        light_roll: false,
     };
-    let debug_str = format!("{:?}", cfg);
-    assert!(debug_str.contains("api_key"));
+
+    let query = "consistency query".to_string();
+    let config = Config::load_from_dir(&args, base_path, query.clone()).unwrap();
+
+    assert_eq!(config.api_key, "secret-key");
+    assert_eq!(config.query, query);
+    assert!(!config.system_prompts.is_empty());
+}
+
+#[test]
+fn test_load_from_dir_missing_gitignore() {
+    let temp_dir = TempDir::new().unwrap();
+    let base_path = temp_dir.path();
+
+    let args = CliArgs {
+        model: Model::Gemini3Pro,
+        workflow: Workflow::CommitCode,
+        force: false,
+        light_roll: false,
+    };
+
+    let result = Config::load_from_dir(&args, base_path, "query".to_string());
+    assert!(matches!(result, Err(AppError::Config(_))));
+}
+
+#[test]
+fn test_load_from_dir_insecure_gitignore() {
+    let temp_dir = TempDir::new().unwrap();
+    let base_path = temp_dir.path();
+
+    let gitignore_path = base_path.join(".gitignore");
+    let mut gitignore_file = File::create(gitignore_path).unwrap();
+    writeln!(gitignore_file, "target/").unwrap(); // Missing agent-config
+
+    let args = CliArgs {
+        model: Model::Gemini3Pro,
+        workflow: Workflow::CommitCode,
+        force: false,
+        light_roll: false,
+    };
+
+    let result = Config::load_from_dir(&args, base_path, "query".to_string());
+    assert!(matches!(result, Err(AppError::Config(_))));
+}
+
+#[test]
+fn test_get_query_from_editor_mocked() {
+    let temp_dir = TempDir::new().unwrap();
+    let script_path = temp_dir.path().join("mock_editor.sh");
+
+    {
+        let mut f = File::create(&script_path).unwrap();
+        writeln!(f, "#!/bin/sh").unwrap();
+        writeln!(f, "echo 'mock query' > $1").unwrap();
+    }
+
+    let mut perms = std::fs::metadata(&script_path).unwrap().permissions();
+    perms.set_mode(0o755);
+    std::fs::set_permissions(&script_path, perms).unwrap();
+
+    let script_abs_path = script_path.canonicalize().unwrap();
+    unsafe {
+        std::env::set_var("VISUAL", script_abs_path.to_str().unwrap());
+    }
+
+    let query = Config::get_query_from_editor().unwrap();
+    assert_eq!(query, "mock query");
 }

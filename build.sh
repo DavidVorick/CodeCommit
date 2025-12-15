@@ -9,6 +9,8 @@ trap 'handle_error' ERR
 # --no-test=pass tells nextest to exit with code 0 if there are no tests
 DATE=$(date +"%Y-%m-%d::%H:%M:%S.%3N")
 cargo fmt
+cargo fix --allow-dirty
+cargo clippy --fix --allow-dirty
 cargo build
 cargo nextest run --no-tests=pass --no-fail-fast
 cargo nextest run --no-tests=pass --no-fail-fast -- --ignored

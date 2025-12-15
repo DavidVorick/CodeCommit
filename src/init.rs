@@ -32,7 +32,6 @@ pub fn create_in_dir(base_dir: &Path, project_name: &str) -> Result<(), AppError
     )?;
     write_if_missing(&base_dir.join("src/main.rs"), TEMPLATE_SRC_MAIN_RS)?;
     write_if_missing(&base_dir.join("UserSpecification.md"), TEMPLATE_USER_SPEC)?;
-    write_if_missing(&base_dir.join("agent-config/query.txt"), "")?;
     Ok(())
 }
 

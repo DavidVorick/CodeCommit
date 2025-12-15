@@ -61,21 +61,16 @@ fn validate_path(path: &Path, base_dir: &Path, ignore: &Gitignore) -> Result<boo
         return Ok(false);
     }
 
-    let allowed_agent_query = Path::new("agent-config").join("query.txt");
-    let is_allowed_agent_query = rel == allowed_agent_query;
-
     if let Some(Component::Normal(first)) = rel.components().next() {
         if let Some(name) = first.to_str() {
-            if matches!(name, "agent-config" | "app-data") && !is_allowed_agent_query {
+            if matches!(name, "agent-config" | "app-data") {
                 return Ok(false);
             }
         }
     }
 
-    if !is_allowed_agent_query {
-        if let ignore::Match::Ignore(_) = ignore.matched_path_or_any_parents(&rel, false) {
-            return Ok(false);
-        }
+    if let ignore::Match::Ignore(_) = ignore.matched_path_or_any_parents(&rel, false) {
+        return Ok(false);
     }
 
     Ok(true)

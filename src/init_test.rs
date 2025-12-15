@@ -17,7 +17,7 @@ fn test_init_creates_all_files_and_dirs() {
 
     assert!(exists(&base.join("agent-config")));
     assert!(exists(&base.join("agent-config/logs")));
-    assert!(exists(&base.join("agent-config/query.txt")));
+    assert!(!exists(&base.join("agent-config/query.txt")));
     assert!(exists(&base.join("src")));
     assert!(exists(&base.join(".gitignore")));
     assert!(exists(&base.join("build.sh")));
@@ -45,9 +45,6 @@ fn test_init_creates_all_files_and_dirs() {
 
     let user_spec = fs::read_to_string(base.join("UserSpecification.md")).unwrap();
     assert!(user_spec.contains("# User Specification"));
-
-    let query_txt = fs::read_to_string(base.join("agent-config/query.txt")).unwrap();
-    assert_eq!(query_txt, "");
 }
 
 #[test]
@@ -78,7 +75,6 @@ fn test_init_does_not_overwrite_existing_files() {
     assert!(base.join("UserSpecification.md").exists());
     assert!(base.join("agent-config").exists());
     assert!(base.join("agent-config/logs").exists());
-    assert!(base.join("agent-config/query.txt").exists());
     assert!(base.join("src/main.rs").exists());
 }
 

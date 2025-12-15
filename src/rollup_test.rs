@@ -50,9 +50,6 @@ fn rollup_includes_all_non_ignored_files_and_respects_protections() {
     env.write("agent-config/secret.txt", "nope\n");
     env.write("app-data/secret.json", "{\"nope\":true}\n");
 
-    // Exception: include agent-config/query.txt even if ignored
-    env.write("agent-config/query.txt", "user query\n");
-
     let rollup = build_rollup_for_base_dir(env.base(), false).unwrap();
 
     assert!(rollup.contains("--- Cargo.toml ---\n[package]\nname = \"x\"\n\n"));
@@ -62,9 +59,6 @@ fn rollup_includes_all_non_ignored_files_and_respects_protections() {
     assert!(!rollup.contains("--- debug.log ---"));
     assert!(!rollup.contains("agent-config/secret.txt"));
     assert!(!rollup.contains("app-data/secret.json"));
-
-    // agent-config/query.txt must be present even though agent-config is ignored
-    assert!(rollup.contains("--- agent-config/query.txt ---\nuser query\n\n"));
 }
 
 #[test]

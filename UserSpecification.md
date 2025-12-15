@@ -21,7 +21,6 @@ created:
 
 + agent-config/
 + agent-config/logs/
-+ agent-config/query.txt (empty file)
 + .gitignore (matching this repo's .gitignore)
 + build.sh (matching this repo's build.sh)
 + Cargo.toml
@@ -46,6 +45,9 @@ The code-commit binary supports multiple workflows, each of which can be
 triggered with a command line flag. It is an error to trigger more than one
 workflow at a time.
 
+When a workflow is triggered, the binary will prompt the user for a query. This
+query is then passed to the LLM as part of the agentic workflow.
+
 ### Committing Code
 
 The 'committing-code' workflow uses LLMs to run programming tasks and is the
@@ -54,9 +56,6 @@ with flags, and if no workflow flags are provided the binary will assume that
 it is supposed to execute the workflow for committing code.
 
 The programmatic slug that refers to this workflow is 'committing-code'.
-
-The user must provide guidance for the committing-code workflow by writing
-their own query in agent-config/query.txt
 
 ### Checking Consistency
 
@@ -74,10 +73,6 @@ therefore it must be both human readable and machine readable.
 The consistency workflow can be triggered with the command line flag
 '--consistency-check' or '--consistency' or '--cc'. The programmatic slug that
 refers to this workflow is 'consistency'.
-
-The user can optionally provide guidance for the consistency workflow by
-writing their own query in agent-config/query.txt - if none is provided, an
-empty string will be used.
 
 The output of the consistency check will be placed in
 agent-config/consistency-report.txt
@@ -130,5 +125,4 @@ The core logic for interfacing with the logs is in the 'logging' module.
 To ensure that the private data of code-commit projects is never exfiltrated or
 exposed, files in the app-data/ folder and agent-config/ folder are never
 allowed to be directly modified by an LLM, and they are never included in the
-context that is provided to an LLM. The one exception is
-agent-config/query.txt, which is allowed to be part of the context.
+context that is provided to an LLM.

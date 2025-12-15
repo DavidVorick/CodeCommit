@@ -31,15 +31,10 @@ will have the following format:
 
 The system prompts can be found in the system-prompts module.
 
-The supervisor query can be found in the local project. It is assumed that the
-'code-commit' binary will be stored alongside the local project as well,
-therefore the 'code-commit' binary should be able to find the supervisor query
-at 'agent-config/query.txt'.
+The supervisor query is collected by the binary when the workflow is triggered,
+and is hand-written by the supervisor.
 
 The 'codebase' will be generated using the `context_builder` module.
-
-The query file will be hand-written by the supervisor. If the query file is
-missing, then an error is returned and the program exits.
 
 The query is then sent to the LLM.
 
@@ -119,12 +114,12 @@ repair query has the following format:
 [codebase]
 [file replacements]
 
-The repair query system prompt can be found in the system-prompts module.  The
+The repair query system prompt can be found in the system-prompts module. The
 build.sh output is the entire output (including both stdout and stderr)
-provided when running build.sh. The query is the contents in query.txt (which
-have not been modified), the codebase is the previously generated codebase
-(which has not been modified), and the file replacements are all of the files
-that got replaced by the system parser.
+provided when running build.sh. The supervisor query is the same from before,
+the codebase is the previously generated codebase (which has not been
+modified), and the file replacements are all of the files that got replaced by
+the system parser.
 
 The file replacements should be presented with the following syntax:
 

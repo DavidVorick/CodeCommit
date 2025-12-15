@@ -2,6 +2,7 @@ use crate::app_error::AppError;
 use crate::cli::{CliArgs, Model, Workflow};
 use crate::system_prompts::{COMMITTING_CODE_INITIAL_QUERY, CONSISTENCY_CHECK, PROJECT_STRUCTURE};
 use std::fs;
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
@@ -14,10 +15,22 @@ pub struct Config {
 
 impl Config {
     pub fn load(args: &CliArgs) -> Result<Self, AppError> {
-        Self::load_from_dir(args, Path::new("."))
+        let query = match args.workflow {
+            Workflow::CommitCode | Workflow::ConsistencyCheck => {
+                println!("Please enter your query (end with Ctrl+D):");
+                let mut buffer = String::new();
+                io::stdin()
+                    .read_to_string(&mut buffer)
+                    .map_err(AppError::Io)?;
+                buffer.trim().to_string()
+            }
+            Workflow::Rollup => String::new(),
+        };
+
+        Self::load_from_dir(args, Path::new("."), query)
     }
 
-    pub fn load_from_dir(args: &CliArgs, base_dir: &Path) -> Result<Self, AppError> {
+    pub fn load_from_dir(args: &CliArgs, base_dir: &Path, query: String) -> Result<Self, AppError> {
         check_gitignore_in_dir(base_dir)?;
 
         match args.workflow {
@@ -29,26 +42,6 @@ impl Config {
                     Model::Gpt5 => PathBuf::from("agent-config/openai-key.txt"),
                 };
                 let api_key = read_file_to_string_at(base_dir, &api_key_rel)?;
-
-                let query_rel = PathBuf::from("agent-config/query.txt");
-                let query = match args.workflow {
-                    Workflow::CommitCode => read_file_to_string_at(base_dir, &query_rel)?,
-                    Workflow::ConsistencyCheck => {
-                        let path = base_dir.join(&query_rel);
-                        match fs::read_to_string(&path) {
-                            Ok(content) => content,
-                            Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
-                            Err(e) => {
-                                return Err(AppError::Config(format!(
-                                    "Failed to read file '{}': {}",
-                                    query_rel.display(),
-                                    e
-                                )));
-                            }
-                        }
-                    }
-                    Workflow::Rollup => unreachable!(),
-                };
 
                 let system_prompts = match args.workflow {
                     Workflow::CommitCode => COMMITTING_CODE_INITIAL_QUERY.to_string(),

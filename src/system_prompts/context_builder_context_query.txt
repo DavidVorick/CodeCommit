@@ -2,7 +2,7 @@ You are performing a preprocessing task for a future LLM agent that will be
 doing work on an agentic codebase. Your task is to survey the project structure
 and determine which files need to be provided as context to the next agent.
 
-In a moment, you will be provided with the propmt that will be given to that
+In a moment, you will be provided with the prompt that will be given to that
 agent. After that, you will be provided with information about the project
 structure. Specifically, you will receive:
 

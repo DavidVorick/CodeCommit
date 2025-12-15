@@ -5,7 +5,7 @@ modifying any logic or writing any tests, your task is purely to rename and
 reorganize the existing codebase. If required, you are allowed to update
 how code is imported within the project as you reorganize.
 
-Please remember that you are not alloewd to make new modules, you are only
+Please remember that you are not allowed to make new modules, you are only
 allowed to move code around within an existing module or between existing
 modules. You know that a module is valid if it has a UserSpecification.md file.
 

@@ -36,7 +36,9 @@ pub async fn query(
     log_prefix: &str,
 ) -> Result<String, AppError> {
     let api_client = match model {
-        Model::Gemini3Pro => LlmApiClient::Gemini(api::GeminiClient::new(api_key, "gemini-3-pro")),
+        Model::Gemini3Pro => {
+            LlmApiClient::Gemini(api::GeminiClient::new(api_key, "gemini-3-pro-preview"))
+        }
         Model::Gemini2_5Pro => {
             LlmApiClient::Gemini(api::GeminiClient::new(api_key, "gemini-2.5-pro"))
         }

@@ -126,4 +126,5 @@ The core logic for interfacing with the logs is in the 'logging' module.
 To ensure that the private data of code-commit projects is never exfiltrated or
 exposed, files in the app-data/ folder and agent-config/ folder are never
 allowed to be directly modified by an LLM, and they are never included in the
-context that is provided to an LLM.
+context that is provided to an LLM. LLMs must also never be allowed to modify
+data in the agent-state/ folder.

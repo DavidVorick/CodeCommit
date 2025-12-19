@@ -126,11 +126,11 @@ will know to update those integration tests.
 
 When the 'code-commit' command is run, the auto workflow tool will iterate over
 every UserSpecification in the project and see which stages have been completed
-for the latest version of that UserSpecification. It will target the
+for the latest version of each UserSpecification. It will target the
 UserSpecification that has the least progress and then trigger the appropriate
 LLM workflow to make progress on that UserSpecification. If multiple
-UserSpecifications are at the same progression level, one is chosen at random
-to make progress.
+UserSpecifications are at the same progression level, they are processed in
+alphabetical order.
 
 Each workflow can provide one of three responses, which will be wrapped in
 '@@@@' tags on either end for easy machine parsing. The three potential

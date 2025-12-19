@@ -7,7 +7,9 @@ use std::pin::Pin;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const GPT_API_URL: &str = "https://api.openai.com/v1/chat/completions";
-const GPT_MODEL_NAME: &str = "gpt-5.2-thinking";
+const GPT_MODEL_NAME: &str = "gpt-5.2";
+const GEMINI_INTERACTIONS_URL: &str =
+    "https://generativelanguage.googleapis.com/v1beta/interactions";
 
 // Internal error classification used for robust retry handling.
 #[derive(Debug)]
@@ -44,9 +46,8 @@ impl GeminiClient {
             .pool_max_idle_per_host(8)
             .build()
             .unwrap_or_else(|_| Client::new());
-        let api_url = format!(
-            "https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
-        );
+        // The URL is now constant for the Interactions API, but we store it to satisfy get_url()
+        let api_url = GEMINI_INTERACTIONS_URL.to_string();
         Self {
             client,
             api_key,
@@ -55,19 +56,68 @@ impl GeminiClient {
         }
     }
 
-    // Single attempt. No retries here; higher-level logic decides retries.
+    // Implements the "Start Interaction -> Poll -> Result" flow.
+    // This entire flow is treated as one "query attempt". If any network error occurs
+    // during start or polling, the outer retry logic (in LlmApiClient) will retry the whole flow,
+    // which effectively creates a new interaction. This is consistent with the UserSpec.
     async fn query_once(&self, request_body: &Value) -> Result<Value, QueryError> {
-        let url = &self.api_url;
+        // 1. Start Interaction
+        let mut resp = self.post_interaction(request_body).await?;
 
+        loop {
+            // 2. Check Status
+            let status = resp.get("status").and_then(|s| s.as_str()).unwrap_or("");
+            if status == "completed" || status == "failed" || status == "cancelled" {
+                return Ok(resp);
+            }
+
+            // 3. Extract ID for polling
+            let id =
+                resp.get("id")
+                    .and_then(|s| s.as_str())
+                    .ok_or_else(|| QueryError::InvalidJson {
+                        body: resp.to_string(),
+                        parse_error: "Missing 'id' in non-terminal Interaction response"
+                            .to_string(),
+                    })?;
+
+            // 4. Wait
+            tokio::time::sleep(Duration::from_secs(2)).await;
+
+            // 5. Poll
+            resp = self.get_interaction(id).await?;
+        }
+    }
+
+    async fn post_interaction(&self, body: &Value) -> Result<Value, QueryError> {
         let resp_res = self
             .client
-            .post(url)
+            .post(&self.api_url)
             .header("x-goog-api-key", &self.api_key)
             .header("Content-Type", "application/json")
-            .json(request_body)
+            .json(body)
             .send()
             .await;
 
+        self.handle_response(resp_res).await
+    }
+
+    async fn get_interaction(&self, id: &str) -> Result<Value, QueryError> {
+        let url = format!("{}/{}", self.api_url, id);
+        let resp_res = self
+            .client
+            .get(&url)
+            .header("x-goog-api-key", &self.api_key)
+            .send()
+            .await;
+
+        self.handle_response(resp_res).await
+    }
+
+    async fn handle_response(
+        &self,
+        resp_res: Result<reqwest::Response, reqwest::Error>,
+    ) -> Result<Value, QueryError> {
         let resp = match resp_res {
             Ok(r) => r,
             Err(e) => {
@@ -78,7 +128,6 @@ impl GeminiClient {
                 });
             }
         };
-
         handle_response_to_json(resp, &self.api_key).await
     }
 }
@@ -160,13 +209,9 @@ impl LlmApiClient {
 
     pub(crate) fn build_request_body(&self, prompt: &str) -> Value {
         match self {
-            LlmApiClient::Gemini(_) => json!({
-                "contents": [{
-                    "parts": [{ "text": prompt }]
-                }],
-                "generationConfig": {
-                    "temperature": 0.7
-                }
+            LlmApiClient::Gemini(c) => json!({
+                "model": c.model_name,
+                "input": prompt,
             }),
             LlmApiClient::Gpt(_) => json!({
                 "model": GPT_MODEL_NAME,
@@ -293,7 +338,8 @@ pub(crate) struct RetryPolicy {
 impl RetryPolicy {
     pub(crate) fn for_model(model: &LlmApiClient) -> Self {
         match model {
-            // Conservative on Gemini: avoid retries on ambiguous timeouts to prevent double inference.
+            // Gemini Interactions flow handles its own polling, so outer retries are for
+            // start/polling network failures.
             LlmApiClient::Gemini(_) => RetryPolicy {
                 max_attempts: 4,
                 base_delay: Duration::from_millis(400),
@@ -316,8 +362,10 @@ impl RetryPolicy {
                 ..
             } => match model {
                 LlmApiClient::Gemini(_) => {
-                    // Retry only if the connection was not established (safe to retry).
-                    *is_connect
+                    // Gemini Interactions: safe to retry if we can't connect or timeout,
+                    // because we are either retrying the initial POST (which generates a new interaction)
+                    // or retrying a poll GET (idempotent).
+                    *is_connect || *is_timeout
                 }
                 LlmApiClient::Gpt(_) => {
                     // With idempotency key, both connect and timeout are safe to retry.
@@ -440,21 +488,18 @@ fn parse_retry_after(headers: &HeaderMap) -> Option<Duration> {
 }
 
 pub(crate) fn extract_text_from_gemini_response(response: &Value) -> Result<String, AppError> {
-    let parts_array = response
-        .get("candidates")
-        .and_then(|c| c.as_array())
-        .and_then(|a| a.first())
-        .and_then(|c| c.get("content"))
-        .and_then(|c| c.get("parts"))
-        .and_then(|p| p.as_array())
+    let outputs = response
+        .get("outputs")
+        .and_then(|o| o.as_array())
         .ok_or_else(|| {
             AppError::ResponseParsing(
-                "Could not find 'parts' array in Gemini response JSON.".to_string(),
+                "Could not find 'outputs' array in Gemini Interaction response.".to_string(),
             )
         })?;
 
-    let text_segments: Vec<String> = parts_array
+    let text_segments: Vec<String> = outputs
         .iter()
+        .filter(|part| part.get("type").and_then(|t| t.as_str()) == Some("text"))
         .filter_map(|part| part.get("text"))
         .filter_map(|text_val| text_val.as_str())
         .map(|s| s.to_string())
@@ -462,7 +507,7 @@ pub(crate) fn extract_text_from_gemini_response(response: &Value) -> Result<Stri
 
     if text_segments.is_empty() {
         return Err(AppError::ResponseParsing(
-            "Found 'parts' array, but it contained no valid text segments.".to_string(),
+            "Found 'outputs' array, but it contained no valid text segments.".to_string(),
         ));
     }
 

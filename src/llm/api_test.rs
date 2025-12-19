@@ -10,15 +10,10 @@ use std::time::Duration;
 #[test]
 fn test_extract_gemini_text_happy_path() {
     let response = json!({
-        "candidates": [
+        "outputs": [
             {
-                "content": {
-                    "parts": [
-                        {
-                            "text": "This is the LLM response."
-                        }
-                    ]
-                }
+                "type": "text",
+                "text": "This is the LLM response."
             }
         ]
     });
@@ -27,28 +22,15 @@ fn test_extract_gemini_text_happy_path() {
 }
 
 #[test]
-fn test_extract_gemini_text_no_candidates() {
-    let response = json!({ "candidates": [] });
+fn test_extract_gemini_text_no_outputs() {
+    let response = json!({ "outputs": [] });
     let result = extract_text_from_gemini_response(&response);
     assert!(matches!(result, Err(AppError::ResponseParsing(_))));
 }
 
 #[test]
-fn test_extract_gemini_text_missing_candidates_key() {
+fn test_extract_gemini_text_missing_outputs_key() {
     let response = json!({ "other_key": "value" });
-    let result = extract_text_from_gemini_response(&response);
-    assert!(matches!(result, Err(AppError::ResponseParsing(_))));
-}
-
-#[test]
-fn test_extract_gemini_text_missing_parts() {
-    let response = json!({
-        "candidates": [
-            {
-                "content": {}
-            }
-        ]
-    });
     let result = extract_text_from_gemini_response(&response);
     assert!(matches!(result, Err(AppError::ResponseParsing(_))));
 }
@@ -56,12 +38,8 @@ fn test_extract_gemini_text_missing_parts() {
 #[test]
 fn test_extract_gemini_text_missing_text() {
     let response = json!({
-        "candidates": [
-            {
-                "content": {
-                    "parts": [{ "not_text": "hello" }]
-                }
-            }
+        "outputs": [
+            { "type": "text", "not_text": "hello" }
         ]
     });
     let result = extract_text_from_gemini_response(&response);
@@ -71,29 +49,23 @@ fn test_extract_gemini_text_missing_text() {
 #[test]
 fn test_extract_gemini_text_multiple_parts() {
     let response = json!({
-        "candidates": [
+        "outputs": [
             {
-                "content": {
-                    "parts": [
-                        {
-                            "text": "This is the first part. "
-                        },
-                        {
-                            "text": "This is the second part. "
-                        },
-                        {
-                            "text": "And this is the third."
-                        }
-                    ]
-                }
+                "type": "text",
+                "text": "This is the first part. "
+            },
+            {
+                "type": "image",
+                "data": "..."
+            },
+            {
+                "type": "text",
+                "text": "This is the second part."
             }
         ]
     });
     let result = extract_text_from_gemini_response(&response).unwrap();
-    assert_eq!(
-        result,
-        "This is the first part. This is the second part. And this is the third."
-    );
+    assert_eq!(result, "This is the first part. This is the second part.");
 }
 
 #[test]
@@ -177,7 +149,8 @@ fn test_retryable_transport_for_gemini() {
         is_timeout: true,
         message: "timeout".to_string(),
     };
-    assert!(!policy.is_retryable(&fake_gemini_client(), &timeout_err));
+    // Gemini interactions are retryable on timeout because we retry the whole flow (safe)
+    assert!(policy.is_retryable(&fake_gemini_client(), &timeout_err));
 
     let connect_err = QueryError::Transport {
         is_connect: true,

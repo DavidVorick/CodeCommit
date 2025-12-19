@@ -59,11 +59,38 @@ however the 17th step is external, and therefore needs to be updated any time
 that the specification for one of the dependencies changes in a way that is
 relevant to the module's implementation.
 
+### Prompt Construction
+
+When constructing the prompt, each section is labeled with the [label] format
+prior to the relevant information being provided.
+
+1. self-consistent
+
+[response format instructions]
+[self consistent prompt]
+[target user specification]
+
+2. project-consistent
+
+[response format instructions]
+[project-consistent prompt]
+[target user specification]
+[parent user specification]
+[all child user specifications]
+
+When putting together the prompt for the project-consistent stage, the target
+user specification is provided first, followed by the parent user
+specification, followed by all child user specifications.
+
+The parent user specificatoin is the specification in the parent folder, and
+the child user specifications are all user specifications located in child
+folders.
+
 ## Specification Caching
 
 Whenever an implementation stage is completed for a UserSpecification, the full
 UserSpecification is cached in a file that corresponds to the stage name. This
-means that there can be up to 13 different versions of the UserSpecification
+means that there can be up to 17 different versions of the UserSpecification
 cached for each UserSpecification in a CodeCommit project.
 
 The cached UserSpecifications are saved in a folder called agent-state/ at a

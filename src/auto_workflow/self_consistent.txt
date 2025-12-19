@@ -1,0 +1,17 @@
+You are about to be provided with a user-written specification for a codebase.
+The specification may define the entire project, or it may only define one
+module within the project.
+
+Your task is to review the user specification and determine whether it is
+self-consistent and free of any confusing statements. This specification will
+be passed along to an LLM that must implement everything described in the
+specification.
+
+This task is considered to be successful if the UserSpecification is already
+sufficiently self-consistent and free of confusing statements that a frontier
+LLM is unlikely to have any issues implementing the specification in a way that
+is faithful to the author's intentions.
+
+If the UserSpecification is not both self-consistent and free from any
+confusing statements, please provide a comment explaining what is confusing,
+and indicate that changes have been requested from the supervisor.

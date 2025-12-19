@@ -77,7 +77,7 @@ The consistency workflow can be triggered with the command line flag
 refers to this workflow is 'consistency'.
 
 The output of the consistency check will be placed in
-agent-config/consistency-report.txt
+agent-state/consistency-report.txt
 
 ### Rolling Up Code
 

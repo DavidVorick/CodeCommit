@@ -1,6 +1,8 @@
 You are about to be provided with a user-written specification for a codebase.
 The specification may define the entire project, or it may only define one
-module within the project.
+module within the project. And it may fully stand on its own, or it may depend
+on other files already existing, which you may assume will be created by a
+human supervisor.
 
 Your task is to review the user specification and determine whether it is
 self-consistent and free of any confusing statements. This specification will

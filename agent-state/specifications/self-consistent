@@ -94,7 +94,9 @@ A log file will also be created in the agent-config/logs/ folder.
 
 CodeCommit supports multiple LLMs. The default LLM is gemini-3-pro-preview, and
 other LLMs are also supported. To run a different model, the user should pass a
-'--model' flag.
+'--model' flag. Unrecognized models and unrecognized flags should produce an
+error. Using the --model flag for a non-agentic workflow should produce an
+error.
 
 The core logic for interfacing with llms is in the 'llm' module.
 

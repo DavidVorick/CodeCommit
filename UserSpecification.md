@@ -76,8 +76,7 @@ The consistency workflow can be triggered with the command line flag
 '--consistency-check' or '--consistency' or '--cc'. The programmatic slug that
 refers to this workflow is 'consistency'.
 
-The output of the consistency check will be placed in
-agent-state/consistency-report.txt
+The output of the consistency check will be printed to stdout.
 
 ### Rolling Up Code
 

@@ -4,7 +4,6 @@ use crate::config::Config;
 use crate::context_builder;
 use crate::llm;
 use crate::logger::Logger;
-use std::fs;
 
 pub async fn run(logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
     let config = Config::load(&cli_args)?;
@@ -30,9 +29,7 @@ pub async fn run(logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
     )
     .await?;
 
-    let output_path = "agent-config/consistency-report.txt";
-    fs::write(output_path, &report)?;
-    println!("\nConsistency check report saved to {output_path}");
+    println!("\n{report}");
 
     Ok(())
 }

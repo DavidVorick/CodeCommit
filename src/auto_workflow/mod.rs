@@ -3,6 +3,9 @@ mod executor;
 mod prompts;
 mod types;
 
+#[cfg(test)]
+mod discovery_test;
+
 use crate::app_error::AppError;
 use crate::cli::CliArgs;
 use crate::config::Config;

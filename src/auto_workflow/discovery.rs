@@ -35,11 +35,11 @@ pub fn find_next_task(root: &Path) -> Result<Option<Task>, AppError> {
         return Ok(None);
     }
 
-    // "one is chosen at random".
-    // Since we don't have rand crate, we use simple time-based selection.
-    let now = chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0);
-    let index = (now as usize) % tasks.len();
-    Ok(Some(tasks.swap_remove(index)))
+    // Sort tasks alphabetically by spec_path
+    tasks.sort_by(|a, b| a.spec_path.cmp(&b.spec_path));
+
+    // Return the first one
+    Ok(Some(tasks.remove(0)))
 }
 
 fn find_all_user_specifications(root: &Path) -> Result<Vec<PathBuf>, AppError> {

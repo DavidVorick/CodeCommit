@@ -38,7 +38,7 @@ After the command completes, instructions are given to the user to drop a
 gemini-key.txt and an openai-key.txt into the agent-config folder.
 
 This command is non-agentic. If any of the files already exist, they will be
-left untouched.
+left untouched, and only the missing files will be created.
 
 ## Supported Workflows
 
@@ -67,10 +67,8 @@ that tells them about the state of their project.
 
 More specifically, it looks for places where the UserSpecification is
 inconsistent with itself, and it looks for places where the UserSpecification
-is inconsistent with the current implementation. It then compiles a report.
-
-The report may either be read by a user or by another agentic workflow,
-therefore it must be both human readable and machine readable.
+is inconsistent with the current implementation. It then compiles a report. The
+report must be human readable in a simple text editor.
 
 The consistency workflow can be triggered with the command line flag
 '--consistency-check' or '--consistency' or '--cc'. The programmatic slug that
@@ -82,10 +80,12 @@ The output of the consistency check will be printed to stdout.
 
 If code-commit is run with the `--rollup` flag, it will trigger a non-agentic
 workflow to roll up every file in the codebase and create a context file that
-gets placed in agent-config/codebase.txt - this file can then by copy-pasted
-into an LLM UI for advanced debugging. By default, the Cargo.lock file is not
-included in the rollup. If the flag '--rollup-full' is used, then the
-Cargo.lock file will also be included.
+gets printed to stdout - this file can then by copy-pasted into an LLM UI for
+advanced debugging. By default, the Cargo.lock file is not included in the
+rollup. If the flag '--rollup-full' is used, then the Cargo.lock file will also
+be included.
+
+A log file will also be created in the agent-config/logs/ folder.
 
 ## LLMs
 
@@ -110,7 +110,7 @@ API Key Location: agent-config/gemini-key.txt
 
 ### GPT 5.2
 
-User flag: '--model gpt-5' (which calls GPT 5.2)
+User flag: '--model gpt-5.2'; '--model gpt-5' is also an alias for GPT 5.2
 
 API Key Location: agent-config/openai-key.txt
 
@@ -124,9 +124,10 @@ The core logic for interfacing with the logs is in the 'logging' module.
 ## Safety
 
 To ensure that the private data of code-commit projects is never exfiltrated or
-exposed, files in the app-data/ folder and agent-config/ folder are never
-allowed to be directly modified by an LLM, and they are never included in the
-context that is provided to an LLM. LLMs must also never be allowed to modify
-data in the agent-state/ folder.
+exposed, files in the app-data/ folder, the agent-state/ folder, and
+agent-config/ folder are never allowed to be provided as input to an LLM, and
+also an LLM is not allowed to directly request modifications to those files.
+The non-LLM parts of the automated workflows are however allowed to modify
+these files.
 
 The app-data/ folder is optional, and not all CodeCommit projects will have it.

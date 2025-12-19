@@ -33,6 +33,18 @@ fn test_model_arg() {
         }
     );
 
+    let args_gpt5_2 = to_string_vec(&["--model", "gpt-5.2"]);
+    let result_gpt5_2 = parse_args(args_gpt5_2.into_iter()).unwrap();
+    assert_eq!(
+        result_gpt5_2,
+        CliArgs {
+            model: Model::Gpt5,
+            workflow: Workflow::CommitCode,
+            force: false,
+            rollup_full: false,
+        }
+    );
+
     let args_gemini25 = to_string_vec(&["--model", "gemini-2.5-pro"]);
     let result_gemini25 = parse_args(args_gemini25.into_iter()).unwrap();
     assert_eq!(

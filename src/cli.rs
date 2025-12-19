@@ -13,7 +13,7 @@ impl Model {
         match s {
             "gemini-3-pro-preview" => Ok(Model::Gemini3Pro),
             "gemini-2.5-pro" => Ok(Model::Gemini2_5Pro),
-            "gpt-5" => Ok(Model::Gpt5),
+            "gpt-5" | "gpt-5.2" => Ok(Model::Gpt5),
             _ => Err(AppError::Config(format!("Unsupported model: {s}"))),
         }
     }

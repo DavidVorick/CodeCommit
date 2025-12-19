@@ -10,11 +10,7 @@ use std::path::{Component, Path, PathBuf};
 pub async fn run(_logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
     let include_cargo_lock = cli_args.rollup_full;
     let rollup = build_rollup_for_base_dir(Path::new("."), include_cargo_lock)?;
-    let out_dir = Path::new("agent-config");
-    fs::create_dir_all(out_dir)?;
-    let out_path = out_dir.join("codebase.txt");
-    fs::write(&out_path, rollup)?;
-    println!("Codebase rollup saved to {}", out_path.display());
+    println!("{rollup}");
     Ok(())
 }
 

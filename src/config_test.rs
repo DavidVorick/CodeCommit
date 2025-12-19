@@ -12,12 +12,10 @@ fn test_load_from_dir_commit_code_success() {
     let temp_dir = TempDir::new().unwrap();
     let base_path = temp_dir.path();
 
-    // Create .gitignore
     let gitignore_path = base_path.join(".gitignore");
     let mut gitignore_file = File::create(gitignore_path).unwrap();
     writeln!(gitignore_file, "/agent-config").unwrap();
 
-    // Create agent-config dir and key
     let config_dir = base_path.join("agent-config");
     std::fs::create_dir(&config_dir).unwrap();
     let key_path = config_dir.join("gemini-key.txt");
@@ -28,7 +26,7 @@ fn test_load_from_dir_commit_code_success() {
         model: Model::Gemini3Pro,
         workflow: Workflow::CommitCode,
         force: false,
-        light_roll: false,
+        rollup_full: false,
     };
 
     let query = "my query".to_string();
@@ -47,12 +45,10 @@ fn test_load_from_dir_consistency_check_success() {
     let temp_dir = TempDir::new().unwrap();
     let base_path = temp_dir.path();
 
-    // Create .gitignore
     let gitignore_path = base_path.join(".gitignore");
     let mut gitignore_file = File::create(gitignore_path).unwrap();
     writeln!(gitignore_file, "/agent-config").unwrap();
 
-    // Create agent-config dir and key
     let config_dir = base_path.join("agent-config");
     std::fs::create_dir(&config_dir).unwrap();
     let key_path = config_dir.join("gemini-key.txt");
@@ -63,7 +59,7 @@ fn test_load_from_dir_consistency_check_success() {
         model: Model::Gemini3Pro,
         workflow: Workflow::ConsistencyCheck,
         force: false,
-        light_roll: false,
+        rollup_full: false,
     };
 
     let query = "consistency query".to_string();
@@ -83,7 +79,7 @@ fn test_load_from_dir_missing_gitignore() {
         model: Model::Gemini3Pro,
         workflow: Workflow::CommitCode,
         force: false,
-        light_roll: false,
+        rollup_full: false,
     };
 
     let result = Config::load_from_dir(&args, base_path, "query".to_string());
@@ -97,13 +93,13 @@ fn test_load_from_dir_insecure_gitignore() {
 
     let gitignore_path = base_path.join(".gitignore");
     let mut gitignore_file = File::create(gitignore_path).unwrap();
-    writeln!(gitignore_file, "target/").unwrap(); // Missing agent-config
+    writeln!(gitignore_file, "target/").unwrap();
 
     let args = CliArgs {
         model: Model::Gemini3Pro,
         workflow: Workflow::CommitCode,
         force: false,
-        light_roll: false,
+        rollup_full: false,
     };
 
     let result = Config::load_from_dir(&args, base_path, "query".to_string());

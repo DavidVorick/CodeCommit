@@ -11,7 +11,7 @@ pub enum Model {
 impl Model {
     fn from_str(s: &str) -> Result<Self, AppError> {
         match s {
-            "gemini-3-pro" => Ok(Model::Gemini3Pro),
+            "gemini-3-pro-preview" => Ok(Model::Gemini3Pro),
             "gemini-2.5-pro" => Ok(Model::Gemini2_5Pro),
             "gpt-5" => Ok(Model::Gpt5),
             _ => Err(AppError::Config(format!("Unsupported model: {s}"))),
@@ -33,7 +33,7 @@ pub struct CliArgs {
     pub model: Model,
     pub workflow: Workflow,
     pub force: bool,
-    pub light_roll: bool,
+    pub rollup_full: bool,
 }
 
 pub fn parse_cli_args() -> Result<CliArgs, AppError> {
@@ -44,7 +44,7 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
     let mut model = Model::default();
     let mut workflow: Option<Workflow> = None;
     let mut force = false;
-    let mut light_roll = false;
+    let mut rollup_full = false;
 
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -78,8 +78,8 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
                 }
                 workflow = Some(Workflow::Auto);
             }
-            "--light-roll" | "--lr" => {
-                light_roll = true;
+            "--rollup-full" => {
+                rollup_full = true;
             }
             "--force" | "--f" => {
                 force = true;
@@ -99,9 +99,9 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
         ));
     }
 
-    if light_roll && final_workflow != Workflow::Rollup {
+    if rollup_full && final_workflow != Workflow::Rollup {
         return Err(AppError::Config(
-            "The --light-roll flag can only be used with the --rollup workflow.".to_string(),
+            "The --rollup-full flag can only be used with the --rollup workflow.".to_string(),
         ));
     }
 
@@ -109,6 +109,6 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
         model,
         workflow: final_workflow,
         force,
-        light_roll,
+        rollup_full,
     })
 }

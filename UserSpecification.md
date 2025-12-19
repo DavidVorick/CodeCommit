@@ -21,6 +21,7 @@ created:
 
 + agent-config/
 + agent-config/logs/
++ agent-state/
 + .gitignore (matching this repo's .gitignore)
 + build.sh (matching this repo's build.sh)
 + Cargo.toml
@@ -78,27 +79,27 @@ refers to this workflow is 'consistency'.
 The output of the consistency check will be placed in
 agent-config/consistency-report.txt
 
-## Rolling Up Code
+### Rolling Up Code
 
-If code-commit is run with the `--rollup` flag, it will roll up every file in
-the codebase and create a context file that gets placed in
-agent-config/codebase.txt - this file can then by copy-pasted into an LLM UI
-for advanced debugging.
-
-If the flag `--light-roll` is passed in, it will ignore the Cargo.lock file.
+If code-commit is run with the `--rollup` flag, it will trigger a non-agentic
+workflow to roll up every file in the codebase and create a context file that
+gets placed in agent-config/codebase.txt - this file can then by copy-pasted
+into an LLM UI for advanced debugging. By default, the Cargo.lock file is not
+included in the rollup. If the flag '--rollup-full' is used, then the
+Cargo.lock file will also be included.
 
 ## LLMs
 
-CodeCommit supports multiple LLMs. The default LLM is gemini-3-pro, and other
-LLMs are also supported. To run a different model, the user should pass a
+CodeCommit supports multiple LLMs. The default LLM is gemini-3-pro-preview, and
+other LLMs are also supported. To run a different model, the user should pass a
 '--model' flag. Unrecognized models and unrecognized flags should produce an
 error.
 
 The core logic for interfacing with llms is in the 'llm' module.
 
-### Gemini 3
+### Gemini 3 Pro Preview
 
-User flag: '--model gemini-3-pro'
+User flag: '--model gemini-3-pro-preview'
 
 API Key Location: agent-config/gemini-key.txt
 
@@ -108,9 +109,9 @@ User flag: '--model gemini-2.5-pro'
 
 API Key Location: agent-config/gemini-key.txt
 
-### GPT 5
+### GPT 5.2
 
-User flag: '--model gpt-5'
+User flag: '--model gpt-5' (which calls GPT 5.2)
 
 API Key Location: agent-config/openai-key.txt
 
@@ -128,3 +129,5 @@ exposed, files in the app-data/ folder and agent-config/ folder are never
 allowed to be directly modified by an LLM, and they are never included in the
 context that is provided to an LLM. LLMs must also never be allowed to modify
 data in the agent-state/ folder.
+
+The app-data/ folder is optional, and not all CodeCommit projects will have it.

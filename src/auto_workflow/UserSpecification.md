@@ -115,12 +115,9 @@ If no file exists for a given step for a given UserSpecification, that means
 that UserSpecification has never reached that implementation stage before.
 
 This cache is used by the auto-workflow module to figure out what steps need to
-be taken to advance the project.
-
-If a UserSpecification is changed, it cannot be considered "project-consistent"
-until it has, as necessary, updated the caching for all dependents that may
-need to update their own integration testing, such that the auto-workflow tool
-will know to update those integration tests.
+be taken to advance the project. If the current UserSpecification does not
+exactly match the cached UserSpecification for a given stage, then that stage
+needs to be revisited by the auto workflow tool.
 
 ## Task Selection
 

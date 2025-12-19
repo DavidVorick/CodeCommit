@@ -32,21 +32,14 @@ impl TestEnv {
 fn rollup_includes_all_non_ignored_files_and_respects_protections() {
     let env = TestEnv::new();
 
-    // .gitignore: ignore agent-config directory, target dir, and *.log
-    env.write(
-        ".gitignore",
-        "/agent-config\n/target/\n*.log\n",
-    );
+    env.write(".gitignore", "/agent-config\n/target/\n*.log\n");
 
-    // Included files
     env.write("Cargo.toml", "[package]\nname = \"x\"\n");
     env.write("src/main.rs", "fn main() {}\n");
 
-    // Ignored by .gitignore
     env.write("target/debug/app", "binary\n");
     env.write("debug.log", "should-be-ignored\n");
 
-    // Protected directories
     env.write("agent-config/secret.txt", "nope\n");
     env.write("app-data/secret.json", "{\"nope\":true}\n");
 
@@ -66,7 +59,6 @@ fn rollup_skips_non_utf8_files_safely() {
     let env = TestEnv::new();
     env.write(".gitignore", "");
 
-    // Write a binary file (invalid UTF-8 sequence)
     let bin_path = env.base().join("bin.dat");
     {
         let mut f = fs::File::create(&bin_path).unwrap();
@@ -78,25 +70,22 @@ fn rollup_skips_non_utf8_files_safely() {
 
     let rollup = build_rollup_for_base_dir(env.base(), false).unwrap();
     assert!(rollup.contains("--- src/lib.rs ---\npub fn f() {}\n\n"));
-    // Ensure binary file doesn't cause inclusion or crash
     assert!(!rollup.contains("--- bin.dat ---"));
 }
 
 #[test]
-fn light_roll_excludes_cargo_lock() {
+fn rollup_by_default_excludes_cargo_lock_and_rollup_full_includes_it() {
     let env = TestEnv::new();
     env.write(".gitignore", "");
     env.write("Cargo.toml", "[package]\n");
     env.write("Cargo.lock", "lock file content\n");
     env.write("src/main.rs", "fn main() {}\n");
 
-    // Regular rollup should include Cargo.lock
-    let rollup = build_rollup_for_base_dir(env.base(), false).unwrap();
-    assert!(rollup.contains("--- Cargo.lock ---"));
+    let default_rollup = build_rollup_for_base_dir(env.base(), false).unwrap();
+    assert!(!default_rollup.contains("--- Cargo.lock ---"));
 
-    // Light roll should exclude Cargo.lock
-    let light_rollup = build_rollup_for_base_dir(env.base(), true).unwrap();
-    assert!(!light_rollup.contains("--- Cargo.lock ---"));
-    assert!(light_rollup.contains("--- Cargo.toml ---"));
-    assert!(light_rollup.contains("--- src/main.rs ---"));
+    let full_rollup = build_rollup_for_base_dir(env.base(), true).unwrap();
+    assert!(full_rollup.contains("--- Cargo.lock ---"));
+    assert!(full_rollup.contains("--- Cargo.toml ---"));
+    assert!(full_rollup.contains("--- src/main.rs ---"));
 }

@@ -96,6 +96,13 @@ fn test_rollup_workflow() {
 }
 
 #[test]
+fn test_auto_workflow() {
+    let args = to_string_vec(&["--aw"]);
+    let result = parse_args(args.into_iter()).unwrap();
+    assert_eq!(result.workflow, Workflow::Auto);
+}
+
+#[test]
 fn test_force_flag() {
     let args = to_string_vec(&["--force"]);
     let result = parse_args(args.into_iter()).unwrap();
@@ -123,6 +130,13 @@ fn test_force_with_rollup_is_error() {
 }
 
 #[test]
+fn test_force_with_aw_is_error() {
+    let args = to_string_vec(&["--f", "--aw"]);
+    let result = parse_args(args.into_iter());
+    assert!(result.is_err());
+}
+
+#[test]
 fn test_multiple_workflows_is_error() {
     let args = to_string_vec(&["--cc", "--consistency"]);
     let result = parse_args(args.into_iter());
@@ -133,6 +147,10 @@ fn test_multiple_workflows_is_error() {
     assert!(result.is_err());
 
     let args = to_string_vec(&["--rollup", "--consistency"]);
+    let result = parse_args(args.into_iter());
+    assert!(result.is_err());
+
+    let args = to_string_vec(&["--aw", "--cc"]);
     let result = parse_args(args.into_iter());
     assert!(result.is_err());
 }

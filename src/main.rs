@@ -1,4 +1,5 @@
 mod app_error;
+mod auto_workflow;
 mod cli;
 mod committing_code;
 mod config;
@@ -56,6 +57,7 @@ async fn run() -> Result<(), AppError> {
         Workflow::CommitCode => "committing-code",
         Workflow::ConsistencyCheck => "consistency",
         Workflow::Rollup => "rollup",
+        Workflow::Auto => "auto-workflow",
     };
     let logger = logger::Logger::new(logger_suffix)?;
 
@@ -63,6 +65,7 @@ async fn run() -> Result<(), AppError> {
         Workflow::CommitCode => committing_code::run(&logger, cli_args).await,
         Workflow::ConsistencyCheck => consistency::run(&logger, cli_args).await,
         Workflow::Rollup => rollup::run(&logger, cli_args).await,
+        Workflow::Auto => auto_workflow::run(&logger, cli_args).await,
     };
 
     if let Err(e) = &result {

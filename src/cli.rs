@@ -25,6 +25,7 @@ pub enum Workflow {
     CommitCode,
     ConsistencyCheck,
     Rollup,
+    Auto,
 }
 
 #[derive(Debug, PartialEq, Default)]
@@ -68,6 +69,14 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
                     ));
                 }
                 workflow = Some(Workflow::Rollup);
+            }
+            "--aw" => {
+                if workflow.is_some() {
+                    return Err(AppError::Config(
+                        "It is an error to trigger more than one workflow at a time.".to_string(),
+                    ));
+                }
+                workflow = Some(Workflow::Auto);
             }
             "--light-roll" | "--lr" => {
                 light_roll = true;

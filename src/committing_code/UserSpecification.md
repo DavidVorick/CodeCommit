@@ -95,9 +95,9 @@ files should be updated on disk at all.
 After parsing the response and making local changes, the code-commit binary
 will attempt to build the project. This means running 'build.sh' and checking
 that it exits successfully. The output of the build - both stdout and stderr as
-well as the exit code - needs to be logged in the logging folder with the file
-suffix "build.txt". A numerical prefix needs to be added to the file name so
-that it is properly grouped with the corresponding LLM call.
+well as the exit code - needs to be logged with the file suffix "build.txt". A
+numerical prefix needs to be added to the file name so that it is properly
+grouped with the corresponding LLM call.
 
 If the build script exits successfully, 'code-commit' stops there. The build is
 considered to have exited successfully if the exit code is 0, even if there is
@@ -126,6 +126,13 @@ codebase to ensure that the repair attempt can be successful. That list should
 be parsed, and the extra files should be added to the codebase that gets
 provided to the repair query. These files will be part of the context for all
 future repair queries.
+
+The file list will be provided with syntax like in the following example:
+
+%%%files
+src/config_test.rs
+src/init_test.rs
+%%%end
 
 ### Repair Query
 

@@ -6,6 +6,8 @@ These decisions are made based on progress milestones that are provided by
 other workflows, which means the decision for which workflow to run does not
 require any LLM oversight.
 
+The auto workflow can be triggered with the command --aw.
+
 ## Implementation Progression
 
 Each UserSpecification file has an implementation progression which establishes
@@ -150,6 +152,9 @@ LLM call
 
 If there are multiple comment sections, an error is returned. The comments are
 presented to the user directly in stdout.
+
+If a task is passed, the auto workflow will automatically reset and keep going,
+continuing until a task is not passed.
 
 ### Assembling Workflows
 

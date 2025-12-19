@@ -22,3 +22,7 @@ This document lists all APIs that the top-level `src` code (e.g., `main.rs`, `co
 ## `rollup` module
 
 - `rollup::run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppError>`
+
+## `auto_workflow` module
+
+- `auto_workflow::run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppError>`

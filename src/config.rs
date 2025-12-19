@@ -18,7 +18,7 @@ impl Config {
     pub fn load(args: &CliArgs) -> Result<Self, AppError> {
         let query = match args.workflow {
             Workflow::CommitCode | Workflow::ConsistencyCheck => Self::get_query_from_editor()?,
-            Workflow::Rollup => String::new(),
+            Workflow::Rollup | Workflow::Auto => String::new(),
         };
 
         Self::load_from_dir(args, Path::new("."), query)
@@ -60,7 +60,7 @@ impl Config {
         check_gitignore_in_dir(base_dir)?;
 
         match args.workflow {
-            Workflow::CommitCode | Workflow::ConsistencyCheck => {
+            Workflow::CommitCode | Workflow::ConsistencyCheck | Workflow::Auto => {
                 let api_key_rel = match args.model {
                     Model::Gemini3Pro | Model::Gemini2_5Pro => {
                         PathBuf::from("agent-config/gemini-key.txt")
@@ -74,6 +74,7 @@ impl Config {
                     Workflow::ConsistencyCheck => {
                         format!("{PROJECT_STRUCTURE}\n{CONSISTENCY_CHECK}")
                     }
+                    Workflow::Auto => String::new(), // Prompts handled internally
                     Workflow::Rollup => unreachable!(),
                 };
 

@@ -1,7 +1,7 @@
 dependencies:
-  llm
-  context_builder
-  system_prompts
+  src/llm
+  src/context_builder
+  src/system_prompts
 
 # Committing Code
 

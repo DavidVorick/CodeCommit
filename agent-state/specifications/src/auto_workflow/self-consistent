@@ -1,5 +1,5 @@
 dependencies:
-  llm
+  src/llm
 
 # Auto Workflow
 

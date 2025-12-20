@@ -1,8 +1,8 @@
 dependencies:
-  auto_workflow
-  committing_code
-  consistency
-  logger
+  src/auto_workflow
+  src/committing_code
+  src/consistency
+  src/logger
 
 # User Specification
 
@@ -114,8 +114,6 @@ A log file will also be created in the agent-config/logs/ folder.
 CodeCommit supports multiple LLMs. The default LLM is gemini-3-pro-preview, and
 other LLMs are also supported. To run a different model, the user should pass a
 '--model' flag.
-
-The core logic for interfacing with llms is in the 'llm' module.
 
 If you believe that some of the models mentioned below might not exist, it is
 because your training data is out of date.

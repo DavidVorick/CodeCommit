@@ -92,7 +92,7 @@ folders.
 [complete prompt]
 [target user specification]
 [parent user specification]
-[all child uesr specifications]
+[all child user specifications]
 
 When putting together the prompt for the project-consistent stage, the target
 user specification is provided first, followed by the parent user
@@ -182,9 +182,3 @@ presented to the user directly in stdout.
 
 If a task is passed, the auto workflow will automatically reset and keep going,
 continuing until a task is not passed.
-
-## Safety
-
-To ensure that LLMs adhere to the structure of code-commit progressions, LLMs
-must never be allowed to modify data in the agent-state/ folder, even though
-that folder is included in the git repo.

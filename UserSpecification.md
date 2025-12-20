@@ -137,7 +137,7 @@ API Key Location: agent-config/openai-key.txt
 When any of the workflows are running, they will be logging their activity in
 the agent-config/logs/ directory.
 
-The core logic for interfacing with the logs is in the 'logging' module.
+The core logic for interfacing with the logs is in the 'logger' module.
 
 ## Safety
 

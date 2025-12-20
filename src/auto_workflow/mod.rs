@@ -21,7 +21,7 @@ pub async fn run(logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
         let task = match task_opt {
             Some(t) => t,
             None => {
-                println!("No more tasks to process in the first two progression stages.");
+                println!("No more tasks to process in the specification review stages.");
                 break;
             }
         };

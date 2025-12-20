@@ -1,6 +1,6 @@
 use crate::app_error::AppError;
 use crate::auto_workflow::prompts::{
-    PROJECT_CONSISTENT, RESPONSE_FORMAT_INSTRUCTIONS, SELF_CONSISTENT,
+    COMPLETE, PROJECT_CONSISTENT, RESPONSE_FORMAT_INSTRUCTIONS, SECURE, SELF_CONSISTENT,
 };
 use crate::auto_workflow::types::Stage;
 use crate::config::Config;
@@ -39,6 +39,8 @@ pub async fn execute_task(
     let prompt = match stage {
         Stage::SelfConsistent => build_self_consistent_prompt(&spec_content),
         Stage::ProjectConsistent => build_project_consistent_prompt(task_spec_path, &spec_content)?,
+        Stage::Complete => build_complete_prompt(task_spec_path, &spec_content)?,
+        Stage::Secure => build_secure_prompt(task_spec_path, &spec_content)?,
     };
 
     let response = llm::query(
@@ -88,6 +90,36 @@ fn build_project_consistent_prompt(
         "2. project-consistent",
         RESPONSE_FORMAT_INSTRUCTIONS,
         PROJECT_CONSISTENT,
+        spec_content,
+        parent_spec_content,
+        child_specs_content
+    ))
+}
+
+fn build_complete_prompt(spec_path: &Path, spec_content: &str) -> Result<String, AppError> {
+    let parent_spec_content = find_parent_spec(spec_path)?;
+    let child_specs_content = find_child_specs(spec_path)?;
+
+    Ok(format!(
+        "{}\n[response format instructions]\n{}\n[complete prompt]\n{}\n[target user specification]\n{}\n[parent user specification]\n{}\n[all child user specifications]\n{}",
+        "3. complete",
+        RESPONSE_FORMAT_INSTRUCTIONS,
+        COMPLETE,
+        spec_content,
+        parent_spec_content,
+        child_specs_content
+    ))
+}
+
+fn build_secure_prompt(spec_path: &Path, spec_content: &str) -> Result<String, AppError> {
+    let parent_spec_content = find_parent_spec(spec_path)?;
+    let child_specs_content = find_child_specs(spec_path)?;
+
+    Ok(format!(
+        "{}\n[response format instructions]\n{}\n[secure prompt]\n{}\n[target user specification]\n{}\n[parent user specification]\n{}\n[all child user specifications]\n{}",
+        "4. secure",
+        RESPONSE_FORMAT_INSTRUCTIONS,
+        SECURE,
         spec_content,
         parent_spec_content,
         child_specs_content

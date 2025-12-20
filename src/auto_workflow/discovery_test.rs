@@ -116,3 +116,48 @@ fn test_find_next_task_cache_match() {
     let task = find_next_task(root).unwrap().expect("Should find a task");
     assert_eq!(task.stage, Stage::ProjectConsistent);
 }
+
+#[test]
+fn test_find_next_task_complete_stage() {
+    let temp = setup_project();
+    let root = temp.path();
+
+    create_spec(root, "A");
+    set_progress(root, "A", Stage::SelfConsistent, "# Spec");
+    set_progress(root, "A", Stage::ProjectConsistent, "# Spec");
+
+    // Next should be Complete
+    let task = find_next_task(root).unwrap().expect("Should find a task");
+    assert_eq!(task.stage, Stage::Complete);
+}
+
+#[test]
+fn test_find_next_task_secure_stage() {
+    let temp = setup_project();
+    let root = temp.path();
+
+    create_spec(root, "A");
+    set_progress(root, "A", Stage::SelfConsistent, "# Spec");
+    set_progress(root, "A", Stage::ProjectConsistent, "# Spec");
+    set_progress(root, "A", Stage::Complete, "# Spec");
+
+    // Next should be Secure
+    let task = find_next_task(root).unwrap().expect("Should find a task");
+    assert_eq!(task.stage, Stage::Secure);
+}
+
+#[test]
+fn test_find_next_task_all_done() {
+    let temp = setup_project();
+    let root = temp.path();
+
+    create_spec(root, "A");
+    set_progress(root, "A", Stage::SelfConsistent, "# Spec");
+    set_progress(root, "A", Stage::ProjectConsistent, "# Spec");
+    set_progress(root, "A", Stage::Complete, "# Spec");
+    set_progress(root, "A", Stage::Secure, "# Spec");
+
+    // Should return None
+    let task = find_next_task(root).unwrap();
+    assert!(task.is_none());
+}

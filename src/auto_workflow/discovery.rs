@@ -80,18 +80,21 @@ fn get_progress_level(root: &Path, spec_path: &Path) -> (usize, Option<Stage>) {
         Err(_) => return (0, Some(Stage::SelfConsistent)),
     };
 
-    let stage1 = Stage::SelfConsistent;
-    if !is_stage_complete(&state_base, stage1, &current_content) {
-        return (0, Some(stage1));
+    let stages = [
+        Stage::SelfConsistent,
+        Stage::ProjectConsistent,
+        Stage::Complete,
+        Stage::Secure,
+    ];
+
+    for (i, stage) in stages.iter().enumerate() {
+        if !is_stage_complete(&state_base, *stage, &current_content) {
+            return (i, Some(*stage));
+        }
     }
 
-    let stage2 = Stage::ProjectConsistent;
-    if !is_stage_complete(&state_base, stage2, &current_content) {
-        return (1, Some(stage2));
-    }
-
-    // Both done (for the purpose of this implementation which only does first 2)
-    (2, None)
+    // All done (for the purpose of this implementation which only does first 4)
+    (stages.len(), None)
 }
 
 fn is_stage_complete(state_base: &Path, stage: Stage, current_content: &str) -> bool {

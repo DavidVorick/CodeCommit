@@ -73,6 +73,8 @@ attempting to modify critical files, namely:
 + any file named UserSpecification.md
 + anything in the .git folder
 + anything in the agent-config folder
++ anything in the agent-state folder
++ anything in the app-data folder
 + anything in the target folder
 + anything specified in the .gitignore file
 

@@ -4,6 +4,8 @@ use std::fmt;
 pub enum Stage {
     SelfConsistent,
     ProjectConsistent,
+    Complete,
+    Secure,
 }
 
 impl Stage {
@@ -11,6 +13,8 @@ impl Stage {
         match self {
             Stage::SelfConsistent => "self-consistent",
             Stage::ProjectConsistent => "project-consistent",
+            Stage::Complete => "complete",
+            Stage::Secure => "secure",
         }
     }
 
@@ -18,7 +22,9 @@ impl Stage {
     pub fn next(&self) -> Option<Stage> {
         match self {
             Stage::SelfConsistent => Some(Stage::ProjectConsistent),
-            Stage::ProjectConsistent => None,
+            Stage::ProjectConsistent => Some(Stage::Complete),
+            Stage::Complete => Some(Stage::Secure),
+            Stage::Secure => None,
         }
     }
 }

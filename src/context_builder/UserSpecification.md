@@ -37,7 +37,8 @@ The codebase summary will contain the following files:
 Note that only files which are not listed in the .gitignore should be provided.
 Any file that appears in the .gitignore will not be mentioned in the codebase
 summary. If the top level files such as Cargo.toml appear in the .gitignore,
-that is an error.
+that is an error. Additionally, nothing from the app-data, agent-config, or
+agent-state folders should be provided.
 
 Note that every sub-folder of the src/ folder needs to be included in the
 codebase summary, even if it does not the required documentation files and

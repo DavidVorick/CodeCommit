@@ -1,0 +1,18 @@
+You are about to be provided with a user-written specification for a codebase,
+followed by a parent specification if one exists, followed by all child
+specifications if any exist. Each specification may define an entire project,
+or it may only define one module within a project.
+
+Your task is to review the user specifications and determine whether the
+initial specification is secure. This means that the specification is not
+vulnerable to any major threats within its security model. If an appropriate
+security model is not obvious, the specification needs a security model. If the
+specification defines a security model, that security model must be well
+adapted to practical deployment in the real, adversarial world.
+
+This task is considered successful if the UserSpecification is already
+secure.
+
+If the specification is not secure, please provide a comment explaining what is
+insufficient, and indicate that changes have been requested from the
+supervisor.

@@ -9,6 +9,11 @@ were fully implemented, an LLM would be able to fully implement the first
 specification in a way that is highly aligned with the intentions of the
 specification author.
 
+If useful in a practical sense, the specification should discuss performance
+requirements and logging strategy. Not every specification requires these, for
+example if the task is clearly inexpensive relative to its frequency, or for
+example if the task doesn't need any logging.
+
 This task is considered successful if the UserSpecification is already
 complete, even if some of the parent or child specifications are not complete.
 

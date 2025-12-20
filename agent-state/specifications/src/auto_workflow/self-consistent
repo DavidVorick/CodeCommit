@@ -151,13 +151,13 @@ needs to be revisited by the auto workflow tool.
 
 ## Task Selection
 
-When the 'code-commit' command is run, the auto workflow tool will iterate over
-every UserSpecification in the project and see which stages have been completed
-for the latest version of each UserSpecification. It will target the
-UserSpecification that has the least progress and then trigger the appropriate
-LLM workflow to make progress on that UserSpecification. If multiple
-UserSpecifications are at the same progression level, they are processed in
-alphabetical order.
+When the 'code-commit' command is run with the `--aw` flag, the auto workflow
+tool will iterate over every UserSpecification in the project and see which
+stages have been completed for the latest version of each UserSpecification. It
+will target the UserSpecification that has the least progress and then trigger
+the appropriate LLM workflow to make progress on that UserSpecification. If
+multiple UserSpecifications are at the same progression level, they are
+processed in alphabetical order.
 
 Each workflow can provide one of three responses, which will be wrapped in
 '@@@@' tags on either end for easy machine parsing. The three potential

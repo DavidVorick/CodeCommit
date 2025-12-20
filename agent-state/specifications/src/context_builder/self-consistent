@@ -109,6 +109,6 @@ files in the app-data, agent-config, and agent-state folders. The parser
 closely checks that those files have not been requested and will not be
 included in the codebase.
 
-When logging, the context_builder will use the identifer and step number that
-is provided by the caller. The caller will also tell the context builder what
-llm model to use.
+When logging, the context_builder will use the name and counter that is
+provided by the caller. The caller will also tell the context builder what llm
+model to use.

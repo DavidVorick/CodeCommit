@@ -10,10 +10,6 @@ security model is not obvious, the specification needs a security model. If the
 specification defines a security model, that security model must be well
 adapted to practical deployment in the real, adversarial world.
 
-Do not worry about missing dependencies, this is handled by another process
-later in the development pipeline. The task can be considered successful even
-if there are dependencies missiing.
-
 This task is considered successful if the UserSpecification is already
 secure.
 

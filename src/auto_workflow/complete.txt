@@ -10,10 +10,6 @@ modules were fully implemented, an LLM would be able to fully implement the
 first specification in a way that is highly aligned with the intentions of the
 specification author.
 
-Do not worry about missing dependencies, this is handled by another process
-later in the development pipeline. The task can be considered successful even
-if there are dependencies missiing.
-
 If useful in a practical sense, the specification should discuss performance
 requirements and logging strategy. Not every specification requires these, for
 example if the task is clearly inexpensive relative to its frequency, or for

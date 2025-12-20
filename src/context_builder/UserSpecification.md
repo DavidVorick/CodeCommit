@@ -34,7 +34,7 @@ The codebase summary will contain the following files:
 
 + the full file for the top level .gitignore, build.sh, Cargo.toml, LLMInstructions.md, and UserSpecification.md
 + all of the filenames of all of the top level files, including names of all the top level files in src/
-+ for each module, the following will be provided:
++ for each module, the following will be provided if available:
 	+ the full InternalDependencies.md file
 	+ the full PublicAPI.md file
 	+ a list of the names of all files in the module, including documentation files

@@ -1,5 +1,6 @@
 dependencies:
   src/llm
+  src/logger
   src/system_prompts
 
 # Building Context
@@ -102,16 +103,12 @@ with the following syntax:
 [file data]
 ```
 
-This list of files becomes the codebase in the next step. This codebase is
-logged as 'codebase.txt' in the logs.
-
 Note that it must be strictly enforced the preprocessing LLM cannot request any
 file that appears in the .gitignore. The LLM is also not allowed to request any
 files in the app-data, agent-config, and agent-state folders. The parser
 closely checks that those files have not been requested and will not be
 included in the codebase.
 
-When logging, the context_builder will use the identifer that is provided by
-the caller.
-
-The caller will tell the context builder what llm model to use.
+When logging, the context_builder will use the name and counter that is
+provided by the caller. The caller will also tell the context builder what llm
+model to use.

@@ -41,7 +41,7 @@ that is an error. Additionally, nothing from the app-data, agent-config, or
 agent-state folders should be provided.
 
 Note that every sub-folder of the src/ folder needs to be included in the
-codebase summary, even if it does not the required documentation files and
+codebase summary, even if it does not have the required documentation files and
 therefore isn't a full module.
 
 Modules will be declared with the following syntax:
@@ -89,9 +89,9 @@ src/other_module/UserSpecification.md
 %%%end
 ```
 
-Every file that appears in that list needs to be provided in full as a part of
-the codebase in the initial query. The list will be parsed, and each file will
-be presented with the following syntax:
+The contents of every file that appears in that list need to be provided in
+full as a part of the codebase in the initial query. The list will be parsed,
+and each file will be presented with the following syntax:
 
 ```
 --- [filepath] ---

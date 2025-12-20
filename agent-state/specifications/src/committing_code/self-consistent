@@ -8,7 +8,7 @@ that follows these steps:
 2. Parse the response and update the corresponding files on disk.
 3. Run the build for the project. If the build passes, exit successfully.
 4. If the build fails, construct a prompt for an LLM requesting that the build
-   be fixed.
+   be fixed and call the LLM and get a response.
 5. Return to step 2 up to three times in an attempt to get the build passing,
    for a total of 1 initial attempt and three repair attempts.
 6. If the build does not pass after three repair attempts, the update is
@@ -73,6 +73,8 @@ attempting to modify critical files, namely:
 + any file named UserSpecification.md
 + anything in the .git folder
 + anything in the agent-config folder
++ anything in the agent-state folder
++ anything in the app-data folder
 + anything in the target folder
 + anything specified in the .gitignore file
 
@@ -88,7 +90,7 @@ accepting and/or committing them.
 
 The parser should do a verification pass before making any file modifications.
 If any part of the LLM response attempts to modify a disallowed file, then no
-files should be updated on disk at all.
+files should be updated on disk at all and an error should be returned.
 
 ## Running the Build
 
@@ -149,9 +151,9 @@ Each repair query has the following format:
 The repair query system prompt can be found in the system-prompts module. The
 build.sh output is the entire output (including both stdout and stderr)
 provided when running build.sh. The supervisor query is the same from before,
-the codebase is the previously generated codebase (which has not been
-modified), and the file replacements are all of the files that got replaced by
-the system parser.
+the codebase is the previously generated codebase (prior to any file
+modifications), any extra code mandated by the extra code query, and the file
+replacements are all of the files that got replaced by the system parser.
 
 The file replacements should be presented with the following syntax:
 

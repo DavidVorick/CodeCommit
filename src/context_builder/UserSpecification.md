@@ -113,3 +113,5 @@ included in the codebase.
 
 When logging, the context_builder will use the identifer that is provided by
 the caller.
+
+The caller will tell the context builder what llm model to use.

@@ -12,6 +12,8 @@ specification author.
 
 Do not worry whether the dependencies are properly declared in the
 specification, this is handled by another process later in the development
+pipeline. Similarly, do not worry about specific APIs or features being
+available in the dependencies, that is also handled later in the development
 pipeline.
 
 If useful in a practical sense, the specification should discuss performance

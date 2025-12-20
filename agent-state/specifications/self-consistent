@@ -46,10 +46,6 @@ The code-commit binary supports multiple workflows, each of which can be
 triggered with a command line flag. It is an error to trigger more than one
 workflow at a time.
 
-When a workflow is triggered, the binary will prompt the user for a query using
-their default text editor. This query is then passed to the LLM as part of the
-agentic workflow.
-
 ### Committing Code
 
 The 'committing-code' workflow uses LLMs to run programming tasks and is the
@@ -58,9 +54,23 @@ other workflow flags are provided. Other workflows can be specified with flags,
 and if no workflow flags are provided the binary will assume that it is
 supposed to execute the workflow for committing code.
 
+When this workflow is triggered, the binary will prompt the user for a query
+using their default text editor. This query is then passed to the LLM as part
+of the agentic workflow.
+
 The programmatic slug that refers to this workflow is 'committing-code'.
 
 The flag '--commit' can also be used to trigger this workflow.
+
+### Auto Workflow
+
+The 'auto-workflow' workflow uses LLMs to run a series of programming tasks in
+an automated pipeline, delivering a comprehensive milestone pipeline that
+verifies specifications, delivers implementations, authors tests, and overall
+ensures that code is brought to the highest level of quality across a deep
+series of automated prompts.
+
+The flag '--aw' can be used to trigger this workflow.
 
 ### Checking Consistency
 
@@ -77,6 +87,10 @@ The consistency workflow can be triggered with the command line flag
 '--consistency-check' or '--consistency' or '--cc'. The programmatic slug that
 refers to this workflow is 'consistency'.
 
+When this workflow is triggered, the binary will prompt the user for a query
+using their default text editor. This query is then passed to the LLM as part
+of the agentic workflow.
+
 The output of the consistency check will be printed to stdout.
 
 ### Rolling Up Code
@@ -85,8 +99,7 @@ If code-commit is run with the `--rollup` flag, it will trigger a non-agentic
 workflow to create a file called codebase.txt, which will contain every file
 tracked by git except for the Cargo.toml and any files in the agent-state/
 folder. If the flag `--rollup-full` is used instead, then the codebase.txt file
-will contain both the Cargo.toml and the full contents of the agent-state/
-folder.
+will additionally contain the Cargo.toml file.
 
 A log file will also be created in the agent-config/logs/ folder.
 
@@ -94,9 +107,7 @@ A log file will also be created in the agent-config/logs/ folder.
 
 CodeCommit supports multiple LLMs. The default LLM is gemini-3-pro-preview, and
 other LLMs are also supported. To run a different model, the user should pass a
-'--model' flag. Unrecognized models and unrecognized flags should produce an
-error. Using the --model flag for a non-agentic workflow should produce an
-error.
+'--model' flag.
 
 The core logic for interfacing with llms is in the 'llm' module.
 

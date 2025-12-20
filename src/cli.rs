@@ -54,6 +54,14 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
                 })?;
                 model = Model::from_str(&model_str)?;
             }
+            "--commit" => {
+                if workflow.is_some() {
+                    return Err(AppError::Config(
+                        "It is an error to trigger more than one workflow at a time.".to_string(),
+                    ));
+                }
+                workflow = Some(Workflow::CommitCode);
+            }
             "--consistency-check" | "--consistency" | "--cc" => {
                 if workflow.is_some() {
                     return Err(AppError::Config(
@@ -63,7 +71,7 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
                 workflow = Some(Workflow::ConsistencyCheck);
             }
             "--rollup" => {
-                if workflow.is_some() {
+                if workflow.is_some() && workflow != Some(Workflow::Rollup) {
                     return Err(AppError::Config(
                         "It is an error to trigger more than one workflow at a time.".to_string(),
                     ));
@@ -79,6 +87,12 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
                 workflow = Some(Workflow::Auto);
             }
             "--rollup-full" => {
+                if workflow.is_some() && workflow != Some(Workflow::Rollup) {
+                    return Err(AppError::Config(
+                        "It is an error to trigger more than one workflow at a time.".to_string(),
+                    ));
+                }
+                workflow = Some(Workflow::Rollup);
                 rollup_full = true;
             }
             "--force" | "--f" => {
@@ -96,12 +110,6 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
         return Err(AppError::Config(
             "The --force or --f flag can only be used with the 'committing-code' workflow."
                 .to_string(),
-        ));
-    }
-
-    if rollup_full && final_workflow != Workflow::Rollup {
-        return Err(AppError::Config(
-            "The --rollup-full flag can only be used with the --rollup workflow.".to_string(),
         ));
     }
 

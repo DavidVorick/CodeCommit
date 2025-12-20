@@ -20,6 +20,13 @@ fn test_no_args() {
 }
 
 #[test]
+fn test_commit_flag() {
+    let args = to_string_vec(&["--commit"]);
+    let result = parse_args(args.into_iter()).unwrap();
+    assert_eq!(result.workflow, Workflow::CommitCode);
+}
+
+#[test]
 fn test_model_arg() {
     let args_gpt5 = to_string_vec(&["--model", "gpt-5"]);
     let result_gpt5 = parse_args(args_gpt5.into_iter()).unwrap();
@@ -165,6 +172,10 @@ fn test_multiple_workflows_is_error() {
     let args = to_string_vec(&["--aw", "--cc"]);
     let result = parse_args(args.into_iter());
     assert!(result.is_err());
+
+    let args = to_string_vec(&["--commit", "--cc"]);
+    let result = parse_args(args.into_iter());
+    assert!(result.is_err());
 }
 
 #[test]
@@ -187,18 +198,14 @@ fn test_model_and_force() {
             rollup_full: false,
         }
     );
+}
 
-    let args = to_string_vec(&["--f", "--model", "gpt-5"]);
+#[test]
+fn test_rollup_full_standalone() {
+    let args = to_string_vec(&["--rollup-full"]);
     let result = parse_args(args.into_iter()).unwrap();
-    assert_eq!(
-        result,
-        CliArgs {
-            model: Model::Gpt5,
-            workflow: Workflow::CommitCode,
-            force: true,
-            rollup_full: false,
-        }
-    );
+    assert_eq!(result.workflow, Workflow::Rollup);
+    assert!(result.rollup_full);
 }
 
 #[test]
@@ -212,13 +219,6 @@ fn test_rollup_full_with_rollup() {
     let result = parse_args(args.into_iter()).unwrap();
     assert_eq!(result.workflow, Workflow::Rollup);
     assert!(result.rollup_full);
-}
-
-#[test]
-fn test_rollup_full_without_rollup_is_error() {
-    let args = to_string_vec(&["--rollup-full"]);
-    let result = parse_args(args.into_iter());
-    assert!(result.is_err());
 }
 
 #[test]

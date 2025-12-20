@@ -8,7 +8,7 @@ that follows these steps:
 2. Parse the response and update the corresponding files on disk.
 3. Run the build for the project. If the build passes, exit successfully.
 4. If the build fails, construct a prompt for an LLM requesting that the build
-   be fixed.
+   be fixed and call the LLM and get a response.
 5. Return to step 2 up to three times in an attempt to get the build passing,
    for a total of 1 initial attempt and three repair attempts.
 6. If the build does not pass after three repair attempts, the update is
@@ -90,7 +90,7 @@ accepting and/or committing them.
 
 The parser should do a verification pass before making any file modifications.
 If any part of the LLM response attempts to modify a disallowed file, then no
-files should be updated on disk at all.
+files should be updated on disk at all and an error should be returned.
 
 ## Running the Build
 

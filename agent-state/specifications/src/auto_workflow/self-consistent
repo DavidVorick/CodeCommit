@@ -86,7 +86,37 @@ The parent user specification is the specification in the parent folder, and
 the child user specifications are all user specifications located in child
 folders.
 
-3. (To be continued)
+3. complete
+
+[response format instructions]
+[complete prompt]
+[target user specification]
+[parent user specification]
+[all child uesr specifications]
+
+When putting together the prompt for the project-consistent stage, the target
+user specification is provided first, followed by the parent user
+specification, followed by all child user specifications.
+
+The parent user specification is the specification in the parent folder, and
+the child user specifications are all user specifications located in child
+folders.
+
+4. secure
+
+[response format instructions]
+[secure prompt]
+[target user specification]
+[parent user specification]
+[all child uesr specifications]
+
+When putting together the prompt for the project-consistent stage, the target
+user specification is provided first, followed by the parent user
+specification, followed by all child user specifications.
+
+The parent user specification is the specification in the parent folder, and
+the child user specifications are all user specifications located in child
+folders.
 
 ## Specification Caching
 

@@ -69,7 +69,8 @@ is added to the names of these 4 files. The first part is a counter, which
 tracks which number call to the LLM this query is. The second part is a name,
 provided by the workflow, which establishes the purpose of this LLM call. For
 example, if the workflow says that the name of the call is "repair", then the
-name of the file might be "3-repair-query.txt".
+name of the file might be "3-repair-query.txt". The caller will provide the
+counter and name.
 
 If there is an error while making the LLM call, the full body of the LLM call
 must be read, so that the full error can be presented in the response.json

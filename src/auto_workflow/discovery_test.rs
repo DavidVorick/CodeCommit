@@ -23,10 +23,10 @@ fn create_spec(root: &Path, rel_path: &str) {
     fs::write(path, "# Spec").unwrap();
 }
 
-fn set_progress(root: &Path, rel_path: &str, stage: Stage) {
+fn set_progress(root: &Path, rel_path: &str, stage: Stage, content: &str) {
     let state_dir = root.join("agent-state/specifications").join(rel_path);
     fs::create_dir_all(&state_dir).unwrap();
-    fs::write(state_dir.join(stage.as_str()), "").unwrap();
+    fs::write(state_dir.join(stage.as_str()), content).unwrap();
 }
 
 #[test]
@@ -58,7 +58,7 @@ fn test_find_next_task_progress_priority() {
     create_spec(root, "A");
     create_spec(root, "B");
 
-    set_progress(root, "A", Stage::SelfConsistent);
+    set_progress(root, "A", Stage::SelfConsistent, "# Spec");
 
     // Should pick B because it has lower progress (0 vs 1)
     let task = find_next_task(root).unwrap().expect("Should find a task");
@@ -87,4 +87,32 @@ fn test_find_next_task_same_progress_alphabetical_deep() {
         "Expected src/cli, got {:?}",
         task.spec_path
     );
+}
+
+#[test]
+fn test_find_next_task_cache_invalidation() {
+    let temp = setup_project();
+    let root = temp.path();
+
+    create_spec(root, "A");
+    // Set progress for stage 1, but with different content
+    set_progress(root, "A", Stage::SelfConsistent, "Old Content");
+
+    // Because the content doesn't match "# Spec", progress should be 0, next stage SelfConsistent
+    let task = find_next_task(root).unwrap().expect("Should find a task");
+    assert_eq!(task.stage, Stage::SelfConsistent);
+}
+
+#[test]
+fn test_find_next_task_cache_match() {
+    let temp = setup_project();
+    let root = temp.path();
+
+    create_spec(root, "A");
+    // Set progress for stage 1, with matching content
+    set_progress(root, "A", Stage::SelfConsistent, "# Spec");
+
+    // Progress should be 1, next stage ProjectConsistent
+    let task = find_next_task(root).unwrap().expect("Should find a task");
+    assert_eq!(task.stage, Stage::ProjectConsistent);
 }

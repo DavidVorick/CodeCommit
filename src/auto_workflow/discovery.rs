@@ -1,6 +1,7 @@
 use crate::app_error::AppError;
 use crate::auto_workflow::types::Stage;
 use ignore::WalkBuilder;
+use std::fs;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
@@ -61,7 +62,7 @@ fn find_all_user_specifications(root: &Path) -> Result<Vec<PathBuf>, AppError> {
 }
 
 fn get_progress_level(root: &Path, spec_path: &Path) -> (usize, Option<Stage>) {
-    // Determine progress based on existence of files in agent-state
+    // Determine progress based on existence of files in agent-state and whether they match current spec
     // Map spec_path to agent-state path.
     // Spec path: "src/llm/UserSpecification.md" -> module dir "src/llm"
     // State dir: "agent-state/specifications/src/llm"
@@ -74,16 +75,32 @@ fn get_progress_level(root: &Path, spec_path: &Path) -> (usize, Option<Stage>) {
         .join("specifications")
         .join(relative_module_dir);
 
+    let current_content = match fs::read_to_string(spec_path) {
+        Ok(c) => c,
+        Err(_) => return (0, Some(Stage::SelfConsistent)),
+    };
+
     let stage1 = Stage::SelfConsistent;
-    if !state_base.join(stage1.as_str()).exists() {
+    if !is_stage_complete(&state_base, stage1, &current_content) {
         return (0, Some(stage1));
     }
 
     let stage2 = Stage::ProjectConsistent;
-    if !state_base.join(stage2.as_str()).exists() {
+    if !is_stage_complete(&state_base, stage2, &current_content) {
         return (1, Some(stage2));
     }
 
     // Both done (for the purpose of this implementation which only does first 2)
     (2, None)
+}
+
+fn is_stage_complete(state_base: &Path, stage: Stage, current_content: &str) -> bool {
+    let stage_path = state_base.join(stage.as_str());
+    if !stage_path.exists() {
+        return false;
+    }
+    match fs::read_to_string(stage_path) {
+        Ok(cached) => cached == current_content,
+        Err(_) => false,
+    }
 }

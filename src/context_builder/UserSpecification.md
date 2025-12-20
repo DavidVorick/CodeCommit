@@ -21,7 +21,7 @@ format:
 [codebase summary]
 
 The context query system prompt can be found in the `system_prompts` module.
-The next agent full prompt is provided as input to the caller that is
+The 'next agent full prompt' is provided as input by the caller that is
 requesting a custom context.
 
 Between the context query system prompt and the next agent full prompt, the
@@ -93,9 +93,9 @@ src/other_module/UserSpecification.md
 %%%end
 ```
 
-The contents of every file that appears in that list need to be provided in
-full as a part of the codebase in the initial query. The list will be parsed,
-and each file will be presented with the following syntax:
+The contents of each file in that list need to be loaded from the filesystem,
+so that the full files can be provided as context. The files will be presented
+with the following syntax:
 
 ```
 --- [filepath] ---
@@ -106,5 +106,10 @@ This list of files becomes the codebase in the next step. This codebase is
 logged as 'codebase.txt' in the logs.
 
 Note that it must be strictly enforced the preprocessing LLM cannot request any
-file that appears in the .gitignore. The parser closely checks that those files
-have not been requested and will not be included in the codebase.
+file that appears in the .gitignore. The LLM is also not allowed to request any
+files in the app-data, agent-config, and agent-state folders. The parser
+closely checks that those files have not been requested and will not be
+included in the codebase.
+
+When logging, the context_builder will use the identifer that is provided by
+the caller.

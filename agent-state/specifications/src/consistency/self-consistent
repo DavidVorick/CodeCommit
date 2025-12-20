@@ -7,7 +7,7 @@ dependencies:
 
 This is a specification for the implementation of an agentic coding workflow
 that builds context for an LLM that reviews code and then generates a report.
-The report is logged printed to stdout.
+The report is printed to stdout.
 
 ## The Query
 
@@ -31,3 +31,7 @@ can accurately identify which context is necessary to successfully complete the
 consistency report. `context_builder` must ensure that files from the following
 folders are never included in the LLM context: app-data/, agent-config/, and
 agent-state/.
+
+The caller will tell the consistency checker what llm model to use.
+
+When logging, the identifier 'consistency' should be used.

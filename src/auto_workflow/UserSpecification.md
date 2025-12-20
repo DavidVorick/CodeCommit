@@ -59,7 +59,7 @@ The stages are as follows:
 18. "dependency-integration-tested": Are there thorough end-to-end tests which
     also verify that all dependencies are working as required?
 
-Note that the first 16 steps are all internal, and therefore never need to be
+Note that the first 17 steps are all internal, and therefore never need to be
 updated unless the UserSpecification for the local module has been updated,
 however the 18th step is external, and therefore needs to be updated any time
 that the specification for one of the dependencies changes in a way that is
@@ -182,3 +182,15 @@ presented to the user directly in stdout.
 
 If a task is passed, the auto workflow will automatically reset and keep going,
 continuing until a task is not passed.
+
+## Logging
+
+When logging, the name that is passed into the logger is
+'auto-workflow-[spec-path]-[stage]', where any pathing characters are replaced
+by '+' characters.
+
+## Security
+
+All paths listed in the dependencies must not have any path traversal
+characters. If there are path traversal characters such as '..', an error is
+returned.

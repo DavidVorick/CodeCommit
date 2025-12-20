@@ -28,8 +28,8 @@ created:
 + agent-config/
 + agent-config/logs/
 + agent-state/
-+ .gitignore (matching the CodeCommit project .gitignore)
-+ build.sh (matching the CodeCommit project build.sh)
++ .gitignore (matching the CodeCommit project .gitignore, imported via include_str!)
++ build.sh (matching the CodeCommit project build.sh, imported via include_str!)
 + Cargo.toml
 + src/
 + src/main.rs
@@ -64,6 +64,11 @@ When this workflow is triggered, the binary will prompt the user for a query
 using their default text editor. This query is then passed to the LLM as part
 of the agentic workflow.
 
+By default, the committing-code workflow will produce an error if there are
+uncommitted changes to the source code of the repo. This is intended to prevent
+the user from accidentally overwriting changes they want to keep. The user can
+override this protection with the `--force` flag.
+
 The programmatic slug that refers to this workflow is 'committing-code'.
 
 The flag '--commit' can also be used to trigger this workflow.
@@ -75,6 +80,8 @@ an automated pipeline, delivering a comprehensive milestone pipeline that
 verifies specifications, delivers implementations, authors tests, and overall
 ensures that code is brought to the highest level of quality across a deep
 series of automated prompts.
+
+The programmatic slug that refers to this workflow is 'auto-workflow'.
 
 The flag '--aw' can be used to trigger this workflow.
 
@@ -108,6 +115,8 @@ folder. If the flag `--rollup-full` is used instead, then the codebase.txt file
 will additionally contain the Cargo.toml file.
 
 A log file will also be created in the agent-config/logs/ folder.
+
+The programmatic slug that refers to this workflow is 'rollup'.
 
 ## LLMs
 

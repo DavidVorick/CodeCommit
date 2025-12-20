@@ -202,7 +202,9 @@ API keys should be sent in http headers rather than as query strings.
 code-commit will enforce programatically that an LLM cannot modify any of the
 listed critical files, and will also ensure that the LLM cannot do any path
 traversal (using characters like '/../' in the filepath) and cannot modify any
-files outside of the directory that code-commit is running from.
+files outside of the directory that code-commit is running from. It will also
+enforce that no files from the following folders will ever be provided as
+context to the LLM: app-data/, agent-state/, agent-config/
 
 To protect the user against losing unsafe changes, the committing-code workflow
 will fail with an error if the git repo contains uncommited changes in any

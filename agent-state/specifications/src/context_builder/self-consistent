@@ -1,6 +1,6 @@
 dependencies:
-  llm
-  system_prompts
+  src/llm
+  src/system_prompts
 
 # Building Context
 

@@ -1,5 +1,5 @@
 dependencies:
-  logger
+  src/logger
 
 # User Specification
 

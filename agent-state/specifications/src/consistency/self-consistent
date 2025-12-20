@@ -1,7 +1,7 @@
 dependencies:
-  context_builder
-  llm
-  system_prompts
+  src/context_builder
+  src/llm
+  src/system_prompts
 
 # Checking Consistency
 
@@ -24,7 +24,7 @@ The query is then sent to the LLM, and the text response is recorded in
 agent-config/consistency-report.txt.
 
 The system prompts can both be found in the `system_prompts` module, the
-supervisor query is provided by the binary, and the codebase is built using the
+supervisor query is provided by the caller, and the codebase is built using the
 `context_builder` module.
 
 The `context_builder` module needs the whole rest of the prompt as input

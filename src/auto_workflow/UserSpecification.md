@@ -6,8 +6,6 @@ These decisions are made based on progress milestones that are provided by
 other workflows, which means the decision for which workflow to run does not
 require any LLM oversight.
 
-The auto workflow can be triggered with the command --aw.
-
 ## Implementation Progression
 
 Each UserSpecification file has an implementation progression which establishes
@@ -84,9 +82,11 @@ When putting together the prompt for the project-consistent stage, the target
 user specification is provided first, followed by the parent user
 specification, followed by all child user specifications.
 
-The parent user specificatoin is the specification in the parent folder, and
+The parent user specification is the specification in the parent folder, and
 the child user specifications are all user specifications located in child
 folders.
+
+3. (To be continued)
 
 ## Specification Caching
 
@@ -152,11 +152,6 @@ presented to the user directly in stdout.
 
 If a task is passed, the auto workflow will automatically reset and keep going,
 continuing until a task is not passed.
-
-### Assembling Workflows
-
-Workflows fall into two major categories - UserSpecification review, and
-implementation.
 
 ## Safety
 

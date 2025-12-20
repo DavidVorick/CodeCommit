@@ -62,6 +62,16 @@ The programmatic slug that refers to this workflow is 'committing-code'.
 
 The flag '--commit' can also be used to trigger this workflow.
 
+### Auto Workflow
+
+The 'auto-workflow' workflow uses LLMs to run a series of programming tasks in
+an automated pipeline, delivering a comprehensive milestone pipeline that
+verifies specifications, delivers implementations, authors tests, and overall
+ensures that code is brought to the highest level of quality across a deep
+series of automated prompts.
+
+The flag '--aw' can be used to trigger this workflow.
+
 ### Checking Consistency
 
 The 'consistency' workflow uses LLMs to verify that the project is self

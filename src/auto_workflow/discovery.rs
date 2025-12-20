@@ -43,7 +43,7 @@ pub fn find_next_task(root: &Path) -> Result<Option<Task>, AppError> {
     Ok(Some(tasks.remove(0)))
 }
 
-fn find_all_user_specifications(root: &Path) -> Result<Vec<PathBuf>, AppError> {
+pub(crate) fn find_all_user_specifications(root: &Path) -> Result<Vec<PathBuf>, AppError> {
     let mut specs = Vec::new();
     let walker = WalkBuilder::new(root)
         .hidden(false)

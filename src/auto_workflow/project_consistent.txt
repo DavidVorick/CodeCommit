@@ -9,17 +9,17 @@ specifications will be passed along to an LLM that must implement everything
 described in the specifications.
 
 You also have a task of ensuring that any requirements that are established in
-specification are appropriately detailed in all relevant child specifications
+specification are appropriately detailed in all relevant dependency specifications
 as well.
 
 This task is considered to be successful if the UserSpecifications are
 sufficiently self-consistent and free of confusing statements that a frontier
 LLM is unlikely to have any issues implementing the specification in a way that
 is faithful to the author's intentions. For the task to be successful, any
-requirements established by parent specifications must also be established in
-all relevant child specifications.
+requirements established by the specification must also be established in
+all relevant dependency specifications.
 
 If the specifications are not self-consistent, free from any confusing
-statements, and properly documenting the requirements established by their
-parents, please provide a comment explaining what is insufficient, and indicate
-that changes have been requested from the supervisor.
+statements, and properly documenting the requirements established by the
+target specification, please provide a comment explaining what is insufficient,
+and indicate that changes have been requested from the supervisor.

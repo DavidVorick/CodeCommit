@@ -41,7 +41,8 @@ The stages are as follows:
     implementation?
 12. "optimized": Have the UserSpecification and implementation been optimized
     to the correct level? Are there any last implementation changes required to
-    bring the implementation to the highest level of quality?
+    bring the implementation to the highest level of quality that is demanded by
+    its practical applications?
 13. "happy-path-unit-tested": Are there happy-path unit tests for every
     function in the implementation?
 14. "edge-case-unit-tested": Are there thorough and robust unit tests probing
@@ -59,6 +60,22 @@ however the 17th step is external, and therefore needs to be updated any time
 that the specification for one of the dependencies changes in a way that is
 relevant to the module's implementation.
 
+### Determining Specification Dependencies
+
+Every UserSpecification keeps a machine-readable list of dependencies at the
+top of the file. The list uses the following format:
+
+```
+dependencies:
+  src/llm
+  src/logger
+```
+
+If a stage requires 'all dependency user specifications', those can be
+determined by looking at the dependencies which are declared at the top of the
+UserSpecification. The UserSpecification files for each dependency can be found
+in [dependency]/UserSpecification.md
+
 ### Prompt Construction
 
 When constructing the prompt, each section is labeled with the [label] format
@@ -75,48 +92,26 @@ prior to the relevant information being provided.
 [response format instructions]
 [project-consistent prompt]
 [target user specification]
-[parent user specification]
-[all child user specifications]
-
-When putting together the prompt for the project-consistent stage, the target
-user specification is provided first, followed by the parent user
-specification, followed by all child user specifications.
-
-The parent user specification is the specification in the parent folder, and
-the child user specifications are all user specifications located in child
-folders.
+[all dependency user specifications]
 
 3. complete
 
 [response format instructions]
 [complete prompt]
 [target user specification]
-[parent user specification]
-[all child user specifications]
+[all dependency user specifications]
+[full list of modules]
 
-When putting together the prompt for the project-consistent stage, the target
-user specification is provided first, followed by the parent user
-specification, followed by all child user specifications.
-
-The parent user specification is the specification in the parent folder, and
-the child user specifications are all user specifications located in child
-folders.
+The full list of all modules is simply a list of every module in the codebase
+that has a UserSpecification. The modules, code, and specifications themselves
+are not provided.
 
 4. secure
 
 [response format instructions]
 [secure prompt]
 [target user specification]
-[parent user specification]
-[all child uesr specifications]
-
-When putting together the prompt for the project-consistent stage, the target
-user specification is provided first, followed by the parent user
-specification, followed by all child user specifications.
-
-The parent user specification is the specification in the parent folder, and
-the child user specifications are all user specifications located in child
-folders.
+[all dependency uesr specifications]
 
 ## Specification Caching
 

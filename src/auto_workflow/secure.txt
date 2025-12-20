@@ -1,7 +1,7 @@
 You are about to be provided with a user-written specification for a codebase,
-followed by a parent specification if one exists, followed by all child
-specifications if any exist. Each specification may define an entire project,
-or it may only define one module within a project.
+followed by all UserSpecifications for all module dependencies required by the
+codebase. Each specification may define an entire project, or it may only
+define one module within a project.
 
 Your task is to review the user specifications and determine whether the
 initial specification is secure. This means that the specification is not

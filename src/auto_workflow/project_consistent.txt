@@ -1,7 +1,7 @@
 You are about to be provided with a user-written specification for a codebase,
-followed by a parent specification if one exists, followed by all child
-specifications if any exist. Each specification may define an entire project,
-or it may only define one module within a project.
+followed by all UserSpecifications for all module dependencies required by the
+codebase. Each specification may define an entire project, or it may only
+define one module within a project.
 
 Your task is to review the user specifications and determine whether they are
 consistent with each other, and free of any confusing statements. These
@@ -9,8 +9,8 @@ specifications will be passed along to an LLM that must implement everything
 described in the specifications.
 
 You also have a task of ensuring that any requirements that are established in
-parent specification are appropriately listed in all relevant child
-specifications.
+specification are appropriately detailed in all relevant child specifications
+as well.
 
 This task is considered to be successful if the UserSpecifications are
 sufficiently self-consistent and free of confusing statements that a frontier

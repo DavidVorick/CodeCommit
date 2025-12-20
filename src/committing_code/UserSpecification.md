@@ -151,9 +151,9 @@ Each repair query has the following format:
 The repair query system prompt can be found in the system-prompts module. The
 build.sh output is the entire output (including both stdout and stderr)
 provided when running build.sh. The supervisor query is the same from before,
-the codebase is the previously generated codebase (which has not been
-modified), and the file replacements are all of the files that got replaced by
-the system parser.
+the codebase is the previously generated codebase (prior to any file
+modifications), any extra code mandated by the extra code query, and the file
+replacements are all of the files that got replaced by the system parser.
 
 The file replacements should be presented with the following syntax:
 

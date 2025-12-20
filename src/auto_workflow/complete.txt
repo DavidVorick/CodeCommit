@@ -10,24 +10,14 @@ modules were fully implemented, an LLM would be able to fully implement the
 first specification in a way that is highly aligned with the intentions of the
 specification author.
 
+Do not worry whether the dependencies are properly declared in the
+specification, this is handled by another process later in the development
+pipeline.
+
 If useful in a practical sense, the specification should discuss performance
 requirements and logging strategy. Not every specification requires these, for
 example if the task is clearly inexpensive relative to its frequency, or for
 example if the task doesn't need any logging.
-
-To be complete, the UserSpecification must also declare all of its direct
-dependencies - the other modules in the codebase that it uses directly - at the
-exact top of the file using the exact following format:
-
-```
-dependencies:
-  src/llm
-  src/logger
-  src/system_prompts
-```
-
-If dependencies are not declared, or if any dependencies are missing, then the
-UserSpecification is not complete.
 
 This task is considered successful if the UserSpecification is already
 complete, even if some of the parent or child specifications are not complete.

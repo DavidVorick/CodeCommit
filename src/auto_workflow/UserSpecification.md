@@ -1,3 +1,6 @@
+dependencies:
+  llm
+
 # Auto Workflow
 
 This is a specification for the auto workflow module, a module that looks at
@@ -28,35 +31,37 @@ The stages are as follows:
 4. "secure": Is the UserSpecification properly considering all security issues,
    such that it will be robust in an adversarial environment?
 5. "implemented": Has the UserSpecification been fully implemented?
-6. "focused": Does the implementation include any features that are not
+6. "documented": Have all of the dependencies and public APIs been properly
+   documented?
+7. "focused": Does the implementation include any features that are not
    declared in the UserSpecification?
-7. "minimized": Has all of the code been broken into files below 300 LoC in
+8. "minimized": Has all of the code been broken into files below 300 LoC in
    size, and functions below 100 LoC in size?
-8. "simplified": Has the dependency graph of functions within the
+9. "simplified": Has the dependency graph of functions within the
    implementation been reduced to a minimal state?
-9. "standardized": Does the implementation meet all code quality requirements?
-10. "benchmarked": Does the implementation have robust benchmarks to measure
+10. "standardized": Does the implementation meet all code quality requirements?
+11. "benchmarked": Does the implementation have robust benchmarks to measure
     performance?
-11. "logged": Is there an appropriate level of logging throughout the
+12. "logged": Is there an appropriate level of logging throughout the
     implementation?
-12. "optimized": Have the UserSpecification and implementation been optimized
+13. "optimized": Have the UserSpecification and implementation been optimized
     to the correct level? Are there any last implementation changes required to
     bring the implementation to the highest level of quality that is demanded by
     its practical applications?
-13. "happy-path-unit-tested": Are there happy-path unit tests for every
+14. "happy-path-unit-tested": Are there happy-path unit tests for every
     function in the implementation?
-14. "edge-case-unit-tested": Are there thorough and robust unit tests probing
+15. "edge-case-unit-tested": Are there thorough and robust unit tests probing
     every branch and edge case for every function in the implementation?
-15. "locally-integration-tested": Are there thorough end-to-end tests for all
+16. "locally-integration-tested": Are there thorough end-to-end tests for all
     of the code in the implementation?
-16. "locally-fuzzed": Have fuzz tests been written for any functions or
+17. "locally-fuzzed": Have fuzz tests been written for any functions or
     features that may benefit from fuzz testing?
-17. "dependency-integration-tested": Are there thorough end-to-end tests which
+18. "dependency-integration-tested": Are there thorough end-to-end tests which
     also verify that all dependencies are working as required?
 
 Note that the first 16 steps are all internal, and therefore never need to be
 updated unless the UserSpecification for the local module has been updated,
-however the 17th step is external, and therefore needs to be updated any time
+however the 18th step is external, and therefore needs to be updated any time
 that the specification for one of the dependencies changes in a way that is
 relevant to the module's implementation.
 
@@ -117,7 +122,7 @@ are not provided.
 
 Whenever an implementation stage is completed for a UserSpecification, the full
 UserSpecification is cached in a file that corresponds to the stage name. This
-means that there can be up to 17 different versions of the UserSpecification
+means that there can be up to 18 different versions of the UserSpecification
 cached for each UserSpecification in a CodeCommit project.
 
 The cached UserSpecifications are saved in a folder called agent-state/ at a

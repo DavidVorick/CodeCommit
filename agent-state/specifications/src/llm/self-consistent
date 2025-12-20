@@ -1,3 +1,6 @@
+dependencies:
+  logger
+
 # User Specification
 
 This is a module that contains all of the logic for interfacing with LLMs.

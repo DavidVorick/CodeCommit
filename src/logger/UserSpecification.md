@@ -1,3 +1,5 @@
+dependencies:
+
 ## Logging
 
 Each call to an agentic workflow creates its own folder in the

@@ -1,3 +1,9 @@
+dependencies:
+  auto_workflow
+  committing_code
+  consistency
+  logger
+
 # User Specification
 
 This is a specification for a tool that uses agentic workflows to assist with

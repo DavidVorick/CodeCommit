@@ -1,3 +1,7 @@
+dependencies:
+  llm
+  system_prompts
+
 # Building Context
 
 This is a specification for a building block that can be used in agentic coding

@@ -8,6 +8,10 @@ consistent with each other, and free of any confusing statements. These
 specifications will be passed along to an LLM that must implement everything
 described in the specifications.
 
+Do not worry whether the dependencies are properly declared in the
+specification, this is handled by another process later in the development
+pipeline.
+
 You also have a task of ensuring that any requirements that are established in
 specification are appropriately detailed in all relevant dependency specifications
 as well.

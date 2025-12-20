@@ -1,3 +1,8 @@
+dependencies:
+  llm
+  context_builder
+  system_prompts
+
 # Committing Code
 
 This is a specification for the implementation of an agentic coding workflow

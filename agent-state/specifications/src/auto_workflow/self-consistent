@@ -84,7 +84,8 @@ in [dependency]/UserSpecification.md
 ### Prompt Construction
 
 When constructing the prompt, each section is labeled with the [label] format
-prior to the relevant information being provided.
+prior to the relevant information being provided. The prompt templaates have
+already been created by the supervisor and exist within this module.
 
 1. self-consistent
 

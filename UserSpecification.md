@@ -7,7 +7,7 @@ dependencies:
 # User Specification
 
 This is a specification for a tool that uses agentic workflows to assist with
-programming tasks. This tool offers multiple agentic flows, each with its own
+programming tasks. This tool offers multiple workflows, each with its own
 objective. All workflows are implemented by the 'code-commit' binary.
 
 ## Project Design
@@ -22,8 +22,9 @@ UserSpecification documents work together to define the project.
 
 The code-commit binary supports an 'init' instruction `code-commit init
 <project-name>` which will create all of the basic files needed to kick off a
-new code-commit project. Simple/basic versions of the following files will be
-created:
+new code-commit project. Simple/basic versions (for example, a hello world
+program, though it really doesn't matter what it is as long as it is simple) of
+the following files will be created:
 
 + agent-config/
 + agent-config/logs/
@@ -114,9 +115,17 @@ tracked by git except for the Cargo.toml and any files in the agent-state/
 folder. If the flag `--rollup-full` is used instead, then the codebase.txt file
 will additionally contain the Cargo.toml file.
 
-A log file will also be created in the agent-config/logs/ folder.
+A log file will also be created using the logger module, using the name
+'rollup'.
 
 The programmatic slug that refers to this workflow is 'rollup'.
+
+Within the rollup, each file will be declared with the following format:
+
+```
+--- [filepath] ---
+[file data]
+```
 
 ## LLMs
 

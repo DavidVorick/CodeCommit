@@ -4,20 +4,113 @@ code-commit is an agentic workflow tool that helps developers interface more
 seamlessly with LLMs. It is currently targeted at rust codebases, but could
 easily be adapted for other codebases.
 
-code-commit is very specification focused. It depends on two files -
-UserSpecification.md and LLMInstructions.md to define a goal, and then it uses
-LLMs to implement the specifications.
+## Using code-commit
 
-code-commit is constantly evolving and might often be in a state of disrepair.
-The best way to make use of code-commit for yourself is to look at the git
-tags. Each tagged version is a stable and fully put together iteration of
-code-commit (or at least, I thought it was stable when I made the tag).
+Every code-commit project is defined by a set of UserSpecification.md files
+which define the purpose of the code and provide guidelines to agentic
+workflows that implement the specifications.
 
-The project is evolving too quickly for the README to be he all that helpful,
-so if you want to use code-commit for yourself I suggest looking at the
-UserSpecification.md file. It contains the full specification for code-commit,
-and is also a good example of how to use code-commit (as code-commit is itself
-a project made with code-commit).
+There is a top level UserSpecification.md which defines the high level goals
+and purpose of the project, and most of the functionality is split off into
+modules, where each module has its own UserSpecification.md. The vast majority
+of the features and nuance are defined within the modules.
+
+Modules form a dependency DAG. One module is allowed to import another, so long
+as it does not result in a dependency cycle. Each module provides an API
+document which provides guarantees around the module's behavior. These
+guarantees are the sole documentation that gets provided to anyone importing
+the module.
+
+LLMs typically only load one module at a time into context. More specifically,
+they load the UserSpecification for that module, the top level
+UserSpecification for the entire project, and then the public API documentation
+for any direct dependencies that the module has. The LLMs will then work on the
+module using different sets of prompts.
+
+A central component of the code-commit lifecycle is specification review. LLMs
+are continuously used throughout the life of a code-commit project to verify
+that specifications are self-consistent, sensible, non-confusing, and making
+correct use of their dependencies. This review process is critical for the
+overall scalability of agentic projects.
+
+Both the review and the implementation process get split into multiple LLM
+calls with different prompts. This is because modern LLMs lose fidelity as the
+number of instructions increases, and as the context size increases. By keeping
+tasks more focused, a stronger overall implementation can emerge as a result.
+
+The recommended development workflow is to define one UserSpecification for the
+whole project, and then as the context starts to grow too large, begin to split
+out different elements of functionality into modules. Modules ust be
+self-contained.
+
+The UserSpecifications are considered sacred, and will never be modified by
+LLMs. During specification review, the LLM may request that the user make
+modifications to the UserSpecifications, but it will never make those
+modifications itself.
+
+The LLMs will also never commit code themselves. If any files are modified, the
+user will have an opportunity to review the changes and manually commit the
+changes. This allows the user to trivially undo any bad changes that are made
+by an LLM.
+
+When code-commit works on a codebase, it works in phases. Each phase takes the
+project to a deeper layer of maturity, and significantly increases the cost of
+making breaking changes.
+
+Within each phase, code-commit works backwards through the dependency tree,
+starting with the modules that have no dependencies, and then progressing to
+the modules that only depend on modules with no dependencies (called L1
+modules), and so on, until every module has been completed for that phase.
+code-commit will complete the full phase for each module before moving onto the
+next module.
+
+The first phase focuses on four things:
+
+1. Ensure the specification is sensible
+2. Ensure there is a basic implementation that is faithful to the specification
+3. Ensure that the public APIs of the module have been properly documented for
+   other modules, as well as the dependencies of the module.
+4. Ensure that basic happy-path testing exists for all major functions of the
+   module.
+
+The second phase focuses on three things:
+
+1. Ensure the module follows best practices for the project's security model.
+2. Ensure there is robust testing of edge cases and adversarial inputs.
+3. Ensure that there are no major gaps in the project design or implementation.
+
+The thrid phase focuses on three things:
+
+1. Ensure that the code is as simple as possible.
+2. Ensure that the code has sufficient logging to debug in production.
+3. Ensure that the code has integration testing which verifies its dependencies
+   work as needed.
+
+And the fourth phase focuses on three things:
+
+1. Ensure that the code has benchmarks which verify that performance meets
+   requirements.
+2. Ensure that fuzz tests exist for any functions that may require fuzz
+   testing.
+3. Ensure that all coding best practices are followed throughout the
+   implementation.
+
+Projects that are just prototypes should stay in phase one, to get the fastest
+possible iteration speed. Projects that are ready to be piloted in a real world
+environment should stay in phase two. Projects that are being piloted in
+production grade environments should stay in phase three, and projects that are
+being fully deployed as production-grade professional software should be phase
+four.
+
+## Usage
+
+TBD, but the goal is to have just two commands: 'code-commit' and 'code-commit
+--query'. 'code-commit' will review the specifications and advance them
+automatically, and 'code-commit --query' will allow the user to ask questions
+about the codebase.
+
+Because the commands are basic, the user has to develop the app entirely by
+modifying the UserSpecification documents.
 
 ## The Evolution of Code-Commit
 

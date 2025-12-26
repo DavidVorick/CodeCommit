@@ -1,96 +1,127 @@
-dependencies:
-  src/llm
-
 # Auto Workflow
 
 This is a specification for the auto workflow module, a module that looks at
-the project state and automatically determines which workflow needs to be run.
-These decisions are made based on progress milestones that are provided by
-other workflows, which means the decision for which workflow to run does not
-require any LLM oversight.
+the project state and automatically runs agents to review and update the
+codebase. These decisions are made based on progress milestones that are
+tracked as the codebase is built out.
+
+The process for determining what to work on is fully scripted, and does not
+depend on LLMs. The work itself typically does involve calling LLMs.
 
 ## Implementation Progression
 
-Each UserSpecification file has an implementation progression which establishes
-how much progress has been made in completing the specification. Each stage of
-progression is associated with a workflow that can be used to complete that
-stage.
+The automated workflow spilts work into four phases, as well as a
+pre-processing phase. Modules are processed one-by-one for each phase, and when
+every module has completed each phase, the next phase can begin.
 
-The stages are as follows:
+Modules in a code-commit project always form a dependency DAG. One module is
+not allowed to import another if it would form a dependency loop. This allows
+the auto workflow to process modules in reverse dependency order: first it
+processes modules that have no dependencies on other modules (L0 modules), then
+it processes modules that exclusively depend on modules with no other
+dependencies (L1 modules), and so on.
 
-1. "self-consistent": Is the UserSpecification consistent with itself and free
-   of any confusing statements?
-2. "project-consistent": Is the UserSpecification consistent with the other
-   UserSpecifications in the project and free of any confusing statements? Does
-   it properly call out all dependencies? Are requirements properly chained
-   into their dependencies?
-3. "complete": Is the UserSpecification fully specified and contains all
-   critical details that would be necessary for successful implementation,
-   without any room for confusion? Are all required performance targets called
-   out? Is the logging strategy sufficient?
-4. "secure": Is the UserSpecification properly considering all security issues,
-   such that it will be robust in an adversarial environment?
-5. "implemented": Has the UserSpecification been fully implemented?
-6. "documented": Have all of the dependencies and public APIs been properly
-   documented?
-7. "focused": Does the implementation include any features that are not
-   declared in the UserSpecification?
-8. "minimized": Has all of the code been broken into files below 300 LoC in
-   size, and functions below 100 LoC in size?
-9. "simplified": Has the dependency graph of functions within the
-   implementation been reduced to a minimal state?
-10. "standardized": Does the implementation meet all code quality requirements?
-11. "benchmarked": Does the implementation have robust benchmarks to measure
-    performance?
-12. "logged": Is there an appropriate level of logging throughout the
-    implementation?
-13. "optimized": Have the UserSpecification and implementation been optimized
-    to the correct level? Are there any last implementation changes required to
-    bring the implementation to the highest level of quality that is demanded by
-    its practical applications?
-14. "happy-path-unit-tested": Are there happy-path unit tests for every
-    function in the implementation?
-15. "edge-case-unit-tested": Are there thorough and robust unit tests probing
-    every branch and edge case for every function in the implementation?
-16. "locally-integration-tested": Are there thorough end-to-end tests for all
-    of the code in the implementation?
-17. "locally-fuzzed": Have fuzz tests been written for any functions or
-    features that may benefit from fuzz testing?
-18. "dependency-integration-tested": Are there thorough end-to-end tests which
-    also verify that all dependencies are working as required?
-
-Note that the first 17 steps are all internal, and therefore never need to be
-updated unless the UserSpecification for the local module has been updated,
-however the 18th step is external, and therefore needs to be updated any time
-that the specification for one of the dependencies changes in a way that is
-relevant to the module's implementation.
-
-### Determining Specification Dependencies
-
-Every UserSpecification keeps a machine-readable list of dependencies at the
-top of the file. The list uses the following format:
+Modules track their dependencies in a file called ModuleDependencies.md, and it
+has this format:
 
 ```
-dependencies:
-  src/llm
-  src/logger
+# Module Dependencies
+
+src/llm
+src/logger
 ```
 
-If a stage requires 'all dependency user specifications', those can be
-determined by looking at the dependencies which are declared at the top of the
-UserSpecification. The UserSpecification files for each dependency can be found
-in [dependency]/UserSpecification.md
+The first line is always `# Module Dependencies`, the second line is always
+blank, and the remaining lines always list out the full set of other modules
+that this module has as dependencies, one per line. This format makes the file
+machine-readable.
+
+## Preprocessing Phase
+
+Because the phases make progress based on the module dependency graph, a module
+dependency graph has to be built. The graph is always built using the
+ModuleDependencies.md file. The graph is built on the fly by loading all
+modules and checking their dependency files.
+
+A module can be identified by the presence of a UserSpecification.md file in a
+folder. The 'root' module has a UserSpecification.md file at the top level of
+the project, and then every other module will appear as a directory or
+subdirectory in the src/ folder. Module folders can have infinite depth, so the
+full folder structure of the src/ folder needs to be scanned.
+
+The full list of modules is assembled, and then the dependency graph is built.
+If a module lacks a ModuleDependencies.md file, then an error is returned
+explaining which modlue is missing a ModuleDependencies.md file.
+
+Once the dependency tree is available, the modules are processed.
+
+## Processing Order
+
+Modules are processed in phases, and each phase has a series of steps. When
+processing modules, a module that has not completed an earlier phase always
+takes priority over one that has completed the phase. If two modules are on the
+same phase, the module with the lowest dependency depth is processed first. If
+two modules are on the same phase and have the same depth, they are processed
+in alphabetical order.
+
+Phase one has four steps:
+
+1. "self-consistent": ensure the specification is consistent with itself and
+   free of any confusing statements.
+2. "implemented": ensure there is an implementation of the module that is
+   faithful to the specification.
+3. "documented": ensure that the ModuleDependencies.md and APISignatures.md
+   file is accurate to the actual implementation of the module
+4. "happy-path-tested" ensure that happy path testing exists for all code
+
+Phase two has four steps:
+
+1. "dependency-verified": ensure that the implementation is making correct use
+   of all dependencies.
+2. "secure": ensure that the implementation follows best practices for the
+   security model of the module and of the project as a whole.
+3. "complete": ensure there are no major gaps in the module's design or
+   implementation.
+4. "edge-tested": ensure that there is robust testing of all edge cases,
+   including adversarial inputs.
+
+Phase three has three steps:
+
+1. "simple": ensure that the code has been simplified as much as possible.
+2. "logged": ensure that there is sufficient logging in the module to support a
+   production deployment. Depending on the module, logging may not be needed.
+3. "integration-testeed": ensure that the code has robust integration testing
+   that verifies all dependencies.
+
+Phase four has three steps:
+
+1. "benchmarked": ensure that the code has benchmarks which verify that
+   performance meets requirements, and that the test suite fails if a benchamrk
+   is too slow.
+2. "fuzzed": ensure that fuzz tests have been written for all functions that
+   may require fuzzing. Depending on the module, fuzz testing may not be
+   needed.
+3. "polished": ensure that all coding best practices are followed throughout
+   the implementation.
 
 ### Prompt Construction
 
 When constructing the prompt, each section is labeled with the [label] format
-prior to the relevant information being provided.
+prior to the relevant information being provided. The prompt templaates have
+already been created by the supervisor and exist within this module.
 
 1. self-consistent
 
 [response format instructions]
 [self consistent prompt]
+[top level UserSpecification.md]
 [target user specification]
+
+Note: if the target user specification is the top level user specification,
+then target user specification is skipped, as it was already provided.
+
+
+
 
 2. project-consistent
 

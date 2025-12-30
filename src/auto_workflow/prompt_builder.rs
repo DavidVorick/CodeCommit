@@ -140,6 +140,15 @@ fn build_codebase_context(target_module_dir: &Path) -> Result<String, AppError> 
         context.push_str("\n\n");
     }
 
+    let cargo_path = Path::new("Cargo.toml");
+    if cargo_path.exists() {
+        let cargo_content = fs::read_to_string(cargo_path)
+            .map_err(|e| AppError::FileUpdate(format!("Failed to read Cargo.toml: {e}")))?;
+        context.push_str("--- Cargo.toml ---\n");
+        context.push_str(&cargo_content);
+        context.push_str("\n\n");
+    }
+
     // Include files in target module
     context.push_str(&build_module_only_context(target_module_dir)?);
 

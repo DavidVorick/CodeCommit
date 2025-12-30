@@ -8,6 +8,8 @@ mod types;
 
 #[cfg(test)]
 mod discovery_test;
+#[cfg(test)]
+mod phase1_test;
 
 use crate::app_error::AppError;
 use crate::cli::CliArgs;

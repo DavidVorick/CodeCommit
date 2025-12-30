@@ -163,6 +163,8 @@ file in the target module, and every single UserSpecification.md and
 APISignatures.md file for every dependency. This list can be automatically
 assembled, without needing help from an LLM.
 
+The implementation is completed by calling out to the committing-code module.
+
 2. implemented - cached UserSpecification
 
 [response format instructions]
@@ -176,6 +178,8 @@ file in the target module, and every single UserSpecification.md and
 APISignatures.md file for every dependency. This list can be automatically
 assembled, without needing help from an LLM.
 
+The implementation is completed by calling out to the committing-code module.
+
 3. documented
 
 [response format instructions]
@@ -185,6 +189,8 @@ assembled, without needing help from an LLM.
 
 The codebase should include every source code file contained within just the
 module.
+
+The implementation is completed by calling out to the committing-code module.
 
 4. happy-path-tested - no cached UserSpecification
 
@@ -198,6 +204,8 @@ file in the target module, and every single UserSpecification.md and
 APISignatures.md file for every dependency. This list can be automatically
 assembled, without needing help from an LLM.
 
+The implementation is completed by calling out to the committing-code module.
+
 4. happy-path-tested - cached UserSpecification
 
 [response format instructions]
@@ -210,6 +218,8 @@ The codebase should include the top level UserSpecification.md, every single
 file in the target module, and every single UserSpecification.md and
 APISignatures.md file for every dependency. This list can be automatically
 assembled, without needing help from an LLM.
+
+The implementation is completed by calling out to the committing-code module.
 
 (future phases will be introduced at another time, for now, just phase 1 is
 fully specified)

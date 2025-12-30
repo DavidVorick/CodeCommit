@@ -5,6 +5,8 @@ use std::path::PathBuf;
 pub enum Stage {
     SelfConsistent,
     Implemented,
+    Documented,
+    HappyPathTested,
 }
 
 impl Stage {
@@ -12,6 +14,8 @@ impl Stage {
         match self {
             Stage::SelfConsistent => "self-consistent",
             Stage::Implemented => "implemented",
+            Stage::Documented => "documented",
+            Stage::HappyPathTested => "happy-path-tested",
         }
     }
 }

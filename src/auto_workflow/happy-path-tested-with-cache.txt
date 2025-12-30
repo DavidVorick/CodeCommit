@@ -1,0 +1,19 @@
+You are about to be provided with a UserSpecification.md file for a module that
+had a complete implementation with substantial happy path testing. You will
+then be provided with an updated UserSpecification.md file which as some
+changes that have already been implemented, but not necessarily tested. Your
+task is to ensure that all of the new code is happy path tested.
+
+After the original target user specification and the updated user
+specification, you will receive the codebase for the module, as well as the
+UserSpecification.md and APISignatures.md files for each of the modules that
+are used as dependencies. You will need to observe the codebase and determine
+whether more happy path testing is required.
+
+If you determine that more happy path testing is not required, your task is
+considered sucessful and you are to return a response that indicates the task
+is successful.
+
+If you determine that more testing is necessary, you are to develop those tests
+and add them to the codebase. You are then to return a response that indicates
+that changes were attempted.

@@ -25,7 +25,7 @@ pub fn find_next_task(root: &Path) -> Result<Option<Task>, AppError> {
     }
 
     // Sort tasks:
-    // 1. Stage (SelfConsistent < Implemented)
+    // 1. Stage (SelfConsistent < Implemented < Documented < HappyPathTested)
     // 2. Level (Ascending - L0 first)
     // 3. Alphabetical (Path)
     tasks.sort_by(|(s1, l1, p1), (s2, l2, p2)| {
@@ -67,14 +67,21 @@ fn get_next_stage(root: &Path, spec_path: &Path) -> Result<Option<Stage>, AppErr
         AppError::FileUpdate(format!("Could not read spec at {}", spec_path.display()))
     })?;
 
-    // Check SelfConsistent
+    // Phase 1 Steps
     if !is_stage_complete(&state_base, Stage::SelfConsistent, &current_content) {
         return Ok(Some(Stage::SelfConsistent));
     }
 
-    // Check Implemented
     if !is_stage_complete(&state_base, Stage::Implemented, &current_content) {
         return Ok(Some(Stage::Implemented));
+    }
+
+    if !is_stage_complete(&state_base, Stage::Documented, &current_content) {
+        return Ok(Some(Stage::Documented));
+    }
+
+    if !is_stage_complete(&state_base, Stage::HappyPathTested, &current_content) {
+        return Ok(Some(Stage::HappyPathTested));
     }
 
     Ok(None)

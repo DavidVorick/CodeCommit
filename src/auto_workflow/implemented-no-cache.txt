@@ -9,11 +9,14 @@ and you are to return a response that indicates the task is successful.
 
 The specification has already been vetted at "complete". If it is clear that
 there are key details missing from the specification which would be necessary
-to create a robust implementation, it likely means that a dependency is
-missing. If this is the case, you should write a note to the supervisor and
-return a response indicating that changes have been requested.
+to create a robust implementation, it likely means that an internal module
+dependency is missing. If this is the case, you should write a note to the
+supervisor and return a response indicating that changes have been requested.
+Note that if an external dependency is missing from the Cargo.toml, you can add
+it yourself.
 
-If the implementation is incomplete, but all required dependencies appear to be
-present, your task is to complete the implementation. You will provide all of
-the file updates necessary to complete the implementation, and then provide a
-response that indicates that changes have been attempted.
+If the implementation is incomplete, but all required internal module
+dependencies appear to be present, your task is to complete the implementation.
+You will provide all of the file updates necessary to complete the
+implementation, and then provide a response that indicates that changes have
+been attempted.

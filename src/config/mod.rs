@@ -22,6 +22,7 @@ impl Config {
         let query = match args.workflow {
             Workflow::CommitCode | Workflow::ConsistencyCheck => Self::get_query_from_editor()?,
             Workflow::Rollup | Workflow::Auto => String::new(),
+            Workflow::Init(_) => unreachable!("Init workflow does not use Config"),
         };
 
         Self::load_from_dir(args, Path::new("."), query)
@@ -79,6 +80,7 @@ impl Config {
                     }
                     Workflow::Auto => String::new(), // Prompts handled internally
                     Workflow::Rollup => unreachable!(),
+                    Workflow::Init(_) => unreachable!(),
                 };
 
                 Ok(Self {
@@ -90,6 +92,9 @@ impl Config {
             }
             Workflow::Rollup => Err(AppError::Config(
                 "The rollup workflow does not require configuration.".to_string(),
+            )),
+            Workflow::Init(_) => Err(AppError::Config(
+                "The init workflow does not require configuration.".to_string(),
             )),
         }
     }

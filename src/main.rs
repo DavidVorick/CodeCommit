@@ -34,14 +34,9 @@ async fn main() {
 }
 
 async fn run() -> Result<(), AppError> {
-    // Non-agentic 'init' command
-    let args_vec: Vec<String> = std::env::args().skip(1).collect();
-    if matches!(args_vec.first().map(|s| s.as_str()), Some("init")) {
-        let project_name = args_vec.get(1).ok_or_else(|| {
-            AppError::Config(
-                "Please provide a project name: code-commit init <project-name>".to_string(),
-            )
-        })?;
+    let cli_args = cli::parse_cli_args()?;
+
+    if let Workflow::Init(ref project_name) = cli_args.workflow {
         init::run_init_command(project_name)?;
         println!(
             "Place your gemini-key.txt and openai-key.txt files into the agent-config/ directory."
@@ -49,13 +44,12 @@ async fn run() -> Result<(), AppError> {
         return Ok(());
     }
 
-    let cli_args = cli::parse_cli_args()?;
-
     let logger_suffix = match cli_args.workflow {
         Workflow::CommitCode => "committing-code",
         Workflow::ConsistencyCheck => "consistency",
         Workflow::Rollup => "rollup",
         Workflow::Auto => "auto-workflow",
+        Workflow::Init(_) => unreachable!(),
     };
     let logger = logger::Logger::new(logger_suffix)?;
 
@@ -64,6 +58,7 @@ async fn run() -> Result<(), AppError> {
         Workflow::ConsistencyCheck => consistency::run(&logger, cli_args).await,
         Workflow::Rollup => rollup::run(&logger, cli_args).await,
         Workflow::Auto => auto_workflow::run(&logger, cli_args).await,
+        Workflow::Init(_) => unreachable!(),
     };
 
     if let Err(e) = &result {

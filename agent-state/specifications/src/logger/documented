@@ -1,5 +1,3 @@
-dependencies:
-
 ## Logger
 
 This is the specification for the logger module.

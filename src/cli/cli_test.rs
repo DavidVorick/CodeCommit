@@ -231,3 +231,35 @@ fn test_rollup_full_with_other_workflow_is_error() {
     let result = parse_args(args.into_iter());
     assert!(result.is_err());
 }
+
+#[test]
+fn test_init_workflow() {
+    let args = to_string_vec(&["init", "my-project"]);
+    let result = parse_args(args.into_iter()).unwrap();
+    assert_eq!(result.workflow, Workflow::Init("my-project".to_string()));
+}
+
+#[test]
+fn test_init_missing_name() {
+    let args = to_string_vec(&["init"]);
+    let result = parse_args(args.into_iter());
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_init_with_other_workflow() {
+    let args = to_string_vec(&["init", "my-project", "--cc"]);
+    let result = parse_args(args.into_iter());
+    assert!(result.is_err());
+
+    let args = to_string_vec(&["--aw", "init", "my-project"]);
+    let result = parse_args(args.into_iter());
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_init_with_force_is_error() {
+    let args = to_string_vec(&["init", "my-project", "--force"]);
+    let result = parse_args(args.into_iter());
+    assert!(result.is_err());
+}

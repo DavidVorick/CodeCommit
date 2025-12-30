@@ -11,6 +11,7 @@ pub enum Workflow {
     ConsistencyCheck,
     Rollup,
     Auto,
+    Init(String),
 }
 
 pub struct CliArgs {

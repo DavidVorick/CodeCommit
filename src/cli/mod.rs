@@ -22,13 +22,14 @@ impl Model {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum Workflow {
     #[default]
     CommitCode,
     ConsistencyCheck,
     Rollup,
     Auto,
+    Init(String),
 }
 
 #[derive(Debug, PartialEq, Default)]
@@ -100,6 +101,17 @@ pub(crate) fn parse_args<T: Iterator<Item = String>>(mut args: T) -> Result<CliA
             }
             "--force" | "--f" => {
                 force = true;
+            }
+            "init" => {
+                if workflow.is_some() {
+                    return Err(AppError::Config(
+                        "It is an error to trigger more than one workflow at a time.".to_string(),
+                    ));
+                }
+                let project_name = args.next().ok_or_else(|| {
+                    AppError::Config("Missing project name for init command".to_string())
+                })?;
+                workflow = Some(Workflow::Init(project_name));
             }
             _ => {
                 return Err(AppError::Config(format!("Unknown argument: {arg}")));

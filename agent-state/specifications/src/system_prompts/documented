@@ -1,5 +1,3 @@
-dependencies:
-
 # System Prompts
 
 The system_prompts module contains constants which define different components

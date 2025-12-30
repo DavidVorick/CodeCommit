@@ -41,6 +41,11 @@ When in doubt, the UserSpecification files are treated as the baseline truth
 for the project. The implementation needs to follow the UserSpecification. The
 implementation is never "correct" if it deviates from the UserSpecification.
 
+Modules are explicitly forbidden from importing any code or functions from the
+top level source code of the project. All imports must be from other modules.
+Furthermore, the module dependency graph must be a DAG, there cannot be any
+dependency loops between modules.
+
 CodeCommit projects are designed for agentic workflows. Often times, agents are
 navigating the project structure using nothing more than the names of each file
 in the project, and the APISignatures.md files of each module. To ensure the

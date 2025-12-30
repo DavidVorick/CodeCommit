@@ -1,5 +1,8 @@
 use crate::app_error::AppError;
 
+#[cfg(test)]
+mod cli_test;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Model {
     #[default]

@@ -1,6 +1,7 @@
 use super::api::LlmApi;
-use super::{generate_request_id, query_internal};
+use super::{create_client, generate_request_id, query_internal};
 use crate::app_error::AppError;
+use crate::cli::Model;
 use crate::logger::Logger;
 use serde_json::{json, Value};
 use std::future::Future;
@@ -142,4 +143,31 @@ fn test_generate_request_id() {
     // UUID v4 is 36 chars long
     assert_eq!(id1.len(), 36);
     assert!(uuid::Uuid::parse_str(&id1).is_ok());
+}
+
+#[test]
+fn test_create_client_config() {
+    let client = create_client(Model::Gemini3Pro, "key".into());
+    assert_eq!(client.get_model_name(), "gemini-3-pro-preview");
+    assert_eq!(
+        client.get_url(),
+        "https://generativelanguage.googleapis.com/v1beta/interactions"
+    );
+    assert!(!client.supports_idempotency());
+
+    let client = create_client(Model::Gemini2_5Pro, "key".into());
+    assert_eq!(client.get_model_name(), "gemini-2.5-pro");
+    assert_eq!(
+        client.get_url(),
+        "https://generativelanguage.googleapis.com/v1beta/interactions"
+    );
+    assert!(!client.supports_idempotency());
+
+    let client = create_client(Model::Gpt5, "key".into());
+    assert_eq!(client.get_model_name(), "gpt-5.2");
+    assert_eq!(
+        client.get_url(),
+        "https://api.openai.com/v1/chat/completions"
+    );
+    assert!(client.supports_idempotency());
 }

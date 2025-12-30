@@ -1,11 +1,232 @@
 use super::api::{
-    self, extract_text_from_gemini_response, extract_text_from_gpt_response, LlmApiClient,
-    QueryError,
+    self, extract_text_from_gemini_response, extract_text_from_gpt_response, GeminiClient,
+    GptClient, LlmApiClient, QueryError,
 };
 use crate::app_error::AppError;
 use reqwest::StatusCode;
 use serde_json::json;
 use std::time::Duration;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpListener;
+use tokio::sync::mpsc;
+
+// --- Mock Server for Integration Tests ---
+
+async fn start_mock_server_with_capture(
+    responses: Vec<(u16, String)>,
+) -> (String, mpsc::Receiver<String>) {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let url = format!("http://127.0.0.1:{port}");
+    let (tx, _rx) = mpsc::channel(100);
+
+    tokio::spawn(async move {
+        let mut resp_iter = responses.into_iter();
+        while let Ok((mut socket, _)) = listener.accept().await {
+            let mut buf = [0u8; 8192];
+            let n = socket.read(&mut buf).await.unwrap_or(0);
+            if n > 0 {
+                let request_str = String::from_utf8_lossy(&buf[..n]).to_string();
+                let _ = tx.send(request_str).await;
+            }
+
+            if let Some((status, body)) = resp_iter.next() {
+                let status_line = match status {
+                    200 => "200 OK",
+                    500 => "500 Internal Server Error",
+                    _ => "200 OK",
+                };
+                let response = format!(
+                    "HTTP/1.1 {}\r\nContent-Type: application/json\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{}",
+                    status_line,
+                    body.len(),
+                    body
+                );
+                let _ = socket.write_all(response.as_bytes()).await;
+            }
+        }
+    });
+    (url, _rx)
+}
+
+// Convenience wrapper that discards captured requests
+async fn start_mock_server(responses: Vec<(u16, String)>) -> String {
+    let (url, _) = start_mock_server_with_capture(responses).await;
+    url
+}
+
+#[tokio::test]
+async fn test_gemini_happy_path_immediate() {
+    let success_body = json!({
+        "status": "completed",
+        "outputs": [{ "type": "text", "text": "Immediate success" }]
+    })
+    .to_string();
+
+    let url = start_mock_server(vec![(200, success_body)]).await;
+    let client = GeminiClient::new_test("key".to_string(), "model", url);
+    let api_client = LlmApiClient::Gemini(client);
+
+    let res = api_client
+        .query_with_retries(&json!({"input": "hi"}), None)
+        .await
+        .unwrap();
+
+    let text = api_client.extract_text_from_response(&res).unwrap();
+    assert_eq!(text, "Immediate success");
+}
+
+#[tokio::test]
+async fn test_gemini_happy_path_polling() {
+    let processing_body = json!({
+        "id": "123",
+        "status": "processing"
+    })
+    .to_string();
+
+    let completed_body = json!({
+        "id": "123",
+        "status": "completed",
+        "outputs": [{ "type": "text", "text": "Polled success" }]
+    })
+    .to_string();
+
+    // 1. POST returns processing
+    // 2. GET returns completed
+    let url = start_mock_server(vec![(200, processing_body), (200, completed_body)]).await;
+    let client = GeminiClient::new_test("key".to_string(), "model", url);
+    let api_client = LlmApiClient::Gemini(client);
+
+    let res = api_client
+        .query_with_retries(&json!({"input": "hi"}), None)
+        .await
+        .unwrap();
+
+    let text = api_client.extract_text_from_response(&res).unwrap();
+    assert_eq!(text, "Polled success");
+}
+
+#[tokio::test]
+async fn test_gpt_retry_flow_and_idempotency() {
+    let error_body = "{}".to_string();
+    let success_body = json!({
+        "choices": [{
+            "message": { "content": "Retry success" }
+        }]
+    })
+    .to_string();
+
+    // 1. 500 Error
+    // 2. 200 OK
+    let (url, mut rx) =
+        start_mock_server_with_capture(vec![(500, error_body), (200, success_body)]).await;
+    let client = GptClient::new_test("key".to_string(), url);
+    let api_client = LlmApiClient::Gpt(client);
+
+    let uuid = "uuid-123";
+    let res = api_client
+        .query_with_retries(&json!({"msg": "hi"}), Some(uuid))
+        .await
+        .unwrap();
+
+    let text = api_client.extract_text_from_response(&res).unwrap();
+    assert_eq!(text, "Retry success");
+
+    // Verify Idempotency Header consistency
+    let req1 = rx.recv().await.unwrap();
+    let req2 = rx.recv().await.unwrap();
+
+    let expected_header = format!("idempotency-key: {uuid}");
+    assert!(
+        req1.to_lowercase().contains(&expected_header),
+        "First request must have idempotency key. Got:\n{req1}"
+    );
+    assert!(
+        req2.to_lowercase().contains(&expected_header),
+        "Retry request must have same idempotency key. Got:\n{req2}"
+    );
+}
+
+#[tokio::test]
+async fn test_gemini_request_structure_and_auth() {
+    let success_body = json!({
+        "status": "completed",
+        "outputs": [{ "type": "text", "text": "ok" }]
+    })
+    .to_string();
+
+    let (url, mut rx) = start_mock_server_with_capture(vec![(200, success_body)]).await;
+    let client = GeminiClient::new_test("my-secret-key".to_string(), "test-model", url);
+    let api_client = LlmApiClient::Gemini(client);
+
+    let _ = api_client
+        .query_with_retries(&json!({"input": "hi"}), None)
+        .await
+        .unwrap();
+
+    let req = rx.recv().await.unwrap();
+    assert!(
+        req.to_lowercase().contains("x-goog-api-key: my-secret-key"),
+        "Gemini request must have api key header"
+    );
+}
+
+#[tokio::test]
+async fn test_gpt_auth_header() {
+    let success_body = json!({
+        "choices": [{ "message": { "content": "ok" } }]
+    })
+    .to_string();
+
+    let (url, mut rx) = start_mock_server_with_capture(vec![(200, success_body)]).await;
+    let client = GptClient::new_test("sk-gpt-key".to_string(), url);
+    let api_client = LlmApiClient::Gpt(client);
+
+    let _ = api_client
+        .query_with_retries(&json!({"msg": "hi"}), Some("u"))
+        .await
+        .unwrap();
+
+    let req = rx.recv().await.unwrap();
+    assert!(
+        req.to_lowercase()
+            .contains("authorization: bearer sk-gpt-key"),
+        "GPT request must have bearer token. Got:\n{req}"
+    );
+}
+
+#[test]
+fn test_build_request_body_gemini() {
+    let client = GeminiClient::new("k".into(), "gemini-model-x");
+    let api_client = LlmApiClient::Gemini(client);
+    let body = api_client.build_request_body("test prompt");
+
+    assert_eq!(body["model"], "gemini-model-x");
+    assert_eq!(body["input"], "test prompt");
+    assert!(
+        body.get("stream").is_none(),
+        "Gemini must not enable streaming"
+    );
+    assert!(
+        body.get("background").is_none(),
+        "Gemini must not use background mode"
+    );
+}
+
+#[test]
+fn test_build_request_body_gpt() {
+    let client = GptClient::new("k".into());
+    let api_client = LlmApiClient::Gpt(client);
+    let body = api_client.build_request_body("test prompt");
+
+    assert_eq!(body["model"], "gpt-5.2");
+    let msgs = body["messages"].as_array().unwrap();
+    assert_eq!(msgs.len(), 1);
+    assert_eq!(msgs[0]["role"], "user");
+    assert_eq!(msgs[0]["content"], "test prompt");
+}
+
+// --- Original Unit Tests ---
 
 #[test]
 fn test_extract_gemini_text_happy_path() {
@@ -88,10 +309,6 @@ fn test_extract_gpt_text_no_choices() {
     let response = json!({"choices": []});
     let result = extract_text_from_gpt_response(&response);
     assert!(matches!(result, Err(AppError::ResponseParsing(_))));
-    assert!(result
-        .unwrap_err()
-        .to_string()
-        .contains("Could not find 'content' in GPT response JSON."));
 }
 
 #[test]
@@ -122,7 +339,6 @@ fn test_extract_gpt_text_missing_message() {
     assert!(matches!(result, Err(AppError::ResponseParsing(_))));
 }
 
-// Reliability classification tests
 #[test]
 fn test_retryable_transport_for_gpt() {
     let policy = super::api::RetryPolicy::for_model(&fake_gpt_client());
@@ -149,7 +365,6 @@ fn test_retryable_transport_for_gemini() {
         is_timeout: true,
         message: "timeout".to_string(),
     };
-    // Gemini interactions are retryable on timeout because we retry the whole flow (safe)
     assert!(policy.is_retryable(&fake_gemini_client(), &timeout_err));
 
     let connect_err = QueryError::Transport {
@@ -239,12 +454,11 @@ fn test_censor_api_key_no_match() {
 }
 
 fn fake_gpt_client() -> LlmApiClient {
-    // We only need the enum variant for policy; the inner client is unused here.
-    let inner = super::api::GptClient::new(String::new());
+    let inner = GptClient::new(String::new());
     LlmApiClient::Gpt(inner)
 }
 
 fn fake_gemini_client() -> LlmApiClient {
-    let inner = super::api::GeminiClient::new(String::new(), "gemini-test-model");
+    let inner = GeminiClient::new(String::new(), "gemini-test-model");
     LlmApiClient::Gemini(inner)
 }

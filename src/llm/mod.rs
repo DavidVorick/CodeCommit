@@ -17,14 +17,8 @@ pub(crate) fn generate_request_id() -> String {
     Uuid::new_v4().to_string()
 }
 
-pub async fn query(
-    model: Model,
-    api_key: String,
-    prompt: &str,
-    logger: &Logger,
-    log_prefix: &str,
-) -> Result<String, AppError> {
-    let api_client = match model {
+pub(crate) fn create_client(model: Model, api_key: String) -> LlmApiClient {
+    match model {
         Model::Gemini3Pro => {
             LlmApiClient::Gemini(api::GeminiClient::new(api_key, "gemini-3-pro-preview"))
         }
@@ -32,7 +26,17 @@ pub async fn query(
             LlmApiClient::Gemini(api::GeminiClient::new(api_key, "gemini-2.5-pro"))
         }
         Model::Gpt5 => LlmApiClient::Gpt(api::GptClient::new(api_key)),
-    };
+    }
+}
+
+pub async fn query(
+    model: Model,
+    api_key: String,
+    prompt: &str,
+    logger: &Logger,
+    log_prefix: &str,
+) -> Result<String, AppError> {
+    let api_client = create_client(model, api_key);
     query_internal(&api_client, prompt, logger, log_prefix).await
 }
 

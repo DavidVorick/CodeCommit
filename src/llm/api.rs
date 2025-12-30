@@ -11,7 +11,6 @@ const GPT_MODEL_NAME: &str = "gpt-5.2";
 const GEMINI_INTERACTIONS_URL: &str =
     "https://generativelanguage.googleapis.com/v1beta/interactions";
 
-// Internal error classification used for robust retry handling.
 #[derive(Debug)]
 pub(crate) enum QueryError {
     Http {
@@ -35,10 +34,30 @@ pub(crate) struct GeminiClient {
     api_key: String,
     model_name: &'static str,
     api_url: String,
+    polling_interval: Duration,
 }
 
 impl GeminiClient {
     pub(crate) fn new(api_key: String, model_name: &'static str) -> Self {
+        Self::create(
+            api_key,
+            model_name,
+            GEMINI_INTERACTIONS_URL.to_string(),
+            Duration::from_secs(2),
+        )
+    }
+
+    #[cfg(test)]
+    pub(crate) fn new_test(api_key: String, model_name: &'static str, api_url: String) -> Self {
+        Self::create(api_key, model_name, api_url, Duration::from_millis(10))
+    }
+
+    fn create(
+        api_key: String,
+        model_name: &'static str,
+        api_url: String,
+        polling_interval: Duration,
+    ) -> Self {
         let client = Client::builder()
             .connect_timeout(Duration::from_secs(15))
             .tcp_keepalive(Some(Duration::from_secs(30)))
@@ -46,32 +65,22 @@ impl GeminiClient {
             .pool_max_idle_per_host(8)
             .build()
             .unwrap_or_else(|_| Client::new());
-        // The URL is now constant for the Interactions API, but we store it to satisfy get_url()
-        let api_url = GEMINI_INTERACTIONS_URL.to_string();
         Self {
             client,
             api_key,
             model_name,
             api_url,
+            polling_interval,
         }
     }
 
-    // Implements the "Start Interaction -> Poll -> Result" flow.
-    // This entire flow is treated as one "query attempt". If any network error occurs
-    // during start or polling, the outer retry logic (in LlmApiClient) will retry the whole flow,
-    // which effectively creates a new interaction. This is consistent with the UserSpec.
     async fn query_once(&self, request_body: &Value) -> Result<Value, QueryError> {
-        // 1. Start Interaction
         let mut resp = self.post_interaction(request_body).await?;
-
         loop {
-            // 2. Check Status
             let status = resp.get("status").and_then(|s| s.as_str()).unwrap_or("");
             if status == "completed" || status == "failed" || status == "cancelled" {
                 return Ok(resp);
             }
-
-            // 3. Extract ID for polling
             let id =
                 resp.get("id")
                     .and_then(|s| s.as_str())
@@ -80,11 +89,7 @@ impl GeminiClient {
                         parse_error: "Missing 'id' in non-terminal Interaction response"
                             .to_string(),
                     })?;
-
-            // 4. Wait
-            tokio::time::sleep(Duration::from_secs(2)).await;
-
-            // 5. Poll
+            tokio::time::sleep(self.polling_interval).await;
             resp = self.get_interaction(id).await?;
         }
     }
@@ -98,7 +103,6 @@ impl GeminiClient {
             .json(body)
             .send()
             .await;
-
         self.handle_response(resp_res).await
     }
 
@@ -110,7 +114,6 @@ impl GeminiClient {
             .header("x-goog-api-key", &self.api_key)
             .send()
             .await;
-
         self.handle_response(resp_res).await
     }
 
@@ -135,10 +138,20 @@ impl GeminiClient {
 pub(crate) struct GptClient {
     client: Client,
     api_key: String,
+    api_url: String,
 }
 
 impl GptClient {
     pub(crate) fn new(api_key: String) -> Self {
+        Self::create(api_key, GPT_API_URL.to_string())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn new_test(api_key: String, api_url: String) -> Self {
+        Self::create(api_key, api_url)
+    }
+
+    fn create(api_key: String, api_url: String) -> Self {
         let client = Client::builder()
             .connect_timeout(Duration::from_secs(15))
             .tcp_keepalive(Some(Duration::from_secs(30)))
@@ -146,10 +159,13 @@ impl GptClient {
             .pool_max_idle_per_host(8)
             .build()
             .unwrap_or_else(|_| Client::new());
-        Self { client, api_key }
+        Self {
+            client,
+            api_key,
+            api_url,
+        }
     }
 
-    // Single attempt with optional idempotency key for safe retries.
     async fn query_once(
         &self,
         request_body: &Value,
@@ -162,16 +178,14 @@ impl GptClient {
                 headers.insert("Idempotency-Key", hv);
             }
         }
-
         let resp_res = self
             .client
-            .post(GPT_API_URL)
+            .post(&self.api_url)
             .bearer_auth(&self.api_key)
             .headers(headers)
             .json(request_body)
             .send()
             .await;
-
         let resp = match resp_res {
             Ok(r) => r,
             Err(e) => {
@@ -182,7 +196,6 @@ impl GptClient {
                 });
             }
         };
-
         handle_response_to_json(resp, &self.api_key).await
     }
 }
@@ -203,7 +216,7 @@ impl LlmApiClient {
     pub(crate) fn get_url(&self) -> &str {
         match self {
             LlmApiClient::Gemini(c) => &c.api_url,
-            LlmApiClient::Gpt(_) => GPT_API_URL,
+            LlmApiClient::Gpt(c) => &c.api_url,
         }
     }
 
@@ -216,16 +229,12 @@ impl LlmApiClient {
             LlmApiClient::Gpt(_) => json!({
                 "model": GPT_MODEL_NAME,
                 "messages": [
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
+                    { "role": "user", "content": prompt }
                 ],
             }),
         }
     }
 
-    // Robust retries with idempotency when supported
     pub(crate) async fn query_with_retries(
         &self,
         request_body: &Value,
@@ -233,7 +242,6 @@ impl LlmApiClient {
     ) -> Result<Value, AppError> {
         let policy = RetryPolicy::for_model(self);
         let mut attempt: u32 = 1;
-
         loop {
             let result = match self {
                 LlmApiClient::Gemini(c) => c.query_once(request_body).await,
@@ -242,16 +250,12 @@ impl LlmApiClient {
                         .await
                 }
             };
-
             match result {
                 Ok(v) => return Ok(v),
                 Err(e) => {
                     if attempt >= policy.max_attempts || !policy.is_retryable(self, &e) {
-                        // Map QueryError -> AppError with full body/message preserved.
                         return Err(map_query_error_to_app_error(e));
                     }
-
-                    // Respect Retry-After if provided (HTTP errors only).
                     let mut delay = policy.backoff_delay(attempt);
                     if let QueryError::Http {
                         retry_after: Some(ra),
@@ -298,15 +302,12 @@ impl LlmApi for LlmApiClient {
     fn get_model_name(&self) -> &'static str {
         LlmApiClient::get_model_name(self)
     }
-
     fn get_url(&self) -> &str {
         LlmApiClient::get_url(self)
     }
-
     fn build_request_body(&self, prompt: &str) -> Value {
         LlmApiClient::build_request_body(self, prompt)
     }
-
     fn query_with_retries<'a>(
         &'a self,
         request_body: &'a Value,
@@ -318,17 +319,14 @@ impl LlmApi for LlmApiClient {
             idempotency_key,
         ))
     }
-
     fn extract_text_from_response(&self, response: &Value) -> Result<String, AppError> {
         LlmApiClient::extract_text_from_response(self, response)
     }
-
     fn supports_idempotency(&self) -> bool {
         LlmApiClient::supports_idempotency(self)
     }
 }
 
-// Retry policy tuned to avoid double-inference while maximizing delivery.
 pub(crate) struct RetryPolicy {
     pub(crate) max_attempts: u32,
     pub(crate) base_delay: Duration,
@@ -338,14 +336,11 @@ pub(crate) struct RetryPolicy {
 impl RetryPolicy {
     pub(crate) fn for_model(model: &LlmApiClient) -> Self {
         match model {
-            // Gemini Interactions flow handles its own polling, so outer retries are for
-            // start/polling network failures.
             LlmApiClient::Gemini(_) => RetryPolicy {
                 max_attempts: 4,
                 base_delay: Duration::from_millis(400),
                 max_delay: Duration::from_secs(8),
             },
-            // Aggressive retries for GPT with idempotency key.
             LlmApiClient::Gpt(_) => RetryPolicy {
                 max_attempts: 6,
                 base_delay: Duration::from_millis(300),
@@ -353,7 +348,6 @@ impl RetryPolicy {
             },
         }
     }
-
     pub(crate) fn is_retryable(&self, model: &LlmApiClient, err: &QueryError) -> bool {
         match err {
             QueryError::Transport {
@@ -361,28 +355,16 @@ impl RetryPolicy {
                 is_timeout,
                 ..
             } => match model {
-                LlmApiClient::Gemini(_) => {
-                    // Gemini Interactions: safe to retry if we can't connect or timeout,
-                    // because we are either retrying the initial POST (which generates a new interaction)
-                    // or retrying a poll GET (idempotent).
-                    *is_connect || *is_timeout
-                }
-                LlmApiClient::Gpt(_) => {
-                    // With idempotency key, both connect and timeout are safe to retry.
-                    *is_connect || *is_timeout
-                }
+                LlmApiClient::Gemini(_) => *is_connect || *is_timeout,
+                LlmApiClient::Gpt(_) => *is_connect || *is_timeout,
             },
             QueryError::Http { status, .. } => {
-                // Retry on common transient codes.
                 matches!(status.as_u16(), 408 | 429 | 500 | 502 | 503 | 504)
             }
-            // If we already received a 2xx with invalid JSON, don't retry to avoid double inference.
             QueryError::InvalidJson { .. } => false,
         }
     }
-
     pub(crate) fn backoff_delay(&self, attempt: u32) -> Duration {
-        // Exponential backoff with jitter derived from system time nanos (no RNG dependency).
         let shift = attempt.saturating_sub(1).min(10);
         let exp = 1u32 << shift;
         let base = self.base_delay.saturating_mul(exp);
@@ -397,12 +379,10 @@ impl RetryPolicy {
 }
 
 fn jitter_duration(base: Duration) -> Duration {
-    // 0..(base/2)
     let nanos_now: u128 = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.subsec_nanos() as u128)
         .unwrap_or(0);
-
     let half = base.as_nanos() / 2;
     if half == 0 {
         return Duration::from_millis(0);
@@ -428,7 +408,6 @@ pub(crate) fn censor_api_key(text: &str, api_key: &str) -> String {
     if api_key.is_empty() {
         return text.to_string();
     }
-    // Only censor things that look like keys. Very short strings are unlikely to be keys.
     let censored_key = if api_key.len() > 8 {
         format!("...{}", &api_key[api_key.len() - 4..])
     } else {
@@ -447,7 +426,6 @@ async fn handle_response_to_json(
 ) -> Result<Value, QueryError> {
     let status = resp.status();
     let retry_after = parse_retry_after(resp.headers());
-
     let text = match resp.text().await {
         Ok(t) => t,
         Err(e) => {
@@ -458,7 +436,6 @@ async fn handle_response_to_json(
             })
         }
     };
-
     if !status.is_success() {
         return Err(QueryError::Http {
             status,
@@ -466,7 +443,6 @@ async fn handle_response_to_json(
             retry_after,
         });
     }
-
     match serde_json::from_str::<Value>(&text) {
         Ok(v) => Ok(v),
         Err(e) => Err(QueryError::InvalidJson {
@@ -496,7 +472,6 @@ pub(crate) fn extract_text_from_gemini_response(response: &Value) -> Result<Stri
                 "Could not find 'outputs' array in Gemini Interaction response.".to_string(),
             )
         })?;
-
     let text_segments: Vec<String> = outputs
         .iter()
         .filter(|part| part.get("type").and_then(|t| t.as_str()) == Some("text"))
@@ -504,13 +479,11 @@ pub(crate) fn extract_text_from_gemini_response(response: &Value) -> Result<Stri
         .filter_map(|text_val| text_val.as_str())
         .map(|s| s.to_string())
         .collect();
-
     if text_segments.is_empty() {
         return Err(AppError::ResponseParsing(
             "Found 'outputs' array, but it contained no valid text segments.".to_string(),
         ));
     }
-
     Ok(text_segments.join(""))
 }
 

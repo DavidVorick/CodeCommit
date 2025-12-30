@@ -15,8 +15,10 @@ structs may be used accurately in an implementation, but they are not
 explained. The signatures should aim to be self-explanatory, supplemented by
 the UserSpecification for more robust documentation.
 
-ModuleDependencies.md lists out all of the modules that this module directly
-imports as a dependency, in a machine readable format.
+ModuleDependencies.md lists out all of the internal modules that this module
+directly imports as a dependency, in a machine readable format. Note that only
+internal module dependencies are listed, as external crate imports are listed
+in the Cargo.toml file.
 
 UserSpecification.md files are user-written files that contain specifications
 for the project and its modules. You are not allowed to create or modify any

@@ -10,3 +10,8 @@ successful.
 If something is incorrect, your task is to fix those two files so that they
 accurately describe what is contained within the module implementation, and
 then you are to return a response that indicates changes were attempted.
+
+Please note that the ModuleDependencies.md file should exclusively declare
+dependencies on other modules within this same project. Imports from external
+rust crates are not considered to be "ModuleDependencies", they are
+dependencies that get enumerated in the Cargo.toml file.

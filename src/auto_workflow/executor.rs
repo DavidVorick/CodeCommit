@@ -2,9 +2,11 @@ use crate::app_error::AppError;
 use crate::auto_workflow::file_updater;
 use crate::auto_workflow::prompt_builder;
 use crate::auto_workflow::types::{Stage, Task};
+use crate::committing_code;
 use crate::config::Config;
 use crate::llm;
 use crate::logger::Logger;
+use crate::system_prompts;
 use std::fs;
 use std::path::Path;
 
@@ -45,14 +47,25 @@ pub async fn execute_task(
         task.stage.as_str()
     );
 
-    let response = llm::query(
-        config.model,
-        config.api_key.clone(),
-        &prompt,
-        logger,
-        &log_name,
-    )
-    .await?;
+    let response = if task.stage == Stage::SelfConsistent {
+        llm::query(
+            config.model,
+            config.api_key.clone(),
+            &prompt,
+            logger,
+            &log_name,
+        )
+        .await?
+    } else {
+        let task_config = Config {
+            model: config.model,
+            api_key: config.api_key.clone(),
+            query: prompt,
+            system_prompts: system_prompts::COMMITTING_CODE_INITIAL_QUERY.to_string(),
+        };
+
+        committing_code::run_with_codebase(logger, &task_config, String::new()).await?
+    };
 
     if response.contains("@@@@task-success@@@@") {
         extract_and_print_comment(&response);

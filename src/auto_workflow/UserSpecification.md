@@ -137,6 +137,12 @@ When constructing the prompt, each section is labeled with the [label] format
 prior to the relevant information being provided. The prompt templaates have
 already been created by the supervisor and exist within this module.
 
+In some cases, the LLM is called directly within the auto_workflow module. In
+other cases, the LLM is called via a committing_code API call. If the
+committing_code API is used, the context that gets created is passed in as the
+supervisor prompt, and then the response that is provided as output by the
+committing_code API call is parsed for the proper response.
+
 ### Phase 1
 
 1. self-consistent
@@ -147,9 +153,9 @@ already been created by the supervisor and exist within this module.
 [target user specification]
 
 If the target user specification is the top level user specification, then
-target user specification is skipped, as it was already provided. For top level
-code, the ModuleDependencies.md and APISignatures.md file appear in the src/
-directory.
+target user specification is skipped, as it was already provided.
+
+This workflow calls an LLM directly.
 
 2. implemented - no cached UserSpecification
 
@@ -163,7 +169,7 @@ file in the target module, and every single UserSpecification.md and
 APISignatures.md file for every dependency. This list can be automatically
 assembled, without needing help from an LLM.
 
-The implementation is completed by calling out to the committing-code module.
+This workflow calls committing_code.
 
 2. implemented - cached UserSpecification
 
@@ -178,7 +184,7 @@ file in the target module, and every single UserSpecification.md and
 APISignatures.md file for every dependency. This list can be automatically
 assembled, without needing help from an LLM.
 
-The implementation is completed by calling out to the committing-code module.
+This workflow calls committing_code.
 
 3. documented
 
@@ -190,7 +196,7 @@ The implementation is completed by calling out to the committing-code module.
 The codebase should include every source code file contained within just the
 module.
 
-The implementation is completed by calling out to the committing-code module.
+This workflow calls committing_code.
 
 4. happy-path-tested - no cached UserSpecification
 
@@ -204,7 +210,7 @@ file in the target module, and every single UserSpecification.md and
 APISignatures.md file for every dependency. This list can be automatically
 assembled, without needing help from an LLM.
 
-The implementation is completed by calling out to the committing-code module.
+This workflow calls committing_code.
 
 4. happy-path-tested - cached UserSpecification
 
@@ -219,7 +225,7 @@ file in the target module, and every single UserSpecification.md and
 APISignatures.md file for every dependency. This list can be automatically
 assembled, without needing help from an LLM.
 
-The implementation is completed by calling out to the committing-code module.
+This workflow calls committing_code.
 
 (future phases will be introduced at another time, for now, just phase 1 is
 fully specified)

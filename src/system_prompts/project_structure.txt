@@ -33,8 +33,8 @@ implementation is never "correct" if it deviates from the UserSpecification.
 
 CodeCommit projects are designed for agentic workflows. Often times, agents are
 navigating the project structure using nothing more than the names of each file
-in the project, and the PublicAPI.md files of each module. To ensure the agents
-can be effective with such sparse information, it is critical that the
+in the project, and the APISignatures.md files of each module. To ensure the
+agents can be effective with such sparse information, it is critical that the
 filenames clearly indicate what code resides inside, and that the function
 names, object names, and field names of the public API be self-explanatory.
 

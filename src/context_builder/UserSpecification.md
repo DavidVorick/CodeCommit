@@ -64,7 +64,7 @@ And lists of filenames will be provided with the following syntax:
 ```
 --- FILENAMES ---
 src/example1.rs
-src/module/PublicAPI.md
+src/module/APISignatures.md
 --- END FILENAMES ---
 ```
 

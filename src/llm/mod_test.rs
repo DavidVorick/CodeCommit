@@ -77,10 +77,7 @@ async fn test_query_internal_happy_path() {
         serde_json::from_str(&std::fs::read_to_string(log_path.join("1-test-query.json")).unwrap())
             .unwrap();
     assert_eq!(query_json["body"]["prompt"], "my prompt");
-    assert!(query_json["requestId"]
-        .as_str()
-        .unwrap()
-        .starts_with("llm-"));
+    assert!(query_json["requestId"].is_string());
 
     let response_txt = std::fs::read_to_string(log_path.join("1-test-response.txt")).unwrap();
     assert_eq!(response_txt, "llm says hi");
@@ -139,14 +136,10 @@ async fn test_query_internal_parsing_error() {
 
 #[test]
 fn test_generate_request_id() {
-    let id1 = generate_request_id("test");
-    // Sleep briefly to ensure timestamp changes for the next call
-    std::thread::sleep(std::time::Duration::from_millis(2));
-    let id2 = generate_request_id("test");
-    assert!(id1.starts_with("test-"));
-    assert!(id2.starts_with("test-"));
+    let id1 = generate_request_id();
+    let id2 = generate_request_id();
     assert_ne!(id1, id2);
-
-    let id3 = generate_request_id("");
-    assert!(id3.starts_with("req-"));
+    // UUID v4 is 36 chars long
+    assert_eq!(id1.len(), 36);
+    assert!(uuid::Uuid::parse_str(&id1).is_ok());
 }

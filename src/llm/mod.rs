@@ -10,22 +10,11 @@ use crate::cli::Model;
 use crate::logger::Logger;
 use api::{LlmApi, LlmApiClient};
 use serde_json::json;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::Instant;
+use uuid::Uuid;
 
-static IDEMPOTENCY_COUNTER: AtomicU64 = AtomicU64::new(1);
-
-pub(crate) fn generate_request_id(prefix: &str) -> String {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis())
-        .unwrap_or(0);
-    let n = IDEMPOTENCY_COUNTER.fetch_add(1, Ordering::Relaxed);
-    if prefix.is_empty() {
-        format!("req-{now}-{n}")
-    } else {
-        format!("{prefix}-{now}-{n}")
-    }
+pub(crate) fn generate_request_id() -> String {
+    Uuid::new_v4().to_string()
 }
 
 pub async fn query(
@@ -57,7 +46,7 @@ async fn query_internal(
 
     let request_body = api_client.build_request_body(prompt);
     let url = api_client.get_url();
-    let request_id = generate_request_id("llm");
+    let request_id = generate_request_id();
 
     let log_body = json!({
         "url": url,

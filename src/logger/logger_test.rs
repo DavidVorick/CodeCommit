@@ -1,7 +1,6 @@
 use super::Logger;
 use serde_json::json;
 use std::fs;
-use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn generate_test_suffix() -> String {
@@ -13,18 +12,20 @@ fn generate_test_suffix() -> String {
 
 #[test]
 fn test_logger_happy_path() {
-    // 1. Setup with unique suffix to avoid collision
     let suffix = generate_test_suffix();
-    let logger = Logger::new(&suffix).expect("Failed to create Logger");
 
-    // 2. Log Text
+    // Create a temporary directory so we don't pollute the live agent-config/logs
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    let root_path = temp_dir.path();
+
+    let logger = Logger::new_with_root(root_path, &suffix).expect("Failed to create Logger");
+
     let text_file = "test_note.txt";
     let text_content = "This is a test log entry.";
     logger
         .log_text(text_file, text_content)
         .expect("Failed to log text");
 
-    // 3. Log JSON
     let json_file = "test_data.json";
     let json_content = json!({
         "status": "success",
@@ -34,13 +35,9 @@ fn test_logger_happy_path() {
         .log_json(json_file, &json_content)
         .expect("Failed to log JSON");
 
-    // 4. Verification
-    // We need to locate the directory created by the logger.
-    // It should be in agent-config/logs and end with our suffix.
-    let logs_root = Path::new("agent-config").join("logs");
     let mut target_dir = None;
 
-    if let Ok(entries) = fs::read_dir(&logs_root) {
+    if let Ok(entries) = fs::read_dir(root_path) {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {

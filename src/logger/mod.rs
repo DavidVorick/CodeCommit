@@ -2,7 +2,7 @@ use crate::app_error::AppError;
 use chrono::Utc;
 use serde_json::Value;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[cfg(test)]
 mod logger_test;
@@ -13,13 +13,18 @@ pub struct Logger {
 
 impl Logger {
     pub fn new(suffix: &str) -> Result<Self, AppError> {
+        let root = PathBuf::from("agent-config").join("logs");
+        Self::new_with_root(&root, suffix)
+    }
+
+    pub fn new_with_root(root: &Path, suffix: &str) -> Result<Self, AppError> {
         let timestamp = Utc::now().format("%Y-%m-%d-%H-%M-%S").to_string();
         let dir_name = if suffix.is_empty() {
             timestamp
         } else {
             format!("{timestamp}-{suffix}")
         };
-        let log_dir = PathBuf::from("agent-config").join("logs").join(dir_name);
+        let log_dir = root.join(dir_name);
         fs::create_dir_all(&log_dir)?;
         Ok(Self { log_dir })
     }

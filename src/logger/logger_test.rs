@@ -41,15 +41,13 @@ fn test_logger_happy_path() {
     let mut target_dir = None;
 
     if let Ok(entries) = fs::read_dir(&logs_root) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                let path = entry.path();
-                if path.is_dir() {
-                    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                        if name.ends_with(&suffix) {
-                            target_dir = Some(path);
-                            break;
-                        }
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                    if name.ends_with(&suffix) {
+                        target_dir = Some(path);
+                        break;
                     }
                 }
             }

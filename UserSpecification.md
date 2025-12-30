@@ -1,9 +1,3 @@
-dependencies:
-  src/auto_workflow
-  src/committing_code
-  src/consistency
-  src/logger
-
 # User Specification
 
 This is a specification for a tool that uses agentic workflows to assist with

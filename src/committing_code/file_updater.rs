@@ -8,8 +8,8 @@ use std::path::{Component, Path, PathBuf};
 
 use super::response_parser::FileUpdate;
 
-pub(crate) fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
-    let protection_rules = PathProtection::new()?;
+pub(crate) fn apply_updates(updates: &[FileUpdate], base_dir: &Path) -> Result<(), AppError> {
+    let protection_rules = PathProtection::new_for_base_dir(base_dir)?;
 
     // Clean paths first, then validate all of them before applying any changes
     let mut cleaned_updates: Vec<FileUpdate> = Vec::with_capacity(updates.len());
@@ -26,34 +26,35 @@ pub(crate) fn apply_updates(updates: &[FileUpdate]) -> Result<(), AppError> {
     // Apply updates only after all validations pass
     for update in &cleaned_updates {
         let path = &update.path;
+        let dest_path = base_dir.join(path);
 
         match &update.content {
             Some(content_str) => {
-                if let Some(parent) = path.parent() {
+                if let Some(parent) = dest_path.parent() {
                     if !parent.exists() {
                         fs::create_dir_all(parent).map_err(|e| {
                             AppError::FileUpdate(format!(
                                 "Failed to create parent directory for {}: {}",
-                                path.display(),
+                                dest_path.display(),
                                 e
                             ))
                         })?;
                     }
                 }
-                fs::write(path, content_str).map_err(|e| {
+                fs::write(&dest_path, content_str).map_err(|e| {
                     AppError::FileUpdate(format!(
                         "Failed to write to file {}: {}",
-                        path.display(),
+                        dest_path.display(),
                         e
                     ))
                 })?;
             }
             None => {
-                if path.exists() {
-                    fs::remove_file(path).map_err(|e| {
+                if dest_path.exists() {
+                    fs::remove_file(&dest_path).map_err(|e| {
                         AppError::FileUpdate(format!(
                             "Failed to delete file {}: {}",
-                            path.display(),
+                            dest_path.display(),
                             e
                         ))
                     })?;

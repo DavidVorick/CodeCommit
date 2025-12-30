@@ -2,7 +2,7 @@ use super::file_updater::{apply_updates, PathProtection};
 use super::response_parser::FileUpdate;
 use crate::app_error::AppError;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use tempfile::{tempdir, TempDir};
 
@@ -43,7 +43,7 @@ fn test_apply_updates_create_new_file() {
         content: Some("Hello, world!".to_string()),
     }];
 
-    apply_updates(&updates).unwrap();
+    apply_updates(&updates, Path::new(".")).unwrap();
 
     assert!(file_path.exists());
     let content = fs::read_to_string(file_path).unwrap();
@@ -63,7 +63,7 @@ fn test_apply_updates_overwrite_existing_file() {
         content: Some("new content".to_string()),
     }];
 
-    apply_updates(&updates).unwrap();
+    apply_updates(&updates, Path::new(".")).unwrap();
 
     let content = fs::read_to_string(file_path).unwrap();
     assert_eq!(content, "new content");
@@ -80,7 +80,7 @@ fn test_apply_updates_create_empty_file() {
         content: Some("".to_string()),
     }];
 
-    apply_updates(&updates).unwrap();
+    apply_updates(&updates, Path::new(".")).unwrap();
 
     assert!(file_path.exists());
     let content = fs::read_to_string(file_path).unwrap();
@@ -101,7 +101,7 @@ fn test_apply_updates_delete_file() {
         content: None,
     }];
 
-    apply_updates(&updates).unwrap();
+    apply_updates(&updates, Path::new(".")).unwrap();
 
     assert!(!file_path.exists());
 }
@@ -118,7 +118,7 @@ fn test_apply_updates_create_nested_directory() {
         content: Some("fn main() {}".to_string()),
     }];
 
-    apply_updates(&updates).unwrap();
+    apply_updates(&updates, Path::new(".")).unwrap();
     assert!(file_path.exists());
 }
 
@@ -288,7 +288,7 @@ fn test_apply_updates_aborts_on_invalid_path_without_applying_changes() {
         },
     ];
 
-    let result = apply_updates(&updates);
+    let result = apply_updates(&updates, Path::new("."));
     assert!(matches!(result, Err(AppError::FileUpdate(_))));
 
     assert!(

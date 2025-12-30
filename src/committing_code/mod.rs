@@ -1,3 +1,4 @@
+mod agent_actions;
 mod build_runner;
 mod file_updater;
 mod git_status;
@@ -19,23 +20,25 @@ mod response_parser_error_test;
 mod response_parser_extra_test;
 #[cfg(test)]
 mod response_parser_happy_test;
+#[cfg(test)]
+mod workflow_test;
 
 use crate::app_error::AppError;
 use crate::cli::CliArgs;
 use crate::config::Config;
 use crate::context_builder;
-use crate::llm;
 use crate::logger;
 use crate::system_prompts::{
-    CODE_MODIFICATION_INSTRUCTIONS, COMMITTING_CODE_EXTRA_CODE_QUERY,
-    COMMITTING_CODE_INITIAL_QUERY, COMMITTING_CODE_REPAIR_QUERY, PROJECT_STRUCTURE,
+    CODE_MODIFICATION_INSTRUCTIONS, COMMITTING_CODE_EXTRA_CODE_QUERY, COMMITTING_CODE_REPAIR_QUERY,
+    PROJECT_STRUCTURE,
 };
+use agent_actions::{AgentActions, RealAgentActions};
 use file_updater as file_updater_impl;
 use git_status as git_status_impl;
 use response_parser as response_parser_impl;
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 const MAX_ATTEMPTS: u32 = 4;
 
@@ -51,7 +54,7 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
     let config = Config::load(&cli_args)?;
 
     println!("Building codebase context for LLM...");
-    let initial_query_prompt = COMMITTING_CODE_INITIAL_QUERY;
+    let initial_query_prompt = &config.system_prompts;
     let system_prompt_part =
         format!("{PROJECT_STRUCTURE}\n{CODE_MODIFICATION_INSTRUCTIONS}\n{initial_query_prompt}");
     let next_agent_prompt = format!(
@@ -76,9 +79,20 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
 pub async fn run_with_codebase(
     logger: &logger::Logger,
     config: &Config,
-    mut codebase: String,
+    codebase: String,
 ) -> Result<String, AppError> {
-    let initial_query_prompt = COMMITTING_CODE_INITIAL_QUERY;
+    let actions = RealAgentActions;
+    run_with_actions(logger, config, codebase, &actions, Path::new(".")).await
+}
+
+async fn run_with_actions<A: AgentActions>(
+    logger: &logger::Logger,
+    config: &Config,
+    mut codebase: String,
+    actions: &A,
+    base_dir: &Path,
+) -> Result<String, AppError> {
+    let initial_query_prompt = &config.system_prompts;
     let system_prompt_part =
         format!("{PROJECT_STRUCTURE}\n{CODE_MODIFICATION_INSTRUCTIONS}\n{initial_query_prompt}");
     let next_agent_prompt = format!(
@@ -108,14 +122,15 @@ pub async fn run_with_codebase(
         };
         let log_prefix = format!("{attempt}-{name_part}");
 
-        let response_text = llm::query(
-            config.model,
-            config.api_key.clone(),
-            &prompt,
-            logger,
-            &log_prefix,
-        )
-        .await?;
+        let response_text = actions
+            .query_llm(
+                config.model,
+                config.api_key.clone(),
+                prompt,
+                logger,
+                log_prefix.clone(),
+            )
+            .await?;
 
         println!("Parsing LLM response and applying file updates...");
         let updates = response_parser_impl::parse_llm_response(&response_text)?;
@@ -124,10 +139,10 @@ pub async fn run_with_codebase(
             cumulative_updates.insert(update.path.clone(), update.content.clone());
         }
 
-        file_updater_impl::apply_updates(&updates)?;
+        file_updater_impl::apply_updates(&updates, base_dir)?;
 
         println!("Running build script...");
-        match build_runner::run() {
+        match actions.run_build() {
             Ok(output) => {
                 logger.log_text(&format!("{log_prefix}-build.txt"), &output)?;
                 println!("Build successful!");
@@ -140,8 +155,16 @@ pub async fn run_with_codebase(
 
                 if attempt < MAX_ATTEMPTS {
                     let build_output = last_build_output.as_ref().unwrap();
-                    run_extra_code_query(config, logger, build_output, &mut codebase, attempt)
-                        .await?;
+                    run_extra_code_query(
+                        config,
+                        logger,
+                        build_output,
+                        &mut codebase,
+                        attempt,
+                        actions,
+                        base_dir,
+                    )
+                    .await?;
                 }
             }
         }
@@ -151,12 +174,14 @@ pub async fn run_with_codebase(
     Err(AppError::MaxAttemptsReached)
 }
 
-async fn run_extra_code_query(
+async fn run_extra_code_query<A: AgentActions>(
     config: &Config,
     logger: &logger::Logger,
     build_output: &str,
     codebase: &mut String,
     attempt: u32,
+    actions: &A,
+    base_dir: &Path,
 ) -> Result<(), AppError> {
     println!("Running extra code query to check for missing context...");
     let existing_files = extract_filenames_from_codebase(codebase);
@@ -166,19 +191,20 @@ async fn run_extra_code_query(
         "{COMMITTING_CODE_EXTRA_CODE_QUERY}\n[codebase file list]\n{existing_files_list}\n[build.sh output]\n{build_output}"
     );
 
-    let response = llm::query(
-        config.model,
-        config.api_key.clone(),
-        &extra_code_prompt,
-        logger,
-        &format!("{attempt}-extra-code"),
-    )
-    .await?;
+    let response = actions
+        .query_llm(
+            config.model,
+            config.api_key.clone(),
+            extra_code_prompt,
+            logger,
+            format!("{attempt}-extra-code"),
+        )
+        .await?;
 
     let extra_files = response_parser_impl::parse_extra_files_response(&response)?;
     let mut files_added = 0;
 
-    let protection = file_updater_impl::PathProtection::new()?;
+    let protection = file_updater_impl::PathProtection::new_for_base_dir(base_dir)?;
 
     for path in extra_files {
         let path_str = path.to_string_lossy().to_string();
@@ -192,7 +218,8 @@ async fn run_extra_code_query(
             continue;
         }
 
-        if let Ok(content) = fs::read_to_string(&path) {
+        let full_path = base_dir.join(&path);
+        if let Ok(content) = fs::read_to_string(&full_path) {
             codebase.push_str(&format!("--- {path_str} ---\n"));
             codebase.push_str(&content);
             if !content.ends_with('\n') {

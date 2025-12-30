@@ -1,5 +1,5 @@
+use super::file_updater::PathProtection;
 use crate::app_error::AppError;
-use crate::committing_code::file_updater::PathProtection;
 use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;

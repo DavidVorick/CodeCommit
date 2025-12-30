@@ -1,9 +1,7 @@
 #[cfg(test)]
 mod tests {
+    use super::super::git_status::{check_for_uncommitted_changes, verify_gitignore_protection};
     use crate::app_error::AppError;
-    use crate::committing_code::git_status::{
-        check_for_uncommitted_changes, verify_gitignore_protection,
-    };
     use std::fs;
     use std::path::Path;
     use std::process::Command;

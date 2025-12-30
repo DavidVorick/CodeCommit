@@ -1,69 +1,48 @@
 mod app_error;
-mod auto_workflow;
 mod cli;
 mod committing_code;
 mod config;
-mod consistency;
 mod context_builder;
-mod init;
-#[cfg(test)]
-mod init_test;
 mod llm;
 mod logger;
-mod rollup;
 mod system_prompts;
 
-use crate::app_error::AppError;
-use crate::cli::Workflow;
-use std::process::exit;
+use app_error::AppError;
+use logger::Logger;
+use std::process::ExitCode;
 
 #[tokio::main]
-async fn main() {
-    let result = run().await;
-
-    match result {
-        Ok(_) => {
-            println!("Workflow completed successfully.");
-            exit(0);
-        }
+async fn main() -> ExitCode {
+    match run().await {
+        Ok(_) => ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("An error occurred: {e}");
-            exit(1);
+            eprintln!("Error: {e}");
+            ExitCode::FAILURE
         }
     }
 }
 
 async fn run() -> Result<(), AppError> {
-    let cli_args = cli::parse_cli_args()?;
+    let args = cli::parse_cli_args()?;
 
-    if let Workflow::Init(ref project_name) = cli_args.workflow {
-        init::run_init_command(project_name)?;
-        println!(
-            "Place your gemini-key.txt and openai-key.txt files into the agent-config/ directory."
-        );
-        return Ok(());
-    }
-
-    let logger_suffix = match cli_args.workflow {
-        Workflow::CommitCode => "committing-code",
-        Workflow::ConsistencyCheck => "consistency",
-        Workflow::Rollup => "rollup",
-        Workflow::Auto => "auto-workflow",
-        Workflow::Init(_) => unreachable!(),
-    };
-    let logger = logger::Logger::new(logger_suffix)?;
-
-    let result = match cli_args.workflow {
-        Workflow::CommitCode => committing_code::run(&logger, cli_args).await,
-        Workflow::ConsistencyCheck => consistency::run(&logger, cli_args).await,
-        Workflow::Rollup => rollup::run(&logger, cli_args).await,
-        Workflow::Auto => auto_workflow::run(&logger, cli_args).await,
-        Workflow::Init(_) => unreachable!(),
+    let suffix = match &args.workflow {
+        cli::Workflow::CommitCode => "committing-code",
+        cli::Workflow::ConsistencyCheck => "consistency",
+        cli::Workflow::Rollup => "rollup",
+        cli::Workflow::Auto => "auto-workflow",
+        cli::Workflow::Init(_) => "init",
     };
 
-    if let Err(e) = &result {
-        let _ = logger.log_text("final_error.txt", &e.to_string());
+    let logger = Logger::new(suffix)?;
+
+    match args.workflow {
+        cli::Workflow::CommitCode => {
+            committing_code::run(&logger, args).await?;
+        }
+        _ => {
+            eprintln!("Workflow not yet implemented.");
+        }
     }
 
-    result
+    Ok(())
 }

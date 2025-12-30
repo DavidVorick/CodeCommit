@@ -64,7 +64,10 @@ pub fn build_dependency_graph(
 fn parse_dependencies(module_dir: &Path) -> Result<Vec<PathBuf>, AppError> {
     let dep_file = module_dir.join("ModuleDependencies.md");
     if !dep_file.exists() {
-        return Ok(Vec::new());
+        return Err(AppError::Config(format!(
+            "Module {} is missing ModuleDependencies.md",
+            module_dir.display()
+        )));
     }
 
     let content = fs::read_to_string(&dep_file).map_err(|e| {

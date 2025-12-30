@@ -21,10 +21,17 @@ fn create_spec(root: &Path, rel_path: &str) {
     let path = root.join(rel_path).join("UserSpecification.md");
     fs::create_dir_all(path.parent().unwrap()).unwrap();
     fs::write(path, "# Spec").unwrap();
+
+    // Ensure ModuleDependencies.md exists
+    let dep_path = root.join(rel_path).join("ModuleDependencies.md");
+    if !dep_path.exists() {
+        fs::write(dep_path, "# Deps\n").unwrap();
+    }
 }
 
 fn create_module_dep(root: &Path, module: &str, dep: &str) {
     let path = root.join(module).join("ModuleDependencies.md");
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
     fs::write(path, format!("# Deps\n\n{dep}")).unwrap();
 }
 
@@ -46,10 +53,17 @@ fn test_find_next_task_stage_priority() {
     create_spec(root, "B");
     // B has NOT passed SelfConsistent
 
-    // Expect B (SelfConsistent) over A (Implemented)
+    // Both A and B are Level 0.
+    // Spec requires iterating modules in order (L0 -> L1).
+    // Spec also says "a module must complete all the steps of a phase before the next module is considered".
+    // A comes before B alphabetically.
+    // So A must complete Phase 1 before B is considered.
+    // A is at Implemented. B is at SelfConsistent.
+    // We expect A (Implemented).
+
     let task = find_next_task(root).unwrap().expect("Should find task");
-    assert!(task.spec_path.ends_with("B/UserSpecification.md"));
-    assert_eq!(task.stage, Stage::SelfConsistent);
+    assert!(task.spec_path.ends_with("A/UserSpecification.md"));
+    assert_eq!(task.stage, Stage::Implemented);
 }
 
 #[test]

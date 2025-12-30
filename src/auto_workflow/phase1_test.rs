@@ -21,6 +21,12 @@ fn create_spec(root: &Path, rel_path: &str, content: &str) {
     let path = root.join(rel_path).join("UserSpecification.md");
     fs::create_dir_all(path.parent().unwrap()).unwrap();
     fs::write(path, content).unwrap();
+
+    // Ensure ModuleDependencies.md exists
+    let dep_path = root.join(rel_path).join("ModuleDependencies.md");
+    if !dep_path.exists() {
+        fs::write(dep_path, "# Deps\n").unwrap();
+    }
 }
 
 fn set_progress(root: &Path, rel_path: &str, stage: Stage, content: &str) {

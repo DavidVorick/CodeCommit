@@ -25,12 +25,9 @@ pub fn find_next_task(root: &Path) -> Result<Option<Task>, AppError> {
     }
 
     // Sort tasks:
-    // 1. Stage (SelfConsistent < Implemented < Documented < HappyPathTested)
-    // 2. Level (Ascending - L0 first)
-    // 3. Alphabetical (Path)
-    tasks.sort_by(|(s1, l1, p1), (s2, l2, p2)| {
-        s1.cmp(s2).then_with(|| l1.cmp(l2)).then_with(|| p1.cmp(p2))
-    });
+    // 1. Level (Ascending - L0 first)
+    // 2. Alphabetical (Path)
+    tasks.sort_by(|(_, l1, p1), (_, l2, p2)| l1.cmp(l2).then_with(|| p1.cmp(p2)));
 
     let (stage, _, spec_path) = tasks.remove(0);
     Ok(Some(Task { spec_path, stage }))

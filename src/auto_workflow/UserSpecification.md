@@ -169,7 +169,6 @@ assembled, without needing help from an LLM.
 [implementation-with-cache prompt]
 [cached target user specification]
 [target user specification]
-[top level UserSpecification.md]
 [codebase, including dependency files and top level UserSpecification]
 
 The codebase should include the top level UserSpecification.md, every single
@@ -177,7 +176,43 @@ file in the target module, and every single UserSpecification.md and
 APISignatures.md file for every dependency. This list can be automatically
 assembled, without needing help from an LLM.
 
-3. [remaining stages will be defined and implemented at a later date]
+3. documented
+
+[response format instructions]
+[documented prompt]
+[target user specification]
+[codebase]
+
+The codebase should include every source code file contained within just the
+module.
+
+4. happy-path-tested - no cached UserSpecification
+
+[response format instructions]
+[happy-path-tested prompt]
+[target user specification]
+[codebase, including dependency files and top level UserSpecification]
+
+The codebase should include the top level UserSpecification.md, every single
+file in the target module, and every single UserSpecification.md and
+APISignatures.md file for every dependency. This list can be automatically
+assembled, without needing help from an LLM.
+
+4. happy-path-tested - cached UserSpecification
+
+[response format instructions]
+[happy-path-tested prompt]
+[cached target user specification]
+[target user specification]
+[codebase, including dependency files and top level UserSpecification]
+
+The codebase should include the top level UserSpecification.md, every single
+file in the target module, and every single UserSpecification.md and
+APISignatures.md file for every dependency. This list can be automatically
+assembled, without needing help from an LLM.
+
+(future phases will be introduced at another time, for now, just phase 1 is
+fully specified)
 
 ## Specification Caching
 

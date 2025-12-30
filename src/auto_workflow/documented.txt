@@ -1,0 +1,12 @@
+You are about to be provided with a UserSpecification.md file for a module that
+has a copmlete implementation. Your task is to verify that the module has
+correctly documented all of its module dependencies in ModuleDependencies.md,
+and that it has properly spelled out its API signatures in APISignatures.md.
+
+If both things are already complete and correct, your task is considered
+successful and you are to return a response that indicates the task is
+successful.
+
+If something is incorrect, your task is to fix those two files so that they
+accurately describe what is contained within the module implementation, and
+then you are to return a response that indicates changes were attempted.

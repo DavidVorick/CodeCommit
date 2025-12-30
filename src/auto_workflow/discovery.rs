@@ -1,34 +1,22 @@
 use crate::app_error::AppError;
-use crate::auto_workflow::types::Stage;
+use crate::auto_workflow::graph;
+use crate::auto_workflow::types::{Stage, Task};
 use ignore::WalkBuilder;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug)]
-pub struct Task {
-    pub spec_path: PathBuf,
-    pub stage: Stage,
-}
-
 pub fn find_next_task(root: &Path) -> Result<Option<Task>, AppError> {
     let specs = find_all_user_specifications(root)?;
+    let graph_nodes = graph::build_dependency_graph(root, &specs)?;
 
     let mut tasks = Vec::new();
-    let mut min_progress = usize::MAX;
 
-    for spec in specs {
-        let (progress, next_stage) = get_progress_level(root, &spec);
-        if progress < min_progress {
-            min_progress = progress;
-            tasks.clear();
-        }
-        if progress == min_progress {
-            if let Some(stage) = next_stage {
-                tasks.push(Task {
-                    spec_path: spec,
-                    stage,
-                });
-            }
+    for node in graph_nodes {
+        let spec_path = node.path.join("UserSpecification.md");
+
+        // Determine the next stage for this module
+        if let Some(stage) = get_next_stage(root, &spec_path)? {
+            tasks.push((stage, node.level, spec_path));
         }
     }
 
@@ -36,11 +24,16 @@ pub fn find_next_task(root: &Path) -> Result<Option<Task>, AppError> {
         return Ok(None);
     }
 
-    // Sort tasks alphabetically by spec_path
-    tasks.sort_by(|a, b| a.spec_path.cmp(&b.spec_path));
+    // Sort tasks:
+    // 1. Stage (SelfConsistent < Implemented)
+    // 2. Level (Ascending - L0 first)
+    // 3. Alphabetical (Path)
+    tasks.sort_by(|(s1, l1, p1), (s2, l2, p2)| {
+        s1.cmp(s2).then_with(|| l1.cmp(l2)).then_with(|| p1.cmp(p2))
+    });
 
-    // Return the first one
-    Ok(Some(tasks.remove(0)))
+    let (stage, _, spec_path) = tasks.remove(0);
+    Ok(Some(Task { spec_path, stage }))
 }
 
 pub(crate) fn find_all_user_specifications(root: &Path) -> Result<Vec<PathBuf>, AppError> {
@@ -61,12 +54,7 @@ pub(crate) fn find_all_user_specifications(root: &Path) -> Result<Vec<PathBuf>, 
     Ok(specs)
 }
 
-fn get_progress_level(root: &Path, spec_path: &Path) -> (usize, Option<Stage>) {
-    // Determine progress based on existence of files in agent-state and whether they match current spec
-    // Map spec_path to agent-state path.
-    // Spec path: "src/llm/UserSpecification.md" -> module dir "src/llm"
-    // State dir: "agent-state/specifications/src/llm"
-
+fn get_next_stage(root: &Path, spec_path: &Path) -> Result<Option<Stage>, AppError> {
     let module_dir = spec_path.parent().unwrap_or(root);
     let relative_module_dir = module_dir.strip_prefix(root).unwrap_or(module_dir);
 
@@ -75,26 +63,21 @@ fn get_progress_level(root: &Path, spec_path: &Path) -> (usize, Option<Stage>) {
         .join("specifications")
         .join(relative_module_dir);
 
-    let current_content = match fs::read_to_string(spec_path) {
-        Ok(c) => c,
-        Err(_) => return (0, Some(Stage::SelfConsistent)),
-    };
+    let current_content = fs::read_to_string(spec_path).map_err(|_| {
+        AppError::FileUpdate(format!("Could not read spec at {}", spec_path.display()))
+    })?;
 
-    let stages = [
-        Stage::SelfConsistent,
-        Stage::ProjectConsistent,
-        Stage::Complete,
-        Stage::Secure,
-    ];
-
-    for (i, stage) in stages.iter().enumerate() {
-        if !is_stage_complete(&state_base, *stage, &current_content) {
-            return (i, Some(*stage));
-        }
+    // Check SelfConsistent
+    if !is_stage_complete(&state_base, Stage::SelfConsistent, &current_content) {
+        return Ok(Some(Stage::SelfConsistent));
     }
 
-    // All done (for the purpose of this implementation which only does first 4)
-    (stages.len(), None)
+    // Check Implemented
+    if !is_stage_complete(&state_base, Stage::Implemented, &current_content) {
+        return Ok(Some(Stage::Implemented));
+    }
+
+    Ok(None)
 }
 
 fn is_stage_complete(state_base: &Path, stage: Stage, current_content: &str) -> bool {

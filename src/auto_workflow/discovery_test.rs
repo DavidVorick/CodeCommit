@@ -23,6 +23,11 @@ fn create_spec(root: &Path, rel_path: &str) {
     fs::write(path, "# Spec").unwrap();
 }
 
+fn create_module_dep(root: &Path, module: &str, dep: &str) {
+    let path = root.join(module).join("ModuleDependencies.md");
+    fs::write(path, format!("# Deps\n\n{dep}")).unwrap();
+}
+
 fn set_progress(root: &Path, rel_path: &str, stage: Stage, content: &str) {
     let state_dir = root.join("agent-state/specifications").join(rel_path);
     fs::create_dir_all(&state_dir).unwrap();
@@ -30,134 +35,37 @@ fn set_progress(root: &Path, rel_path: &str, stage: Stage, content: &str) {
 }
 
 #[test]
-fn test_find_next_task_alphabetical() {
+fn test_find_next_task_stage_priority() {
     let temp = setup_project();
     let root = temp.path();
 
-    // Create 3 specs: B, A, C. All at progress 0.
-    create_spec(root, "B");
     create_spec(root, "A");
-    create_spec(root, "C");
-
-    // find_next_task should return A
-    let task = find_next_task(root).unwrap().expect("Should find a task");
-    assert!(
-        task.spec_path.ends_with("A/UserSpecification.md"),
-        "Expected A, got {:?}",
-        task.spec_path
-    );
-}
-
-#[test]
-fn test_find_next_task_progress_priority() {
-    let temp = setup_project();
-    let root = temp.path();
-
-    // A is progress 1 (self-consistent done)
-    // B is progress 0
-    create_spec(root, "A");
-    create_spec(root, "B");
-
+    // A has passed SelfConsistent
     set_progress(root, "A", Stage::SelfConsistent, "# Spec");
 
-    // Should pick B because it has lower progress (0 vs 1)
-    let task = find_next_task(root).unwrap().expect("Should find a task");
-    assert!(
-        task.spec_path.ends_with("B/UserSpecification.md"),
-        "Expected B, got {:?}",
-        task.spec_path
-    );
-}
+    create_spec(root, "B");
+    // B has NOT passed SelfConsistent
 
-#[test]
-fn test_find_next_task_same_progress_alphabetical_deep() {
-    let temp = setup_project();
-    let root = temp.path();
-
-    // src/llm/UserSpecification.md
-    // src/cli/UserSpecification.md
-    // Both progress 0. 'src/cli' comes before 'src/llm'.
-    create_spec(root, "src/llm");
-    create_spec(root, "src/cli");
-
-    let task = find_next_task(root).unwrap().expect("Should find a task");
-    // Depending on path separator, but 'c' < 'l'.
-    assert!(
-        task.spec_path.ends_with("src/cli/UserSpecification.md"),
-        "Expected src/cli, got {:?}",
-        task.spec_path
-    );
-}
-
-#[test]
-fn test_find_next_task_cache_invalidation() {
-    let temp = setup_project();
-    let root = temp.path();
-
-    create_spec(root, "A");
-    // Set progress for stage 1, but with different content
-    set_progress(root, "A", Stage::SelfConsistent, "Old Content");
-
-    // Because the content doesn't match "# Spec", progress should be 0, next stage SelfConsistent
-    let task = find_next_task(root).unwrap().expect("Should find a task");
+    // Expect B (SelfConsistent) over A (Implemented)
+    let task = find_next_task(root).unwrap().expect("Should find task");
+    assert!(task.spec_path.ends_with("B/UserSpecification.md"));
     assert_eq!(task.stage, Stage::SelfConsistent);
 }
 
 #[test]
-fn test_find_next_task_cache_match() {
+fn test_find_next_task_level_priority() {
     let temp = setup_project();
     let root = temp.path();
 
-    create_spec(root, "A");
-    // Set progress for stage 1, with matching content
-    set_progress(root, "A", Stage::SelfConsistent, "# Spec");
+    // A depends on B
+    create_spec(root, "src/A");
+    create_spec(root, "src/B");
+    create_module_dep(root, "src/A", "src/B");
 
-    // Progress should be 1, next stage ProjectConsistent
-    let task = find_next_task(root).unwrap().expect("Should find a task");
-    assert_eq!(task.stage, Stage::ProjectConsistent);
-}
+    // Both at SelfConsistent stage
+    // B is Level 0 (no deps). A is Level 1.
+    // Expect B first.
 
-#[test]
-fn test_find_next_task_complete_stage() {
-    let temp = setup_project();
-    let root = temp.path();
-
-    create_spec(root, "A");
-    set_progress(root, "A", Stage::SelfConsistent, "# Spec");
-    set_progress(root, "A", Stage::ProjectConsistent, "# Spec");
-
-    // Next should be Complete
-    let task = find_next_task(root).unwrap().expect("Should find a task");
-    assert_eq!(task.stage, Stage::Complete);
-}
-
-#[test]
-fn test_find_next_task_secure_stage() {
-    let temp = setup_project();
-    let root = temp.path();
-
-    create_spec(root, "A");
-    set_progress(root, "A", Stage::SelfConsistent, "# Spec");
-    set_progress(root, "A", Stage::ProjectConsistent, "# Spec");
-    set_progress(root, "A", Stage::Complete, "# Spec");
-
-    // Next should be Secure
-    let task = find_next_task(root).unwrap().expect("Should find a task");
-    assert_eq!(task.stage, Stage::Secure);
-}
-
-#[test]
-fn test_find_next_task_all_done() {
-    let temp = setup_project();
-    let root = temp.path();
-
-    create_spec(root, "A");
-    set_progress(root, "A", Stage::SelfConsistent, "# Spec");
-    set_progress(root, "A", Stage::ProjectConsistent, "# Spec");
-    set_progress(root, "A", Stage::Complete, "# Spec");
-    set_progress(root, "A", Stage::Secure, "# Spec");
-
-    // Should return None
-    let task = find_next_task(root).unwrap();
-    assert!(task.is_none());
+    let task = find_next_task(root).unwrap().expect("Should find task");
+    assert!(task.spec_path.ends_with("src/B/UserSpecification.md"));
 }

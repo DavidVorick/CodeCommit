@@ -1,5 +1,8 @@
 mod discovery;
 mod executor;
+mod file_updater;
+mod graph;
+mod prompt_builder;
 mod prompts;
 mod types;
 
@@ -26,11 +29,15 @@ pub async fn run(logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
             }
         };
 
-        let result = executor::execute_task(&task.spec_path, task.stage, &config, logger).await?;
+        let result = executor::execute_task(&task, &config, logger).await?;
 
         match result {
             executor::ExecutionResult::Success => {
                 // Continue to next task
+                continue;
+            }
+            executor::ExecutionResult::ChangesAttempted => {
+                // Changes were applied, loop to verify or continue
                 continue;
             }
             executor::ExecutionResult::ChangesRequested => {

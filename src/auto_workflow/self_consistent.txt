@@ -20,5 +20,5 @@ If the specification is not both self-consistent and free from any confusing
 statements, please provide a comment explaining what is confusing, and indicate
 that changes have been requested from the supervisor. Do not be nit-picky, if a
 highly intelligent frontier LLM would be able to discern the user's original
-intention, that is sufficeint. Only call out genuniely confusing or
+intention, that is sufficient. Only call out genuinely confusing or
 inconsistent issues.

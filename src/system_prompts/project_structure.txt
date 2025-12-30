@@ -1,29 +1,22 @@
 You are working on a CodeCommit project, which means that the project will be
-following a CodeCommit structure. The project is written in idiomatic Rust, has
-a top level src/ directory, and potentially has multiple module directories.
+following a CodeCommit structure. The project has a top level src/ directory,
+and may have modules within the source directory, one module per folder.
+Modules may recursevely contain their own modules as well.
 
 Every module should have the following three documentation files:
 
-+ InternalDependencies.md
-+ PublicAPI.md
++ APISignatures.md
++ ModuleDependencies.md
 + UserSpecification.md
 
-InternalDependencies.md clearly and completely documents every API that is used
-from other modules within the codebase. This file tracks which APIs are used
-where, so that all relevant code can be updated in the event of a breaking
-change. You are responsible for updating the InternalDependencies.md file if
-you change any code which impacts a module's internal dependencies. If there
-are no internal dependencies, the file should contain a single character '-'.
+APISignatures.md provides the signature for every type and function that is
+exported by the module. The signatures are provided so that the functions and
+structs may be used accurately in an implementation, but they are not
+explained. The signatures should aim to be self-explanatory, supplemented by
+the UserSpecification for more robust documentation.
 
-PublicAPI.md enumerates the full public API of the module. This means all
-exported structs and functions. Note that this file is about enumerating the
-exports rather than documenting them; the file should therefore be quite
-concise. The names of the functions, objects, and fields in the API should be
-self-explanatory, full documentation should not be necessary for another module
-in the codebase to use the API correctly. You are responsible for updating the
-PublicAPI.md file if you add any APIs or change any existing APIs. If you
-change any existing APIs, you are also responsible for updating any modules
-that are using those APIs.
+ModuleDependencies.md lists out all of the modules that this module directly
+imports as a dependency, in a machine readable format.
 
 UserSpecification.md files are user-written files that contain specifications
 for the project and its modules. You are not allowed to create or modify any
@@ -37,13 +30,6 @@ UserSpecification files to fully define the project.
 When in doubt, the UserSpecification files are treated as the baseline truth
 for the project. The implementation needs to follow the UserSpecification. The
 implementation is never "correct" if it deviates from the UserSpecification.
-
-The src/ directory also contains an InternalDependencies.md file that details
-all of the APIs that the top level source code uses from the project's modules.
-
-The src/ directory itself is not allowed to have any APIs or exports that are
-used by the modules. There is therefore no PublicAPI.md file in the top level
-of the src/ directory.
 
 CodeCommit projects are designed for agentic workflows. Often times, agents are
 navigating the project structure using nothing more than the names of each file

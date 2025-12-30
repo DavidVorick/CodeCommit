@@ -10,7 +10,7 @@ depend on LLMs. The work itself typically does involve calling LLMs.
 
 ## Implementation Progression
 
-The automated workflow spilts work into four phases, as well as a
+The automated workflow splits work into four phases, as well as a
 pre-processing phase. Modules are processed one-by-one for each phase, and when
 every module has completed each phase, the next phase can begin.
 
@@ -51,7 +51,7 @@ full folder structure of the src/ folder needs to be scanned.
 
 The full list of modules is assembled, and then the dependency graph is built.
 If a module lacks a ModuleDependencies.md file, then an error is returned
-explaining which modlue is missing a ModuleDependencies.md file.
+explaining which module is missing a ModuleDependencies.md file.
 
 Once the dependency tree is available, the modules are processed.
 
@@ -62,7 +62,34 @@ processing modules, a module that has not completed an earlier phase always
 takes priority over one that has completed the phase. If two modules are on the
 same phase, the module with the lowest dependency depth is processed first. If
 two modules are on the same phase and have the same depth, they are processed
-in alphabetical order.
+in alphabetical order. When a module is being processed for a certain phase,
+the steps of that phase are processed on that module in order.
+
+Steps are processed using workflows. Each workflow can provide one of three
+responses, which will be wrapped in '@@@@' tags on either end for easy machine
+parsing. The three potential responses are 'task-success', 'changes-requested',
+and 'changes-attempted'.
+
+That means the output string will either contain '@@@@task-success@@@@' or
+'@@@@changes-requested@@@@' or '@@@@changes-attempted@@@@'. If none are
+present, or if multiple are present, an error is returned to the user.
+
+The workflow may also have a comment section, which will be wrapped by
+'%%%%comment%%%%' and '%%%%end%%%%' tags. For example:
+
+%%%%comment%%%%
+The UserSpecification is not self-consistent, one section says that there
+should be no network calls, and another section says that there should be an
+LLM call
+%%%%end%%%%
+
+If there are multiple comment sections, an error is returned. The comments are
+presented to the user directly in stdout.
+
+If a task is passed, the auto workflow will automatically reset and keep going,
+continuing until a task is not passed.
+
+### The Phases and Steps
 
 Phase one has four steps:
 
@@ -90,13 +117,13 @@ Phase three has three steps:
 1. "simple": ensure that the code has been simplified as much as possible.
 2. "logged": ensure that there is sufficient logging in the module to support a
    production deployment. Depending on the module, logging may not be needed.
-3. "integration-testeed": ensure that the code has robust integration testing
+3. "integration-tested": ensure that the code has robust integration testing
    that verifies all dependencies.
 
 Phase four has three steps:
 
 1. "benchmarked": ensure that the code has benchmarks which verify that
-   performance meets requirements, and that the test suite fails if a benchamrk
+   performance meets requirements, and that the test suite fails if a benchmark
    is too slow.
 2. "fuzzed": ensure that fuzz tests have been written for all functions that
    may require fuzzing. Depending on the module, fuzz testing may not be
@@ -104,11 +131,13 @@ Phase four has three steps:
 3. "polished": ensure that all coding best practices are followed throughout
    the implementation.
 
-### Prompt Construction
+## Prompt Construction
 
 When constructing the prompt, each section is labeled with the [label] format
 prior to the relevant information being provided. The prompt templaates have
 already been created by the supervisor and exist within this module.
+
+### Phase 1
 
 1. self-consistent
 
@@ -117,45 +146,44 @@ already been created by the supervisor and exist within this module.
 [top level UserSpecification.md]
 [target user specification]
 
-Note: if the target user specification is the top level user specification,
-then target user specification is skipped, as it was already provided.
+If the target user specification is the top level user specification, then
+target user specification is skipped, as it was already provided. For top level
+code, the ModuleDependencies.md and APISignatures.md file appear in the src/
+directory.
 
-
-
-
-2. project-consistent
-
-[response format instructions]
-[project-consistent prompt]
-[target user specification]
-[all dependency user specifications]
-
-3. complete
+2. implemented - no cached UserSpecification
 
 [response format instructions]
-[complete prompt]
+[implementation-no-cache prompt]
 [target user specification]
-[all dependency user specifications]
-[full list of modules]
+[codebase, including dependency files and top level UserSpecification]
 
-The full list of all modules is simply a list of every module in the codebase
-that has a UserSpecification. The modules, code, and specifications themselves
-are not provided.
+The codebase should include the top level UserSpecification.md, every single
+file in the target module, and every single UserSpecification.md and
+APISignatures.md file for every dependency. This list can be automatically
+assembled, without needing help from an LLM.
 
-4. secure
+2. implemented - cached UserSpecification
 
 [response format instructions]
-[secure prompt]
+[implementation-with-cache prompt]
+[cached target user specification]
 [target user specification]
-[all dependency uesr specifications]
+[top level UserSpecification.md]
+[codebase, including dependency files and top level UserSpecification]
 
-5. [remaining stages will be defined and implemented at a later date]
+The codebase should include the top level UserSpecification.md, every single
+file in the target module, and every single UserSpecification.md and
+APISignatures.md file for every dependency. This list can be automatically
+assembled, without needing help from an LLM.
+
+3. [remaining stages will be defined and implemented at a later date]
 
 ## Specification Caching
 
 Whenever an implementation stage is completed for a UserSpecification, the full
 UserSpecification is cached in a file that corresponds to the stage name. This
-means that there can be up to 18 different versions of the UserSpecification
+means that there can be up to 14 different versions of the UserSpecification
 cached for each UserSpecification in a CodeCommit project.
 
 The cached UserSpecifications are saved in a folder called agent-state/ at a
@@ -165,13 +193,13 @@ src/logger/UserSpecification.md, then the agent-state/ folder will have the the
 following file structure:
 
 agent-state/specifications/self-consistent
-agent-state/specifications/project-consistent
+agent-state/specifications/implemented
 agent-state/specifications/...etc
 agent-state/specifications/src/llm/self-consistent
-agent-state/specifications/src/llm/project-consistent
+agent-state/specifications/src/llm/implemented
 agent-state/specifications/src/llm/...etc
 agent-state/specifications/src/logger/self-consistent
-agent-state/specifications/src/logger/project-consistent
+agent-state/specifications/src/logger/implemented
 agent-state/specifications/src/logger/...etc
 
 If no file exists for a given step for a given UserSpecification, that means
@@ -181,40 +209,6 @@ This cache is used by the auto-workflow module to figure out what steps need to
 be taken to advance the project. If the current UserSpecification does not
 exactly match the cached UserSpecification for a given stage, then that stage
 needs to be revisited by the auto workflow tool.
-
-## Task Selection
-
-When the 'code-commit' command is run with the `--aw` flag, the auto workflow
-tool will iterate over every UserSpecification in the project and see which
-stages have been completed for the latest version of each UserSpecification. It
-will target the UserSpecification that has the least progress and then trigger
-the appropriate LLM workflow to make progress on that UserSpecification. If
-multiple UserSpecifications are at the same progression level, they are
-processed in alphabetical order.
-
-Each workflow can provide one of three responses, which will be wrapped in
-'@@@@' tags on either end for easy machine parsing. The three potential
-responses are 'progression-complete', 'changes-requested', and
-'changes-attempted'.
-
-That means the output string will either contain '@@@@progression-complete@@@@'
-or '@@@@changes-requested@@@@' or '@@@@changes-attempted@@@@'. If none are
-present, or if multiple are present, an error is returned to the user.
-
-The workflow may also have a comment section, which will be wrapped by
-'%%%%comment%%%%' and '%%%%end%%%%' tags. For example:
-
-%%%%comment%%%%
-The UserSpecification is not self-consistent, one section says that there
-should be no network calls, and another section says that there should be an
-LLM call
-%%%%end%%%%
-
-If there are multiple comment sections, an error is returned. The comments are
-presented to the user directly in stdout.
-
-If a task is passed, the auto workflow will automatically reset and keep going,
-continuing until a task is not passed.
 
 ## Logging
 

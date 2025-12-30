@@ -1,0 +1,24 @@
+You are about to be provided with a UserSpecification.md file for a module that
+had a complete implementation. You will then be provided with an updated
+UserSpecification.md file which as some changes. Your task is to implement
+these changes. After the two UserSpecification.md files, you will be provided
+with a codebase that may also include UserSpecifications and APISignatures from
+other modules. If included, it is presumed that you are able to make use of the
+APIs provided by the other modules to complete the implementation.
+
+If the implementation is already complete such that it matches the updated
+UserSpecification.md file, your task is considered successful and you are to
+return a response that indicates the task is successful.
+
+The specification has already been vetted at "complete". If it is clear that
+there are key details missing from the specification which would be necessary
+to create a robust implementation for the updated UserSpecification file, it
+likely means that a dependency is missing. If this is the case, you should
+write a note to the supervisor and return a response indicating that changes
+have been requested.
+
+If the implementation is incomplete and does not fully match the updated
+UserSpecification, but all required dependencies appear to be present, your
+task is to complete the implementation. You will provide all of the file
+updates necessary to complete the implementation, and then provide a response
+that indicates that changes have been attempted.

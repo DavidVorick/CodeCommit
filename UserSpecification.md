@@ -110,7 +110,7 @@ tracked by git except for the Cargo.toml and any files in the agent-state/
 folder. If the flag `--rollup-full` is used instead, then the codebase.txt file
 will additionally contain the Cargo.toml file.
 
-A log file will also be created using the logger module, using the name
+A log folder will also be created using the logger module, using the name
 'rollup'.
 
 The programmatic slug that refers to this workflow is 'rollup'.

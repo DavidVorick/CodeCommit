@@ -1,8 +1,43 @@
 # code-commit
 
-code-commit is an agentic workflow tool that helps developers interface more
-seamlessly with LLMs. It is currently targeted at rust codebases, but could
-easily be adapted for other codebases.
+code-commit is a pure-cli agentic coding tool that can make use of any
+instruction based LLM as a backend. It is currently targeted at rust codebases,
+but could easily be adapted for other codebases.
+
+code-commit is highly opinionated, and is only meant to be used with codebases
+that are explicitly code-commit codebases. code-commit believes that LLMs have
+certain strengths and weaknesses, and a codebase that is written by LLMs should
+be deliberately architected to cater towards their fundamental capabilities.
+
+There is therefore a moderate learning curve to using code-commit, and its most
+likely easier to entirely rewrite an existing codebase than it is to port
+existing code into a code-commit format.
+
+## The Basics
+
+A code-commit codebase is fully defined by a series of UserSpecification.md
+files. The specification is written in plain English, and it describes what the
+code is supposed to do. LLMs read these UserSpecification files and then
+implement the things that are described.
+
+Critically, before implementing anything, the LLMs run a sanity check on the
+specification. If anything is confusing or inconsistent, the LLM will halt,
+explain the problem with the spec, and then refuse to write code until the spec
+has been cleaned up.
+
+The spec analysis works both on a per-spec basis, and also checks that each
+spec makes sense in the context of the rest of the codebase.
+
+Most code-commit projects are split between a minimal set of top-level code and
+a bunch of modules. Top level code can import modules, and modules can import
+other modules, but the dependency graph must form a DAG. This means that
+modules are not allowed to import code from the top level of the repository -
+if a module needs code, it has to get that code from another module.
+
+The top level code is intended to have the high level overview of the codebase
+and its purpose, and each module is intended to be specific and focused.
+
+## General Philosophy
 
 ## Using code-commit
 

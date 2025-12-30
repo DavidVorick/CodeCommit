@@ -5,6 +5,7 @@ use crate::cli::Model;
 use crate::config::Config;
 use crate::logger::Logger;
 use std::collections::VecDeque;
+use std::fs;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Mutex;
@@ -27,6 +28,10 @@ impl MockAgentActions {
             captured_prompts: Mutex::new(Vec::new()),
         }
     }
+
+    fn get_captured_prompts(&self) -> Vec<String> {
+        self.captured_prompts.lock().unwrap().clone()
+    }
 }
 
 impl AgentActions for MockAgentActions {
@@ -42,17 +47,19 @@ impl AgentActions for MockAgentActions {
         prompts.push(prompt);
 
         let mut responses = self.llm_responses.lock().unwrap();
-        let res = responses
-            .pop_front()
-            .expect("Mock query_llm called more times than expected");
+        if responses.is_empty() {
+            panic!("Mock query_llm called more times than expected. Log prefix: {_log_prefix}");
+        }
+        let res = responses.pop_front().unwrap();
         Box::pin(async move { res })
     }
 
     fn run_build(&self) -> Result<String, BuildFailure> {
         let mut results = self.build_results.lock().unwrap();
-        results
-            .pop_front()
-            .expect("Mock run_build called more times than expected")
+        if results.is_empty() {
+            panic!("Mock run_build called more times than expected");
+        }
+        results.pop_front().unwrap()
     }
 }
 
@@ -89,7 +96,7 @@ async fn test_happy_path_success_first_try() {
     assert!(response_text.contains("fixed"));
 
     let main_rs = dir.path().join("src/main.rs");
-    let content = std::fs::read_to_string(main_rs).unwrap();
+    let content = fs::read_to_string(main_rs).unwrap();
     assert!(content.contains("println!(\"fixed\")"));
 }
 
@@ -113,7 +120,7 @@ async fn test_happy_path_success_with_repair() {
     let actions = MockAgentActions::new(
         vec![
             Ok(response_1),
-            Ok("".to_string()), // Extra code response
+            Ok("".to_string()), // Extra code response (empty)
             Ok(response_2),
         ],
         vec![
@@ -131,6 +138,139 @@ async fn test_happy_path_success_with_repair() {
     assert!(response_text.contains("repaired"));
 
     let main_rs = dir.path().join("src/main.rs");
-    let content = std::fs::read_to_string(main_rs).unwrap();
+    let content = fs::read_to_string(main_rs).unwrap();
     assert!(content.contains("println!(\"repaired\")"));
+}
+
+#[tokio::test]
+async fn test_happy_path_success_with_extra_code() {
+    let dir = tempdir().unwrap();
+    let logger = Logger::new_with_root(dir.path(), "test").unwrap();
+    let config = create_test_config();
+
+    // Create the file that will be requested via extra code
+    let extra_file_path = dir.path().join("src").join("helper.rs");
+    fs::create_dir_all(extra_file_path.parent().unwrap()).unwrap();
+    fs::write(&extra_file_path, "pub fn help() {}").unwrap();
+
+    let codebase = "--- src/main.rs ---\nfn main() {}".to_string();
+
+    let caret_block = "^^^";
+    let end_block = "^^^end";
+    let pct_block = "%%%";
+
+    // 1. Initial response: introduces bug (missing import)
+    let response_1 = format!(
+        "{caret_block}src/main.rs\nuse helper::help;\nfn main() {{ help(); }}\n{end_block}"
+    );
+
+    // 2. Extra code response: requests src/helper.rs
+    let response_extra = format!("{pct_block}files\nsrc/helper.rs\n{pct_block}end");
+
+    // 3. Repair response: fixes it (or just confirms it works now that context is there)
+    let response_2 = format!("{caret_block}src/main.rs\nmod helper;\nuse helper::help;\nfn main() {{ help(); }}\n{end_block}");
+
+    let actions = MockAgentActions::new(
+        vec![Ok(response_1), Ok(response_extra), Ok(response_2)],
+        vec![
+            Err(BuildFailure {
+                output: "error: unresolved import".to_string(),
+            }), // Build 1
+            Ok("EXIT CODE: 0".to_string()), // Build 2
+        ],
+    );
+
+    let result = run_with_actions(&logger, &config, codebase, &actions, dir.path()).await;
+
+    assert!(result.is_ok());
+
+    // Check that the repair prompt contained the extra file content
+    let prompts = actions.get_captured_prompts();
+    // Prompt 0: Initial
+    // Prompt 1: Extra Code Query
+    // Prompt 2: Repair Query
+    assert!(prompts.len() >= 3);
+    let repair_prompt = &prompts[2];
+    assert!(repair_prompt.contains("src/helper.rs"));
+    assert!(repair_prompt.contains("pub fn help() {}"));
+}
+
+#[tokio::test]
+async fn test_happy_path_success_max_repairs() {
+    let dir = tempdir().unwrap();
+    let logger = Logger::new_with_root(dir.path(), "test").unwrap();
+    let config = create_test_config();
+    let codebase = "fn main() {}".to_string();
+
+    let caret_block = "^^^";
+    let end_block = "^^^end";
+
+    // Responses:
+    // 1. Initial (Fail)
+    // 2. Extra (Empty)
+    // 3. Repair 1 (Fail)
+    // 4. Extra (Empty)
+    // 5. Repair 2 (Fail)
+    // 6. Extra (Empty)
+    // 7. Repair 3 (Success) - This is the 4th attempt total (1 initial + 3 repairs)
+
+    let bad_resp = format!("{caret_block}src/main.rs\ncompile_error!(\"fail\");\n{end_block}");
+    let good_resp = format!("{caret_block}src/main.rs\nfn main() {{}}\n{end_block}");
+    let empty_extra = "".to_string();
+
+    let actions = MockAgentActions::new(
+        vec![
+            Ok(bad_resp.clone()),
+            Ok(empty_extra.clone()),
+            Ok(bad_resp.clone()),
+            Ok(empty_extra.clone()),
+            Ok(bad_resp.clone()),
+            Ok(empty_extra.clone()),
+            Ok(good_resp),
+        ],
+        vec![
+            Err(BuildFailure {
+                output: "fail".to_string(),
+            }), // Build 1
+            Err(BuildFailure {
+                output: "fail".to_string(),
+            }), // Build 2
+            Err(BuildFailure {
+                output: "fail".to_string(),
+            }), // Build 3
+            Ok("EXIT CODE: 0".to_string()), // Build 4
+        ],
+    );
+
+    let result = run_with_actions(&logger, &config, codebase, &actions, dir.path()).await;
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_happy_path_file_deletion_and_creation() {
+    let dir = tempdir().unwrap();
+    let logger = Logger::new_with_root(dir.path(), "test").unwrap();
+    let config = create_test_config();
+
+    let delete_path = dir.path().join("src/delete_me.rs");
+    fs::create_dir_all(delete_path.parent().unwrap()).unwrap();
+    fs::write(&delete_path, "fn old() {}").unwrap();
+
+    let codebase = "--- src/delete_me.rs ---\nfn old() {}".to_string();
+
+    let caret_block = "^^^";
+    let end_block = "^^^end";
+
+    // The response deletes 'src/delete_me.rs' and creates 'src/new_file.rs'
+    let response = format!(
+        "{caret_block}src/delete_me.rs\n{caret_block}delete\n{caret_block}src/new_file.rs\nfn new() {{}}\n{end_block}"
+    );
+
+    let actions = MockAgentActions::new(vec![Ok(response)], vec![Ok("EXIT CODE: 0".to_string())]);
+
+    let result = run_with_actions(&logger, &config, codebase, &actions, dir.path()).await;
+    assert!(result.is_ok());
+
+    assert!(!delete_path.exists());
+    assert!(dir.path().join("src/new_file.rs").exists());
 }

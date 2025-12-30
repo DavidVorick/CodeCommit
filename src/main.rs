@@ -1,10 +1,14 @@
 mod app_error;
+mod auto_workflow;
 mod cli;
 mod committing_code;
 mod config;
+mod consistency;
 mod context_builder;
+mod init;
 mod llm;
 mod logger;
+mod rollup;
 mod system_prompts;
 
 use app_error::AppError;
@@ -39,8 +43,17 @@ async fn run() -> Result<(), AppError> {
         cli::Workflow::CommitCode => {
             committing_code::run(&logger, args).await?;
         }
-        _ => {
-            eprintln!("Workflow not yet implemented.");
+        cli::Workflow::ConsistencyCheck => {
+            consistency::run(&logger, args).await?;
+        }
+        cli::Workflow::Rollup => {
+            rollup::run(&logger, args).await?;
+        }
+        cli::Workflow::Auto => {
+            auto_workflow::run(&logger, args).await?;
+        }
+        cli::Workflow::Init(ref name) => {
+            init::run_init_command(name)?;
         }
     }
 

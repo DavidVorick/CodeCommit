@@ -34,6 +34,7 @@ the following files will be created:
 + Cargo.toml
 + src/
 + src/main.rs
++ src/ModuleDependencies.md (no dependencies added)
 + UserSpecification.md (word wrapped to 80 characters)
 
 When the Cargo.toml file is created, the `name = "code-commit"` line will need
@@ -164,10 +165,9 @@ The core logic for interfacing with the logs is in the 'logger' module.
 ## Safety
 
 To ensure that the private data of code-commit projects is never exfiltrated or
-exposed, files in the app-data/ folder, the agent-state/ folder, and
-agent-config/ folder are never allowed to be provided as input to an LLM, and
-also an LLM is not allowed to directly request modifications to those files.
-The non-LLM parts of the automated workflows are however allowed to modify
-these files.
+exposed, files in the app-data/ folder, and the agent-config/ folder are never
+allowed to be provided as input to an LLM, and also an LLM is not allowed to
+directly request modifications to those files. The non-LLM parts of the
+automated workflows are however allowed to modify these files.
 
 The app-data/ folder is optional, and not all CodeCommit projects will have it.

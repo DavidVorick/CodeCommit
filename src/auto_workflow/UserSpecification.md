@@ -86,8 +86,8 @@ LLM call
 If there are multiple comment sections, an error is returned. The comments are
 presented to the user directly in stdout.
 
-If a task is passed, the auto workflow will automatically reset and keep going,
-continuing until a task is not passed.
+If a task is successful, the auto workflow will automatically reset and keep
+going, continuing until a task receives a response that is not task-success.
 
 ### The Phases and Steps
 
@@ -142,6 +142,13 @@ other cases, the LLM is called via a committing_code API call. If the
 committing_code API is used, the context that gets created is passed in as the
 supervisor prompt, and then the response that is provided as output by the
 committing_code API call is parsed for the proper response.
+
+Please note that if the committing_code API call modified files on disk, and
+also indicated with a response that a task was successful, this is an error.
+You can see the src/comitting_code/UserSpecification.md file to understand the
+parsing rules for making file updates. If the committing_code API response
+contains any file updates at all, the only valid response is a 'changes
+attempted' response, anything else must produce an error.
 
 ### Phase 1
 

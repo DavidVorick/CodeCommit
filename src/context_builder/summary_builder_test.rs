@@ -114,3 +114,25 @@ fn test_missing_optional_root_files() {
     assert!(!summary.contains("--- LLMInstructions.md ---"));
     assert!(!summary.contains("--- UserSpecification.md ---"));
 }
+
+#[test]
+fn test_module_docs_are_included() {
+    let _guard = CWD_LOCK.lock().unwrap();
+    let env = TestEnv::new();
+
+    env.create_file(".gitignore", "");
+    env.create_file("Cargo.toml", "[package]");
+    env.create_file("src/my_mod/ModuleDependencies.md", "dep1\ndep2");
+    env.create_file("src/my_mod/APISignatures.md", "fn foo();");
+    env.create_file("src/my_mod/mod.rs", "pub fn foo() {}");
+
+    let summary = summary_builder::build_summary().unwrap();
+
+    // Paths on the current platform might vary, but verify content presence
+    // In unix-like environment of the shell script, paths use forward slashes.
+    assert!(summary.contains("=== src/my_mod ==="));
+    assert!(summary.contains("--- src/my_mod/ModuleDependencies.md ---"));
+    assert!(summary.contains("dep1\ndep2"));
+    assert!(summary.contains("--- src/my_mod/APISignatures.md ---"));
+    assert!(summary.contains("fn foo();"));
+}

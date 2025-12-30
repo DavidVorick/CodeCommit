@@ -134,14 +134,14 @@ pub(crate) fn build_summary() -> Result<String, AppError> {
         let module_path = src_path.join(&module_name);
         summary.push_str(&format!("=== {} ===\n\n", module_path.display()));
 
-        let internal_deps_path = module_path.join("InternalDependencies.md");
-        if internal_deps_path.exists() {
-            summary.push_str(&read_and_format_file(&internal_deps_path)?);
+        let module_deps_path = module_path.join("ModuleDependencies.md");
+        if module_deps_path.exists() {
+            summary.push_str(&read_and_format_file(&module_deps_path)?);
         }
 
-        let public_api_path = module_path.join("PublicAPI.md");
-        if public_api_path.exists() {
-            summary.push_str(&read_and_format_file(&public_api_path)?);
+        let api_signatures_path = module_path.join("APISignatures.md");
+        if api_signatures_path.exists() {
+            summary.push_str(&read_and_format_file(&api_signatures_path)?);
         }
 
         summary.push_str("--- FILENAMES ---\n");

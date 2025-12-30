@@ -60,7 +60,7 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
         context_builder::build_codebase_context(&next_agent_prompt, &config, logger).await?;
     logger.log_text("codebase.txt", &codebase)?;
 
-    run_with_codebase(logger, &config, codebase).await?;
+    let _ = run_with_codebase(logger, &config, codebase).await?;
 
     Ok(())
 }

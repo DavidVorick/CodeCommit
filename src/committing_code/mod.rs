@@ -56,9 +56,27 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
         system_prompt_part, config.query
     );
 
-    let mut codebase =
+    let codebase =
         context_builder::build_codebase_context(&next_agent_prompt, &config, logger).await?;
     logger.log_text("codebase.txt", &codebase)?;
+
+    run_with_codebase(logger, &config, codebase).await?;
+
+    Ok(())
+}
+
+pub async fn run_with_codebase(
+    logger: &logger::Logger,
+    config: &Config,
+    mut codebase: String,
+) -> Result<String, AppError> {
+    let initial_query_prompt = COMMITTING_CODE_INITIAL_QUERY;
+    let system_prompt_part =
+        format!("{PROJECT_STRUCTURE}\n{CODE_MODIFICATION_INSTRUCTIONS}\n{initial_query_prompt}");
+    let next_agent_prompt = format!(
+        "{}\n[supervisor query]\n{}",
+        system_prompt_part, config.query
+    );
 
     let mut last_build_output: Option<String> = None;
     let mut cumulative_updates: HashMap<PathBuf, Option<String>> = HashMap::new();
@@ -76,7 +94,7 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
                 .as_ref()
                 .expect("Build output should exist for repair attempts");
             (
-                build_repair_prompt(&config, build_output, &cumulative_updates, &codebase),
+                build_repair_prompt(config, build_output, &cumulative_updates, &codebase),
                 "repair",
             )
         };
@@ -105,7 +123,7 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
             Ok(output) => {
                 logger.log_text(&format!("{log_prefix}-build.txt"), &output)?;
                 println!("Build successful!");
-                return Ok(());
+                return Ok(response_text);
             }
             Err(build_failure) => {
                 logger.log_text(&format!("{log_prefix}-build.txt"), &build_failure.output)?;
@@ -114,7 +132,7 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
 
                 if attempt < MAX_ATTEMPTS {
                     let build_output = last_build_output.as_ref().unwrap();
-                    run_extra_code_query(&config, logger, build_output, &mut codebase, attempt)
+                    run_extra_code_query(config, logger, build_output, &mut codebase, attempt)
                         .await?;
                 }
             }

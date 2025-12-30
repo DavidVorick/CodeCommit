@@ -9,8 +9,8 @@ structure. Specifically, you will receive:
 + the top level build.sh, Cargo.toml, LLMInstructions.md, and UserSpecification.md
 + all of the filenames of all of the top level files, including names of all the top level files in src/
 + for each module, the following will be provided:
-	+ the full InternalDependencies.md file
-	+ the full PublicAPI.md file
+	+ the full APISignatures.md file
+	+ the full ModuleDependencies.md file
 	+ a list of the names of all files in the module, including documentation files
 
 You will then compile all of this information and determine which files need to
@@ -48,10 +48,10 @@ Cargo.toml
 LLMInstructions.md
 UserSpecification.md
 src/main.rs
-src/example_module/PublicAPI.md
+src/example_module/APISignatures.md
 src/other_module/mod.rs
-src/other_module/InternalDependencies.md
-src/other_module/PublicAPI.md
+src/other_module/APISignatures.md
+src/other_module/ModuleDependencies.md
 src/other_module/UserSpecification.md
 %%%end
 
@@ -60,4 +60,4 @@ they are needed. They are not included by default.
 
 If the next agent is going to be modifying modules, they will need all of the
 code for each module they are modifying so that they can properly update
-documentation files such as the InternalDependencies.md file.
+documentation files such as the ModuleDependencies.md file.

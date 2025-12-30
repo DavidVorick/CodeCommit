@@ -1,0 +1,9 @@
+Configuration Error: Uncommitted changes found in files that can be modified by the LLM:
+- src/committing_code/InternalDependencies.md
+- src/committing_code/PublicAPI.md
+- src/committing_code/mod.rs
+- src/context_builder/ModuleDependencies.md
+- src/system_prompts/context_builder_context_query.txt
+
+Please commit or stash your changes before running.
+To override this safety check, use the --force or --f flag.

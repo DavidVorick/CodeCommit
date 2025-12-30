@@ -1,8 +1,3 @@
-dependencies:
-  src/llm
-  src/logger
-  src/system_prompts
-
 # Building Context
 
 This is a specification for a building block that can be used in agentic coding
@@ -35,8 +30,8 @@ The codebase summary will contain the following files:
 + the full file for the top level .gitignore, build.sh, Cargo.toml, LLMInstructions.md, and UserSpecification.md
 + all of the filenames of all of the top level files, including names of all the top level files in src/
 + for each module, the following will be provided if available:
-	+ the full InternalDependencies.md file
-	+ the full PublicAPI.md file
+    + the full ModuleDependencies.md file
+	+ the full APISignatures.md file
 	+ a list of the names of all files in the module, including documentation files
 
 Note that only files which are not listed in the .gitignore should be provided.
@@ -86,10 +81,10 @@ this:
 LLMInstructions.md
 UserSpecification.md
 src/main.rs
-src/example_module/PublicAPI.md
+src/example_module/APISignatures.md
 src/other_module/mod.rs
-src/other_module/InternalDependencies.md
-src/other_module/PublicAPI.md
+src/other_module/APISignatures.md
+src/other_module/ModuleDependencies.md
 src/other_module/UserSpecification.md
 %%%end
 ```

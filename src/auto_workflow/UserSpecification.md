@@ -87,7 +87,10 @@ If there are multiple comment sections, an error is returned. The comments are
 presented to the user directly in stdout.
 
 If a task is successful, the auto workflow will automatically reset and keep
-going, continuing until a task receives a response that is not task-success.
+going. If a task returns the response 'changes-attempted', then the same task
+will be retried one time automatically. If the retry returns 'task-success',
+the auto workflow will automatically reset and keep going. If the retry returns
+a non 'task-success' response, then the auto workflow stops.
 
 ### The Phases and Steps
 

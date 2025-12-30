@@ -41,9 +41,18 @@ pub async fn run(logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
                 continue;
             }
             executor::ExecutionResult::ChangesAttempted => {
-                // Changes were applied, stopping progression
-                println!("Changes attempted by Auto Workflow. Stopping.");
-                break;
+                println!("Changes attempted. Retrying task...");
+                let retry_result = executor::execute_task(&task, &config, logger).await?;
+                match retry_result {
+                    executor::ExecutionResult::Success => {
+                        println!("Retry successful. Continuing workflow.");
+                        continue;
+                    }
+                    _ => {
+                        println!("Retry did not result in success. Stopping.");
+                        break;
+                    }
+                }
             }
             executor::ExecutionResult::ChangesRequested => {
                 println!("Changes requested by Auto Workflow. Stopping.");

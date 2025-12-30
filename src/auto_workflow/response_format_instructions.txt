@@ -23,3 +23,6 @@ This is an example of a comment that will be provided to the supervisor.
 Please complete the task to the best of your abilities and provide the most
 appropriate status string, along with any comments that would be helpful to the
 supervisor.
+
+Note that if any files are changed in the codebase, 'changes-attempted' must be
+output as the response.

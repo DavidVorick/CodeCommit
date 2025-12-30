@@ -67,6 +67,15 @@ pub async fn execute_task(
         committing_code::run_with_codebase(logger, &task_config, String::new()).await?
     };
 
+    if file_updater::has_pending_updates(&response)
+        && !response.contains("@@@@changes-attempted@@@@")
+    {
+        return Err(AppError::FileUpdate(
+            "Auto Workflow Error: Code modifications provided without 'changes-attempted' status."
+                .to_string(),
+        ));
+    }
+
     if response.contains("@@@@task-success@@@@") {
         extract_and_print_comment(&response);
         mark_stage_complete(&task.spec_path, task.stage, &spec_content)?;

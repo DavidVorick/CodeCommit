@@ -9,6 +9,8 @@ mod types;
 #[cfg(test)]
 mod discovery_test;
 #[cfg(test)]
+mod enforcement_test;
+#[cfg(test)]
 mod phase1_test;
 
 use crate::app_error::AppError;
@@ -39,8 +41,9 @@ pub async fn run(logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
                 continue;
             }
             executor::ExecutionResult::ChangesAttempted => {
-                // Changes were applied, loop to verify or continue
-                continue;
+                // Changes were applied, stopping progression
+                println!("Changes attempted by Auto Workflow. Stopping.");
+                break;
             }
             executor::ExecutionResult::ChangesRequested => {
                 println!("Changes requested by Auto Workflow. Stopping.");

@@ -34,6 +34,24 @@ pub fn apply_file_updates(response: &str) -> Result<(), AppError> {
     Ok(())
 }
 
+pub fn has_pending_updates(response: &str) -> bool {
+    let mut current_pos = 0;
+    while let Some(start_idx) = response[current_pos..].find("^^^") {
+        let absolute_start = current_pos + start_idx;
+        let rest = &response[absolute_start + 3..];
+
+        if let Some(newline_idx) = rest.find('\n') {
+            let content_start = absolute_start + 3 + newline_idx + 1;
+
+            if let Some(_end_idx) = response[content_start..].find("^^^end") {
+                return true;
+            }
+        }
+        current_pos += 3;
+    }
+    false
+}
+
 fn write_file(filename: &str, content: &str) -> Result<(), AppError> {
     let path = Path::new(filename);
     if let Some(parent) = path.parent() {

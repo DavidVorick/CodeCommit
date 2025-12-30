@@ -42,14 +42,10 @@ impl PathFilter {
             }
         }
 
-        // Exception: agent-config/query.txt is allowed in context even if ignored
-        let allowed_agent_query = Path::new("agent-config").join("query.txt");
-        let is_allowed_agent_query = cleaned == allowed_agent_query;
-
-        // Block protected directories (app-data, agent-config), except the allowed agent-config/query.txt
+        // Block protected directories (app-data, agent-config, agent-state)
         if let Some(Component::Normal(first_comp)) = cleaned.components().next() {
             if let Some(name) = first_comp.to_str() {
-                if matches!(name, "app-data" | "agent-config") && !is_allowed_agent_query {
+                if matches!(name, "app-data" | "agent-config" | "agent-state") {
                     return Err(AppError::FileUpdate(format!(
                         "File '{}' is in a protected directory and cannot be loaded into context.",
                         cleaned.display()
@@ -58,19 +54,15 @@ impl PathFilter {
             }
         }
 
-        if !is_allowed_agent_query {
-            match self
-                .gitignore_matcher
-                .matched_path_or_any_parents(&cleaned, false)
-            {
-                ignore::Match::Ignore(_) => Err(AppError::FileUpdate(format!(
-                    "File '{}' matches a rule in .gitignore and cannot be loaded into context.",
-                    cleaned.display()
-                ))),
-                ignore::Match::Whitelist(_) | ignore::Match::None => Ok(()),
-            }
-        } else {
-            Ok(())
+        match self
+            .gitignore_matcher
+            .matched_path_or_any_parents(&cleaned, false)
+        {
+            ignore::Match::Ignore(_) => Err(AppError::FileUpdate(format!(
+                "File '{}' matches a rule in .gitignore and cannot be loaded into context.",
+                cleaned.display()
+            ))),
+            ignore::Match::Whitelist(_) | ignore::Match::None => Ok(()),
         }
     }
 }

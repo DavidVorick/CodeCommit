@@ -33,7 +33,7 @@ pub(crate) fn build_summary() -> Result<String, AppError> {
         ".gitignore",
         "build.sh",
         "Cargo.toml",
-        "LLMInstructions.md",
+        "ModuleDependencies.md",
         "UserSpecification.md",
     ];
 
@@ -87,8 +87,8 @@ pub(crate) fn build_summary() -> Result<String, AppError> {
 
     let src_path = Path::new("src");
     if src_path.is_dir() {
+        // Recursively walk src to catch all sub-modules
         for result in WalkBuilder::new(src_path)
-            .max_depth(Some(2))
             .git_ignore(true)
             .parents(true)
             .ignore(false)
@@ -98,22 +98,30 @@ pub(crate) fn build_summary() -> Result<String, AppError> {
             let entry =
                 result.map_err(|e| AppError::Config(format!("Error walking directory: {e}")))?;
             let path = entry.path().clean();
+            
+            // We only care about files
             if !path.is_file() {
                 continue;
             }
+            
+            // Skip src root itself (depth 0)
+            if entry.depth() == 0 {
+                continue;
+            }
 
+            // Depth 1 relative to src_path means src/file.rs
             if entry.depth() == 1 {
                 let rel = to_relative_string(&path);
                 src_top_level_filenames.push(rel);
-            } else if entry.depth() == 2 {
-                let module_name = path
-                    .parent()
-                    .unwrap()
-                    .strip_prefix(src_path)
-                    .unwrap()
-                    .to_string_lossy()
-                    .into_owned();
-                modules.entry(module_name).or_default().push(path);
+            } else {
+                // Depth >= 2 means src/mod/file.rs or src/mod/sub/file.rs
+                // We group by the directory path relative to src
+                if let Some(parent) = path.parent() {
+                    if let Ok(relative_parent) = parent.strip_prefix(src_path) {
+                        let module_name = relative_parent.to_string_lossy().into_owned();
+                        modules.entry(module_name).or_default().push(path);
+                    }
+                }
             }
         }
     }
@@ -134,13 +142,14 @@ pub(crate) fn build_summary() -> Result<String, AppError> {
         let module_path = src_path.join(&module_name);
         summary.push_str(&format!("=== {} ===\n\n", module_path.display()));
 
+        // Check for documentation files and validate they are not ignored
         let module_deps_path = module_path.join("ModuleDependencies.md");
-        if module_deps_path.exists() {
+        if module_deps_path.exists() && filter.validate(&module_deps_path).is_ok() {
             summary.push_str(&read_and_format_file(&module_deps_path)?);
         }
 
         let api_signatures_path = module_path.join("APISignatures.md");
-        if api_signatures_path.exists() {
+        if api_signatures_path.exists() && filter.validate(&api_signatures_path).is_ok() {
             summary.push_str(&read_and_format_file(&api_signatures_path)?);
         }
 

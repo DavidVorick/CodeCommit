@@ -111,8 +111,21 @@ fn test_missing_optional_root_files() {
     assert!(summary.contains("--- .gitignore ---\n\n\n"));
     assert!(summary.contains("--- Cargo.toml ---\n[package]\n\n"));
     assert!(!summary.contains("--- build.sh ---"));
-    assert!(!summary.contains("--- LLMInstructions.md ---"));
+    assert!(!summary.contains("--- ModuleDependencies.md ---"));
     assert!(!summary.contains("--- UserSpecification.md ---"));
+}
+
+#[test]
+fn test_module_dependencies_is_included() {
+    let _guard = CWD_LOCK.lock().unwrap();
+    let env = TestEnv::new();
+
+    env.create_file(".gitignore", "");
+    env.create_file("Cargo.toml", "[package]");
+    env.create_file("ModuleDependencies.md", "dep1");
+
+    let summary = summary_builder::build_summary().unwrap();
+    assert!(summary.contains("--- ModuleDependencies.md ---\ndep1"));
 }
 
 #[test]
@@ -135,4 +148,25 @@ fn test_module_docs_are_included() {
     assert!(summary.contains("dep1\ndep2"));
     assert!(summary.contains("--- src/my_mod/APISignatures.md ---"));
     assert!(summary.contains("fn foo();"));
+}
+
+#[test]
+fn test_nested_module_structure() {
+    let _guard = CWD_LOCK.lock().unwrap();
+    let env = TestEnv::new();
+
+    env.create_file(".gitignore", "");
+    env.create_file("Cargo.toml", "[package]");
+    env.create_file("src/parent/mod.rs", "// parent");
+    env.create_file("src/parent/child/mod.rs", "// child");
+
+    let summary = summary_builder::build_summary().unwrap();
+
+    // Parent module
+    assert!(summary.contains("=== src/parent ==="));
+    assert!(summary.contains("src/parent/mod.rs"));
+
+    // Child module
+    assert!(summary.contains("=== src/parent/child ==="));
+    assert!(summary.contains("src/parent/child/mod.rs"));
 }

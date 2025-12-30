@@ -34,7 +34,7 @@ the following files will be created:
 + Cargo.toml
 + src/
 + src/main.rs
-+ sModuleDependencies.md (no dependencies added)
++ ModuleDependencies.md (no dependencies added)
 + UserSpecification.md (word wrapped to 80 characters)
 
 When the Cargo.toml file is created, the `name = "code-commit"` line will need

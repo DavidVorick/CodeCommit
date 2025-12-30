@@ -1,6 +1,7 @@
 use crate::app_error::AppError;
 use crate::committing_code::file_updater::PathProtection;
 use std::collections::HashSet;
+use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -62,6 +63,32 @@ pub(crate) fn check_for_uncommitted_changes() -> Result<(), AppError> {
         return Err(AppError::Config(format!(
             "Uncommitted changes found in files that can be modified by the LLM:\n- {file_list}\n\nPlease commit or stash your changes before running.\nTo override this safety check, use the --force or --f flag."
         )));
+    }
+
+    Ok(())
+}
+
+pub(crate) fn verify_gitignore_protection() -> Result<(), AppError> {
+    let gitignore_path = PathBuf::from(".gitignore");
+    if !gitignore_path.exists() {
+        return Err(AppError::Config(
+            ".gitignore file is missing. It is required to protect agent-config/.".to_string(),
+        ));
+    }
+
+    let content = fs::read_to_string(&gitignore_path)
+        .map_err(|e| AppError::Config(format!("Failed to read .gitignore: {e}")))?;
+
+    // The spec requires that .gitignore contains lines for /agent-config.
+    let has_protection = content.lines().any(|line| {
+        let t = line.trim();
+        t == "/agent-config" || t == "agent-config/" || t == "agent-config" || t == "/agent-config/"
+    });
+
+    if !has_protection {
+        return Err(AppError::Config(
+            "The .gitignore file is missing a line for '/agent-config'. This is required to prevent API keys from being committed.".to_string(),
+        ));
     }
 
     Ok(())

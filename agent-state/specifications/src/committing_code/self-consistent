@@ -1,8 +1,3 @@
-dependencies:
-  src/llm
-  src/context_builder
-  src/system_prompts
-
 # Committing Code
 
 This is a specification for the implementation of an agentic coding workflow
@@ -42,6 +37,11 @@ and is hand-written by the supervisor.
 The 'codebase' will be generated using the `context_builder` module.
 
 The query is then sent to the LLM.
+
+Note: An alternate API exists that allows the caller to provide the codebase
+alongside the supervisor query. If the codebase is provided, the 'building the
+codebase' step may be skipped. This alternate API must also provide the full
+LLM response to the caller.
 
 ## Building the Codebase
 

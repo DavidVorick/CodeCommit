@@ -40,6 +40,9 @@ use std::path::PathBuf;
 const MAX_ATTEMPTS: u32 = 4;
 
 pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppError> {
+    // Ensure .gitignore protects agent-config before proceeding
+    git_status_impl::verify_gitignore_protection()?;
+
     if !cli_args.force {
         println!("Checking for uncommitted changes...");
         git_status_impl::check_for_uncommitted_changes()?;
@@ -56,8 +59,13 @@ pub async fn run(logger: &logger::Logger, cli_args: CliArgs) -> Result<(), AppEr
         system_prompt_part, config.query
     );
 
-    let codebase =
-        context_builder::build_codebase_context(&next_agent_prompt, &config, logger).await?;
+    let codebase = context_builder::build_codebase_context(
+        &next_agent_prompt,
+        &config,
+        logger,
+        "0-context-query",
+    )
+    .await?;
     logger.log_text("codebase.txt", &codebase)?;
 
     let _ = run_with_codebase(logger, &config, codebase).await?;
@@ -170,17 +178,17 @@ async fn run_extra_code_query(
     let extra_files = response_parser_impl::parse_extra_files_response(&response)?;
     let mut files_added = 0;
 
+    let protection = file_updater_impl::PathProtection::new()?;
+
     for path in extra_files {
         let path_str = path.to_string_lossy().to_string();
         if existing_files.contains(&path_str) {
             continue;
         }
 
-        if path.is_absolute()
-            || path
-                .components()
-                .any(|c| matches!(c, std::path::Component::ParentDir))
-        {
+        // Validate the path before reading to prevent leaking protected files
+        if protection.validate(&path).is_err() {
+            println!("Skipping protected or ignored file: {path_str}");
             continue;
         }
 

@@ -145,8 +145,11 @@ impl PathProtection {
 
         if let Some(Component::Normal(first_comp)) = cleaned.components().next() {
             if let Some(name) = first_comp.to_str() {
-                // Protect .git, target, agent-config, and app-data directories
-                if matches!(name, ".git" | "target" | "agent-config" | "app-data") {
+                // Protect .git, target, agent-config, agent-state, and app-data directories
+                if matches!(
+                    name,
+                    ".git" | "target" | "agent-config" | "agent-state" | "app-data"
+                ) {
                     return Err(AppError::FileUpdate(format!(
                         "Modification of directory '{name}/' is not allowed."
                     )));

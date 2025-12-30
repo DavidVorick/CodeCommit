@@ -13,8 +13,13 @@ pub async fn run(logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
         "{}\n[supervisor query]\n{}",
         config.system_prompts, config.query
     );
-    let codebase =
-        context_builder::build_codebase_context(&next_agent_prompt, &config, logger).await?;
+    let codebase = context_builder::build_codebase_context(
+        &next_agent_prompt,
+        &config,
+        logger,
+        "consistency-context-query",
+    )
+    .await?;
     logger.log_text("codebase_for_consistency.txt", &codebase)?;
 
     println!("Running consistency check...");

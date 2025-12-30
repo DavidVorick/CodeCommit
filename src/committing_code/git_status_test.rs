@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests {
     use crate::app_error::AppError;
-    use crate::committing_code::git_status::check_for_uncommitted_changes;
+    use crate::committing_code::git_status::{
+        check_for_uncommitted_changes, verify_gitignore_protection,
+    };
     use std::fs;
     use std::path::Path;
     use std::process::Command;
@@ -207,6 +209,58 @@ mod tests {
             assert!(msg.contains("src/main.rs"));
             assert!(!msg.contains("build.sh"));
             assert!(!msg.contains("agent-config/key.txt"));
+        } else {
+            panic!("Expected Config error");
+        }
+    }
+
+    #[test]
+    fn test_gitignore_protection_valid() {
+        let _lock = GIT_TEST_LOCK.lock().unwrap();
+        let env = GitTestEnv::new();
+        // Overwrite default .gitignore with one that protects agent-config
+        fs::write(env.path().join(".gitignore"), "target/\n/agent-config").unwrap();
+
+        let result = verify_gitignore_protection();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_gitignore_protection_valid_trailing_slash() {
+        let _lock = GIT_TEST_LOCK.lock().unwrap();
+        let env = GitTestEnv::new();
+        fs::write(env.path().join(".gitignore"), "target/\nagent-config/").unwrap();
+
+        let result = verify_gitignore_protection();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_gitignore_protection_invalid_missing() {
+        let _lock = GIT_TEST_LOCK.lock().unwrap();
+        let env = GitTestEnv::new();
+        // .gitignore created by setup_git_repo only contains "target/"
+        fs::write(env.path().join(".gitignore"), "target/").unwrap();
+
+        let result = verify_gitignore_protection();
+        assert!(result.is_err());
+        if let Err(AppError::Config(msg)) = result {
+            assert!(msg.contains("missing a line for '/agent-config'"));
+        } else {
+            panic!("Expected Config error");
+        }
+    }
+
+    #[test]
+    fn test_gitignore_protection_file_missing() {
+        let _lock = GIT_TEST_LOCK.lock().unwrap();
+        let env = GitTestEnv::new();
+        fs::remove_file(env.path().join(".gitignore")).unwrap();
+
+        let result = verify_gitignore_protection();
+        assert!(result.is_err());
+        if let Err(AppError::Config(msg)) = result {
+            assert!(msg.contains(".gitignore file is missing"));
         } else {
             panic!("Expected Config error");
         }

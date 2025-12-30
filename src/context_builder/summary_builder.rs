@@ -98,12 +98,12 @@ pub(crate) fn build_summary() -> Result<String, AppError> {
             let entry =
                 result.map_err(|e| AppError::Config(format!("Error walking directory: {e}")))?;
             let path = entry.path().clean();
-            
+
             // We only care about files
             if !path.is_file() {
                 continue;
             }
-            
+
             // Skip src root itself (depth 0)
             if entry.depth() == 0 {
                 continue;

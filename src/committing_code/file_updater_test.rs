@@ -324,3 +324,15 @@ fn test_forbid_app_data_dir_modification() {
         .to_string()
         .contains("Modification of directory 'app-data/' is not allowed."));
 }
+
+#[test]
+fn test_forbid_agent_state_dir_modification() {
+    let protection = PathProtection::new().unwrap();
+
+    let res = protection.validate(&PathBuf::from("agent-state/history.json"));
+    assert!(matches!(res, Err(AppError::FileUpdate(_))));
+    assert!(res
+        .unwrap_err()
+        .to_string()
+        .contains("Modification of directory 'agent-state/' is not allowed."));
+}

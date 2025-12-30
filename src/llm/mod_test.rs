@@ -6,12 +6,29 @@ use crate::logger::Logger;
 use serde_json::{json, Value};
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::{Arc, Mutex};
 use tempfile::tempdir;
 
 struct MockLlmApiClient {
     response: Result<Value, String>,
     extracted_text: Result<String, String>,
     supports_idempotency: bool,
+    last_idempotency_key: Arc<Mutex<Option<String>>>,
+}
+
+impl MockLlmApiClient {
+    fn new(
+        response: Result<Value, String>,
+        extracted_text: Result<String, String>,
+        supports_idempotency: bool,
+    ) -> Self {
+        Self {
+            response,
+            extracted_text,
+            supports_idempotency,
+            last_idempotency_key: Arc::new(Mutex::new(None)),
+        }
+    }
 }
 
 impl LlmApi for MockLlmApiClient {
@@ -27,8 +44,10 @@ impl LlmApi for MockLlmApiClient {
     fn query_with_retries<'a>(
         &'a self,
         _request_body: &'a Value,
-        _idempotency_key: Option<&'a str>,
+        idempotency_key: Option<&'a str>,
     ) -> Pin<Box<dyn Future<Output = Result<Value, AppError>> + Send + 'a>> {
+        let mut lock = self.last_idempotency_key.lock().unwrap();
+        *lock = idempotency_key.map(|s| s.to_string());
         let resp = self.response.clone().map_err(AppError::Network);
         Box::pin(async { resp })
     }
@@ -59,11 +78,11 @@ async fn test_query_internal_happy_path() {
         .into_string()
         .unwrap();
 
-    let client = MockLlmApiClient {
-        response: Ok(json!({"result": "ok"})),
-        extracted_text: Ok("llm says hi".to_string()),
-        supports_idempotency: true,
-    };
+    let client = MockLlmApiClient::new(
+        Ok(json!({"result": "ok"})),
+        Ok("llm says hi".to_string()),
+        true,
+    );
 
     let result = query_internal(&client, "my prompt", &logger, "1-test").await;
 
@@ -80,6 +99,11 @@ async fn test_query_internal_happy_path() {
     assert_eq!(query_json["body"]["prompt"], "my prompt");
     assert!(query_json["requestId"].is_string());
 
+    // Verify idempotency key was passed and matches requestId
+    let used_key = client.last_idempotency_key.lock().unwrap().clone();
+    assert!(used_key.is_some());
+    assert_eq!(used_key.unwrap(), query_json["requestId"].as_str().unwrap());
+
     let response_txt = std::fs::read_to_string(log_path.join("1-test-response.txt")).unwrap();
     assert_eq!(response_txt, "llm says hi");
 
@@ -94,6 +118,28 @@ async fn test_query_internal_happy_path() {
 }
 
 #[tokio::test]
+async fn test_query_internal_no_idempotency() {
+    let dir = tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join("agent-config/logs")).unwrap();
+    let original_dir = std::env::current_dir().unwrap();
+    std::env::set_current_dir(dir.path()).unwrap();
+
+    let logger = Logger::new("test-run").unwrap();
+    let client = MockLlmApiClient::new(
+        Ok(json!({"result": "ok"})),
+        Ok("hi".to_string()),
+        false, // No idempotency
+    );
+
+    let _ = query_internal(&client, "prompt", &logger, "4-test").await;
+
+    let used_key = client.last_idempotency_key.lock().unwrap().clone();
+    assert!(used_key.is_none());
+
+    std::env::set_current_dir(original_dir).unwrap();
+}
+
+#[tokio::test]
 async fn test_query_internal_api_error() {
     let dir = tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join("agent-config/logs")).unwrap();
@@ -101,11 +147,7 @@ async fn test_query_internal_api_error() {
     std::env::set_current_dir(dir.path()).unwrap();
 
     let logger = Logger::new("test-run").unwrap();
-    let client = MockLlmApiClient {
-        response: Err("API failed".to_string()),
-        extracted_text: Ok("...".to_string()),
-        supports_idempotency: false,
-    };
+    let client = MockLlmApiClient::new(Err("API failed".to_string()), Ok("...".to_string()), false);
 
     let result = query_internal(&client, "prompt", &logger, "2-test").await;
     assert!(result.is_err());
@@ -122,11 +164,11 @@ async fn test_query_internal_parsing_error() {
     std::env::set_current_dir(dir.path()).unwrap();
 
     let logger = Logger::new("test-run").unwrap();
-    let client = MockLlmApiClient {
-        response: Ok(json!({"result": "ok"})),
-        extracted_text: Err("Bad format".to_string()),
-        supports_idempotency: false,
-    };
+    let client = MockLlmApiClient::new(
+        Ok(json!({"result": "ok"})),
+        Err("Bad format".to_string()),
+        false,
+    );
 
     let result = query_internal(&client, "prompt", &logger, "3-test").await;
     assert!(result.is_err());

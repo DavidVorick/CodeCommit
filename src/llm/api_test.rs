@@ -107,6 +107,133 @@ async fn test_gemini_happy_path_polling() {
 }
 
 #[tokio::test]
+async fn test_gemini_polling_url_verification() {
+    let processing_body = json!({
+        "id": "interaction-123",
+        "status": "processing"
+    })
+    .to_string();
+
+    let completed_body = json!({
+        "id": "interaction-123",
+        "status": "completed",
+        "outputs": [{ "type": "text", "text": "done" }]
+    })
+    .to_string();
+
+    let (url, mut rx) =
+        start_mock_server_with_capture(vec![(200, processing_body), (200, completed_body)]).await;
+
+    let client = GeminiClient::new_test("key".to_string(), "model", url);
+    let api_client = LlmApiClient::Gemini(client);
+
+    let _ = api_client
+        .query_with_retries(&json!({"input": "hi"}), None)
+        .await
+        .unwrap();
+
+    let req1 = rx.recv().await.unwrap();
+    assert!(
+        req1.starts_with("POST / HTTP/1.1"),
+        "Expected POST /. Got first line: {}",
+        req1.lines().next().unwrap_or("")
+    );
+
+    let req2 = rx.recv().await.unwrap();
+    assert!(
+        req2.starts_with("GET /interaction-123 HTTP/1.1"),
+        "Expected GET /interaction-123. Got first line: {}",
+        req2.lines().next().unwrap_or("")
+    );
+}
+
+#[tokio::test]
+async fn test_gemini_happy_path_polling_multiple() {
+    let processing_body = json!({
+        "id": "123",
+        "status": "processing"
+    })
+    .to_string();
+
+    let completed_body = json!({
+        "id": "123",
+        "status": "completed",
+        "outputs": [{ "type": "text", "text": "Polled multiple success" }]
+    })
+    .to_string();
+
+    // 1. POST -> Processing
+    // 2. GET -> Processing
+    // 3. GET -> Completed
+    let url = start_mock_server(vec![
+        (200, processing_body.clone()),
+        (200, processing_body),
+        (200, completed_body),
+    ])
+    .await;
+
+    let client = GeminiClient::new_test("key".to_string(), "model", url);
+    let api_client = LlmApiClient::Gemini(client);
+
+    let res = api_client
+        .query_with_retries(&json!({"input": "hi"}), None)
+        .await
+        .unwrap();
+
+    let text = api_client.extract_text_from_response(&res).unwrap();
+    assert_eq!(text, "Polled multiple success");
+}
+
+#[tokio::test]
+async fn test_gemini_retry_flow() {
+    let error_body = json!({
+        "error": { "code": 500, "message": "Internal Server Error" }
+    })
+    .to_string();
+    let success_body = json!({
+        "status": "completed",
+        "outputs": [{ "type": "text", "text": "Retry success" }]
+    })
+    .to_string();
+
+    // 1. 500 Error
+    // 2. 200 OK
+    let url = start_mock_server(vec![(500, error_body), (200, success_body)]).await;
+    let client = GeminiClient::new_test("key".to_string(), "model", url);
+    let api_client = LlmApiClient::Gemini(client);
+
+    let res = api_client
+        .query_with_retries(&json!({"input": "hi"}), None)
+        .await
+        .unwrap();
+
+    let text = api_client.extract_text_from_response(&res).unwrap();
+    assert_eq!(text, "Retry success");
+}
+
+#[tokio::test]
+async fn test_gpt_happy_path_immediate() {
+    let success_body = json!({
+        "choices": [{
+            "message": { "content": "GPT Immediate success" }
+        }]
+    })
+    .to_string();
+
+    let url = start_mock_server(vec![(200, success_body)]).await;
+    let client = GptClient::new_test("key".to_string(), url);
+    let api_client = LlmApiClient::Gpt(client);
+
+    let res = api_client
+        .query_with_retries(&json!({"msg": "hi"}), Some("uuid-123"))
+        .await
+        .unwrap();
+
+    let text = api_client.extract_text_from_response(&res).unwrap();
+    assert_eq!(text, "GPT Immediate success");
+}
+
+#[tokio::test]
 async fn test_gpt_retry_flow_and_idempotency() {
     let error_body = "{}".to_string();
     let success_body = json!({

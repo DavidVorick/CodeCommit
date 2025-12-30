@@ -27,7 +27,7 @@ next agent full prompt and the codebase summary, the text '=== Codebase Summary
 
 The codebase summary will contain the following files:
 
-+ the full file for the top level .gitignore, build.sh, Cargo.toml, LLMInstructions.md, and UserSpecification.md
++ the full file for the top level .gitignore, build.sh, Cargo.toml, ModuleDependencies, and UserSpecification.md
 + all of the filenames of all of the top level files, including names of all the top level files in src/
 + for each module, the following will be provided if available:
     + the full ModuleDependencies.md file
@@ -78,7 +78,6 @@ this:
 
 ```
 %%%files
-LLMInstructions.md
 UserSpecification.md
 src/main.rs
 src/example_module/APISignatures.md

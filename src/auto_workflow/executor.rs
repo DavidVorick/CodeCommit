@@ -132,7 +132,7 @@ pub(crate) fn validate_response_format(response: &str) -> Result<(), AppError> {
     Ok(())
 }
 
-fn mark_stage_complete(
+pub(crate) fn mark_stage_complete(
     root: &Path,
     spec_path: &Path,
     stage: Stage,

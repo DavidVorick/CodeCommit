@@ -76,3 +76,32 @@ fn test_build_prompt_documented_stage() {
     assert!(prompt.contains("DOC_SPEC"));
     assert!(prompt.contains("struct Internal;"));
 }
+
+#[test]
+fn test_build_prompt_with_cache() {
+    let temp = TempDir::new().unwrap();
+    let root = temp.path();
+    let mod_dir = root.join("src/cached_mod");
+    fs::create_dir_all(&mod_dir).unwrap();
+    let spec_path = mod_dir.join("UserSpecification.md");
+    let spec_content = "NEW_SPEC";
+    let cached_content = "OLD_SPEC";
+
+    // Set up cache
+    let cache_dir = root.join("agent-state/specifications/src/cached_mod");
+    fs::create_dir_all(&cache_dir).unwrap();
+    fs::write(cache_dir.join("implemented"), cached_content).unwrap();
+
+    // Write current files
+    fs::write(&spec_path, spec_content).unwrap();
+    fs::write(mod_dir.join("ModuleDependencies.md"), "# Deps").unwrap();
+    fs::write(root.join("UserSpecification.md"), "TOP").unwrap();
+
+    let prompt =
+        prompt_builder::build_prompt(root, &spec_path, Stage::Implemented, spec_content).unwrap();
+
+    assert!(prompt.contains("implementation-with-cache prompt"));
+    assert!(prompt.contains("cached target user specification"));
+    assert!(prompt.contains(cached_content));
+    assert!(prompt.contains(spec_content));
+}

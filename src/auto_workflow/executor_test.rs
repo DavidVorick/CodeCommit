@@ -1,4 +1,7 @@
 use super::executor;
+use crate::auto_workflow::types::Stage;
+use std::fs;
+use tempfile::TempDir;
 
 #[test]
 fn test_validate_response_format_success() {
@@ -46,4 +49,20 @@ fn test_extract_comment() {
 
     let response_no_comment = "Just text";
     assert!(executor::extract_comment(response_no_comment).is_none());
+}
+
+#[test]
+fn test_mark_stage_complete() {
+    let temp = TempDir::new().unwrap();
+    let root = temp.path();
+    let mod_dir = root.join("src/mod");
+    fs::create_dir_all(&mod_dir).unwrap();
+    let spec_path = mod_dir.join("UserSpecification.md");
+    let content = "SPEC CONTENT";
+
+    executor::mark_stage_complete(root, &spec_path, Stage::Implemented, content).unwrap();
+
+    let state_path = root.join("agent-state/specifications/src/mod/implemented");
+    assert!(state_path.exists());
+    assert_eq!(fs::read_to_string(state_path).unwrap(), content);
 }

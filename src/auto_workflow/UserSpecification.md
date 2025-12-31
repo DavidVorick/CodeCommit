@@ -108,8 +108,9 @@ Phase two has four steps:
 
 1. "dependency-verified": ensure that the implementation is making correct use
    of all dependencies.
-2. "secure": ensure that the implementation follows best practices for the
-   security model of the module and of the project as a whole.
+2. "secure": ensure that the specification and implementation both follow best
+   practices for the security model of the module and of the project as a
+   whole.
 3. "complete": ensure there are no major gaps in the module's design or
    implementation.
 4. "edge-tested": ensure that there is robust testing of all edge cases,

@@ -70,67 +70,32 @@ maximium size of a piece depends on the quality of the LLM. If a codebase has
 lots of specific intructions or best practices, those practices need to be
 enforced across multiple calls to LLMs rather than conducted all at once.
 
-## Using code-commit
+Finally, code-commit tries as much as possible to use LLMs exclusively for the
+coding itself, relying on normal, non-intelligent scripts and processes for the
+actual steps of updating files and running the build. Though it's not
+bulletproof, it significantly reduces the chances that an LLM does something
+destructive or irreversible to the host machine, because the actions that the
+LLM itself can take are highly constrained. For example, only the user can
+commit code. An LLM can make changes, but the changes don't enter the git
+history until a user has had a chance to sign off.
 
-Every code-commit project is defined by a set of UserSpecification.md files
-which define the purpose of the code and provide guidelines to agentic
-workflows that implement the specifications.
-
-There is a top level UserSpecification.md which defines the high level goals
-and purpose of the project, and most of the functionality is split off into
-modules, where each module has its own UserSpecification.md. The vast majority
-of the features and nuance are defined within the modules.
-
-Modules form a dependency DAG. One module is allowed to import another, so long
-as it does not result in a dependency cycle. Each module provides an API
-document which provides guarantees around the module's behavior. These
-guarantees are the sole documentation that gets provided to anyone importing
-the module.
-
-LLMs typically only load one module at a time into context. More specifically,
-they load the UserSpecification for that module, the top level
-UserSpecification for the entire project, and then the public API documentation
-for any direct dependencies that the module has. The LLMs will then work on the
-module using different sets of prompts.
-
-A central component of the code-commit lifecycle is specification review. LLMs
-are continuously used throughout the life of a code-commit project to verify
-that specifications are self-consistent, sensible, non-confusing, and making
-correct use of their dependencies. This review process is critical for the
-overall scalability of agentic projects.
-
-Both the review and the implementation process get split into multiple LLM
-calls with different prompts. This is because modern LLMs lose fidelity as the
-number of instructions increases, and as the context size increases. By keeping
-tasks more focused, a stronger overall implementation can emerge as a result.
-
-The recommended development workflow is to define one UserSpecification for the
-whole project, and then as the context starts to grow too large, begin to split
-out different elements of functionality into modules. Modules ust be
-self-contained.
-
-The UserSpecifications are considered sacred, and will never be modified by
-LLMs. During specification review, the LLM may request that the user make
-modifications to the UserSpecifications, but it will never make those
-modifications itself.
-
-The LLMs will also never commit code themselves. If any files are modified, the
-user will have an opportunity to review the changes and manually commit the
-changes. This allows the user to trivially undo any bad changes that are made
-by an LLM.
+## Coding Phases
 
 When code-commit works on a codebase, it works in phases. Each phase takes the
-project to a deeper layer of maturity, and significantly increases the cost of
-making breaking changes.
+project to a deeper layer of maturity, and increases the cost of making
+breaking changes.
 
-Within each phase, code-commit works backwards through the dependency tree,
-starting with the modules that have no dependencies, and then progressing to
-the modules that only depend on modules with no dependencies (called L1
-modules), and so on, until every module has been completed for that phase.
-code-commit will complete the full phase for each module before moving onto the
-next module.
+Within each phase, code-commit works backwards through the module dependency
+tree, starting with the modules that have no dependencies (L0 modules), and
+then progressing to the modules that only depend on modules with no
+dependencies or fewer (called L1 modules), and so on, until every module has
+been completed for that phase. code-commit will complete the full phase for
+each module before moving onto the next module.
 
-The first phase focuses on four things:
+Though the phases have been adjusted over time, the initial progression looked
+something like this:
+
+Phase 1:
 
 1. Ensure the specification is sensible
 2. Ensure there is a basic implementation that is faithful to the specification
@@ -139,20 +104,20 @@ The first phase focuses on four things:
 4. Ensure that basic happy-path testing exists for all major functions of the
    module.
 
-The second phase focuses on three things:
+Phase 2:
 
 1. Ensure the module follows best practices for the project's security model.
 2. Ensure there is robust testing of edge cases and adversarial inputs.
 3. Ensure that there are no major gaps in the project design or implementation.
 
-The thrid phase focuses on three things:
+Phase 3:
 
 1. Ensure that the code is as simple as possible.
 2. Ensure that the code has sufficient logging to debug in production.
 3. Ensure that the code has integration testing which verifies its dependencies
    work as needed.
 
-And the fourth phase focuses on three things:
+Phase 4:
 
 1. Ensure that the code has benchmarks which verify that performance meets
    requirements.
@@ -242,80 +207,13 @@ had to be compiled mechanically, without the use of an LLM. And whatever
 summary was pulled together mechanically had to be good enough that the
 context-building LLM could figure out what context was actually necessary.
 
-This is where we are now, and it seems to be working alright. Things are
-generally okay for introducing new features, but it can often be deficient for
-refactoring, especially if functions are being moved between files or if
-function signatures are changing. The challenge is ensuring that the context
-building LLM can see from the mechanical build summary what functions are
-called where, and allowing the LLM to see that without using up too much
-context.
+After that, the whole code-commit design was overhauled, because the main
+bottleneck became UserSpecification design - it got quite finicky for larger
+projects. The development process was broken into phases, and a clear module
+dependency DAG was established so that modules could be built out one phase at
+a time.
 
-### What's Next?
-
-So far, it has worked really well to develop code-commit by focusing on the
-thing that is most immediately slowing down development. And while there are
-three general categories of things that seem to be causing issues, one clearly
-rises to the top.
-
-The least important issue is using the LLM to design modules and refactor code.
-It's been my experience that between the limitations of the context-builder and
-the LLM's natural tendency to split things up in non-helpful ways, that the LLM
-pretty much needs heavily supervised handholding during any code refactor.
-Though this could turn into a pretty big long term bottleneck, the truth is
-that it doesn't take that much time to manage all of the module design by hand.
-So while it's probably the most obviously deficient thing about code-commit
-right now, it's also not that time consuming to work around.
-
-The middleground issue is the context building, which works pretty well about
-70% of the time, and then otherwise falls on its face and needs clear
-instructions about which files need to be included. But, similar to the
-refactoring and module design, the LLM seems to be quite responsive to direct
-instructions about how to build the context, which means it's pretty easy to
-work around this deficiency when it pops up.
-
-The most pressing issue is in the automated prompt / system prompt /
-LLMInstructions. The default behaviors for a lot of coding things like error
-handling, logging, and building test suites simply don't scale well within an
-agentic codebase, and actually usually don't scale well within codebases in
-general.
-
-This can pretty easily be fixed with some custom instructions, but between all
-of the different types of coding patterns that the LLM needs to know, you end
-up with a really fat stack of custom instructions, which spreads the attention
-of the LLM really thin, especially on larger codebases. The context builder
-helped a lot, but as the number of instructions increase, attention gets spread
-thin and the quality of the code that gets produced goes down. Even worse, some
-instructions are non-deterministically overlooked, and that problem grows as
-the prompt size grows.
-
-The top proposed solution is to break coding into smaller steps, where each
-step refactors the code to adhere to better coding paradigms. The prompts will
-need to be constructed carefully enough that there isn't any regression each
-time a new layer of improvement is added, but by having one set of prompts for
-authoring core logic, another for authoring logging, another for authoring
-testing, and so on, allowing the set of instructions for each stage to be
-minimal and focused, while still covering the full set of quality requirements
-on each code change.
-
-This solution would likely come with the consistency check being woven into the
-full coding pipeline, once again pulling the code-commit binary down to a
-single command / workflow that produces a bunch of helpful output as it runs.
-Before the first step, a consistency prompt would run that focuses entirely on
-being certain that the UserSpecification documents made sense and were self
-consistent. And then after each coding step, a consistency check would run to
-check the quality of the code aspect that is being covered, its consistency
-with the UserSpecification, and its consistency with the system prompts for
-that coding step.
-
-The consistency check in particular would be given the authority to abort the
-coding process, if it felt that something was seriously misaligned or needed
-clarification from the user. Aside from that, it would be instructed to provide
-output to the user based on what it saw with either general comments or
-suggestions, or flagging places where the implementation and the spec diverged.
-Or even flagging where the spec diverged from the prompts.
-
-This upgrade would collapse everything back down to a single command, and
-perhaps the user query could even provide instructions on how many stages to
-run and which stages to run. This would both increase the utility of
-code-commit for large scale codebases, and also simplify the UX, improving the
-chances that other people find the utility useful.
+This type of separation also significantly simplified the process of building
+context for the LLMs, allowing it to be mostly automated. The phase based
+architecture is still being worked out, but early signs point to it being very
+effective.

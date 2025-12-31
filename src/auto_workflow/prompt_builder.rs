@@ -28,7 +28,7 @@ fn build_self_consistent_prompt(
     spec_content: &str,
 ) -> Result<String, AppError> {
     let top_spec = get_top_level_spec(root)?;
-    let target_spec_section = if is_top_level_spec(spec_path) {
+    let target_spec_section = if is_top_level_spec(root, spec_path) {
         String::new()
     } else {
         format!("[target user specification]\n{spec_content}\n")
@@ -50,7 +50,7 @@ fn build_implemented_prompt(
     spec_content: &str,
 ) -> Result<String, AppError> {
     let cached_content = get_cached_spec(root, spec_path, Stage::Implemented)?;
-    let codebase = build_codebase_context(root, spec_path.parent().unwrap_or(Path::new(".")))?;
+    let codebase = build_codebase_context(root, spec_path.parent().unwrap_or(root))?;
 
     let target_spec_section = format!("[target user specification]\n{spec_content}\n");
 
@@ -81,6 +81,7 @@ fn build_documented_prompt(
     spec_path: &Path,
     spec_content: &str,
 ) -> Result<String, AppError> {
+    // For documentation, we look at the module itself
     let module_dir = spec_path.parent().unwrap_or(Path::new("."));
     let codebase = build_module_only_context(module_dir)?;
 
@@ -100,7 +101,7 @@ fn build_happy_path_tested_prompt(
     spec_content: &str,
 ) -> Result<String, AppError> {
     let cached_content = get_cached_spec(root, spec_path, Stage::HappyPathTested)?;
-    let codebase = build_codebase_context(root, spec_path.parent().unwrap_or(Path::new(".")))?;
+    let codebase = build_codebase_context(root, spec_path.parent().unwrap_or(root))?;
 
     if let Some(cached) = cached_content {
         Ok(format!(
@@ -124,7 +125,7 @@ fn build_happy_path_tested_prompt(
     }
 }
 
-fn get_cached_spec(
+pub(crate) fn get_cached_spec(
     root: &Path,
     spec_path: &Path,
     stage: Stage,
@@ -151,18 +152,19 @@ fn get_cached_spec(
     }
 }
 
-fn get_top_level_spec(root: &Path) -> Result<String, AppError> {
+pub(crate) fn get_top_level_spec(root: &Path) -> Result<String, AppError> {
     fs::read_to_string(root.join("UserSpecification.md")).or_else(|_| Ok("".to_string()))
 }
 
-fn is_top_level_spec(spec_path: &Path) -> bool {
-    // Check if the spec path points to the top level UserSpecification.md
-    // We assume the process runs from the root or relative path is clean.
-    spec_path == Path::new("UserSpecification.md")
-        || spec_path == Path::new("./UserSpecification.md")
+fn is_top_level_spec(root: &Path, spec_path: &Path) -> bool {
+    // Robust check using the root
+    spec_path == root.join("UserSpecification.md") || spec_path == Path::new("UserSpecification.md")
 }
 
-fn build_codebase_context(root: &Path, target_module_dir: &Path) -> Result<String, AppError> {
+pub(crate) fn build_codebase_context(
+    root: &Path,
+    target_module_dir: &Path,
+) -> Result<String, AppError> {
     let mut context = String::new();
     let top_spec = get_top_level_spec(root)?;
     if !top_spec.is_empty() {
@@ -211,7 +213,7 @@ fn build_codebase_context(root: &Path, target_module_dir: &Path) -> Result<Strin
     Ok(context)
 }
 
-fn build_module_only_context(module_dir: &Path) -> Result<String, AppError> {
+pub(crate) fn build_module_only_context(module_dir: &Path) -> Result<String, AppError> {
     let mut context = String::new();
     let walker = WalkBuilder::new(module_dir)
         .hidden(false)

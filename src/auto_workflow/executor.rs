@@ -18,6 +18,7 @@ pub enum ExecutionResult {
 }
 
 pub async fn execute_task(
+    root: &Path,
     task: &Task,
     config: &Config,
     logger: &Logger,
@@ -36,8 +37,6 @@ pub async fn execute_task(
         ))
     })?;
 
-    // We assume current working directory is the root for execution
-    let root = Path::new(".");
     let prompt = prompt_builder::build_prompt(root, &task.spec_path, task.stage, &spec_content)?;
 
     // To ensure unique logs for re-runs, we might want to append a timestamp or counter,
@@ -82,7 +81,7 @@ pub async fn execute_task(
 
     if response.contains("@@@@task-success@@@@") {
         extract_and_print_comment(&response);
-        mark_stage_complete(&task.spec_path, task.stage, &spec_content)?;
+        mark_stage_complete(root, &task.spec_path, task.stage, &spec_content)?;
         Ok(ExecutionResult::Success)
     } else if response.contains("@@@@changes-requested@@@@") {
         extract_and_print_comment(&response);
@@ -133,8 +132,12 @@ pub(crate) fn validate_response_format(response: &str) -> Result<(), AppError> {
     Ok(())
 }
 
-fn mark_stage_complete(spec_path: &Path, stage: Stage, content: &str) -> Result<(), AppError> {
-    let root = Path::new(".");
+fn mark_stage_complete(
+    root: &Path,
+    spec_path: &Path,
+    stage: Stage,
+    content: &str,
+) -> Result<(), AppError> {
     let module_dir = spec_path.parent().unwrap_or(root);
     let relative_module_dir = module_dir.strip_prefix(root).unwrap_or(module_dir);
 

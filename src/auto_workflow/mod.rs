@@ -13,6 +13,8 @@ mod enforcement_test;
 #[cfg(test)]
 mod executor_test;
 #[cfg(test)]
+mod file_updater_test;
+#[cfg(test)]
 mod graph_test;
 #[cfg(test)]
 mod phase1_test;
@@ -29,7 +31,8 @@ pub async fn run(logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
     let config = Config::load(&cli_args)?;
 
     loop {
-        let task_opt = discovery::find_next_task(Path::new("."))?;
+        let root = Path::new(".");
+        let task_opt = discovery::find_next_task(root)?;
 
         let task = match task_opt {
             Some(t) => t,
@@ -39,7 +42,7 @@ pub async fn run(logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
             }
         };
 
-        let result = executor::execute_task(&task, &config, logger).await?;
+        let result = executor::execute_task(root, &task, &config, logger).await?;
 
         match result {
             executor::ExecutionResult::Success => {
@@ -48,7 +51,7 @@ pub async fn run(logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
             }
             executor::ExecutionResult::ChangesAttempted => {
                 println!("Changes attempted. Retrying task...");
-                let retry_result = executor::execute_task(&task, &config, logger).await?;
+                let retry_result = executor::execute_task(root, &task, &config, logger).await?;
                 match retry_result {
                     executor::ExecutionResult::Success => {
                         println!("Retry successful. Continuing workflow.");

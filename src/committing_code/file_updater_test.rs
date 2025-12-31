@@ -123,6 +123,74 @@ fn test_apply_updates_create_nested_directory() {
 }
 
 #[test]
+fn test_apply_file_updates_create_and_update() {
+    let _lock = CWD_LOCK.lock().unwrap();
+    let _env = TestEnv::new();
+
+    let file_path = PathBuf::from("create_and_update.txt");
+    let updates = vec![
+        FileUpdate {
+            path: file_path.clone(),
+            content: Some("Initial content".to_string()),
+        },
+        FileUpdate {
+            path: file_path.clone(),
+            content: Some("Updated content".to_string()),
+        },
+    ];
+
+    apply_updates(&updates, Path::new(".")).unwrap();
+
+    let content = fs::read_to_string(&file_path).unwrap();
+    assert_eq!(content, "Updated content");
+}
+
+#[test]
+fn test_apply_file_updates_multiple() {
+    let _lock = CWD_LOCK.lock().unwrap();
+    let _env = TestEnv::new();
+
+    let file1 = PathBuf::from("file1.txt");
+    let file2 = PathBuf::from("file2.txt");
+
+    // The supervisor will replace !!! with ^^^
+    let content2 = "!!!src/main.rs\nfn main() {}\n!!!end";
+
+    let updates = vec![
+        FileUpdate {
+            path: file1.clone(),
+            content: Some("Content 1".to_string()),
+        },
+        FileUpdate {
+            path: file2.clone(),
+            content: Some(content2.to_string()),
+        },
+    ];
+
+    apply_updates(&updates, Path::new(".")).unwrap();
+
+    assert_eq!(fs::read_to_string(&file1).unwrap(), "Content 1");
+    assert_eq!(fs::read_to_string(&file2).unwrap(), content2);
+}
+
+#[test]
+fn test_apply_file_updates_nested_dir() {
+    let _lock = CWD_LOCK.lock().unwrap();
+    let _env = TestEnv::new();
+
+    let file_path = PathBuf::from("a/b/c/d/nested.txt");
+    let updates = vec![FileUpdate {
+        path: file_path.clone(),
+        content: Some("Nested content".to_string()),
+    }];
+
+    apply_updates(&updates, Path::new(".")).unwrap();
+
+    assert!(file_path.exists());
+    assert_eq!(fs::read_to_string(&file_path).unwrap(), "Nested content");
+}
+
+#[test]
 fn test_validate_path_valid() {
     let protection = PathProtection::new().unwrap();
     assert!(protection.validate(&PathBuf::from("src/main.rs")).is_ok());

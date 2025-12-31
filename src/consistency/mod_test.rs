@@ -1,4 +1,4 @@
-use super::{ConsistencyDeps, run_internal};
+use super::{run_internal, ConsistencyDeps};
 use crate::app_error::AppError;
 use crate::cli::Model;
 use crate::config::Config;
@@ -40,7 +40,7 @@ impl ConsistencyDeps for MockDeps {
         let captured = self.captured_build_context_prompt.clone();
         let prompt_str = prompt.to_string();
         let ret = self.expected_context.clone();
-        
+
         // Assertions for build_context
         assert_eq!(prefix, "1-consistency-context");
         assert!(matches!(config.model, Model::Gemini3Pro));
@@ -62,7 +62,7 @@ impl ConsistencyDeps for MockDeps {
         // Assertions for query_llm arguments
         assert!(matches!(model, Model::Gemini3Pro));
         assert_eq!(api_key, "key");
-        
+
         let captured_prompt = self.captured_query_llm_prompt.clone();
         let captured_prefix = self.captured_query_llm_prefix.clone();
         let prompt_str = prompt.to_string();
@@ -80,7 +80,7 @@ impl ConsistencyDeps for MockDeps {
 async fn test_run_internal_happy_path() {
     let temp_dir = tempfile::tempdir().expect("tempdir");
     let logger = Logger::new_with_root(temp_dir.path(), "test").expect("logger");
-    
+
     let config = Config {
         model: Model::Gemini3Pro,
         api_key: "key".to_string(),
@@ -89,15 +89,20 @@ async fn test_run_internal_happy_path() {
     };
 
     let deps = MockDeps::new("mock codebase context", "mock report");
-    
+
     let result = run_internal(&logger, config, &deps).await;
-    
+
     assert!(result.is_ok());
     let report = result.unwrap();
     assert_eq!(report, "mock report");
 
     // Verify build_context inputs
-    let build_prompt = deps.captured_build_context_prompt.lock().unwrap().take().expect("build_context should be called");
+    let build_prompt = deps
+        .captured_build_context_prompt
+        .lock()
+        .unwrap()
+        .take()
+        .expect("build_context should be called");
     let expected_prompt_start = format!(
         "{}\n{}\n[supervisor query]\nmy query",
         system_prompts::PROJECT_STRUCTURE,
@@ -106,14 +111,23 @@ async fn test_run_internal_happy_path() {
     assert_eq!(build_prompt, expected_prompt_start);
 
     // Verify query_llm inputs
-    let query_prompt = deps.captured_query_llm_prompt.lock().unwrap().take().expect("query_llm should be called");
+    let query_prompt = deps
+        .captured_query_llm_prompt
+        .lock()
+        .unwrap()
+        .take()
+        .expect("query_llm should be called");
     let expected_query_prompt = format!(
-        "{}\n[codebase]\nmock codebase context",
-        expected_prompt_start
+        "{expected_prompt_start}\n[codebase]\nmock codebase context"
     );
     assert_eq!(query_prompt, expected_query_prompt);
 
-    let query_prefix = deps.captured_query_llm_prefix.lock().unwrap().take().expect("query_llm should be called");
+    let query_prefix = deps
+        .captured_query_llm_prefix
+        .lock()
+        .unwrap()
+        .take()
+        .expect("query_llm should be called");
     assert_eq!(query_prefix, "2-consistency");
 
     // Verify logging side effect
@@ -122,7 +136,7 @@ async fn test_run_internal_happy_path() {
     let log_dir_entry = entries.next().expect("should be one entry").expect("entry");
     let log_dir_path = log_dir_entry.path();
     assert!(log_dir_path.is_dir());
-    
+
     let log_file_path = log_dir_path.join("codebase_for_consistency.txt");
     assert!(log_file_path.exists(), "log file should exist");
     let content = fs::read_to_string(log_file_path).expect("read log file");

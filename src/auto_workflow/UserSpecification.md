@@ -196,7 +196,11 @@ This workflow calls committing_code.
 The codebase should include the top level UserSpecification.md, the Cargo.toml
 file, every single file in the target module, and every single
 UserSpecification.md and APISignatures.md file for every dependency. This list
-can be automatically assembled, without needing help from an LLM.
+can be automatically assembled, without needing help from an LLM. If the target
+module is the root module, all of the top level files should be included except
+for anything that is blocked by security policy, and all of the top level files
+in the src/ directory should be also included.
+
 
 This workflow calls committing_code.
 
@@ -222,7 +226,10 @@ This workflow calls committing_code.
 The codebase should include the top level UserSpecification.md, the Cargo.toml
 file, every single file in the target module, and every single
 UserSpecification.md and APISignatures.md file for every dependency. This list
-can be automatically assembled, without needing help from an LLM.
+can be automatically assembled, without needing help from an LLM. If the target
+module is the root module, all of the top level files should be included except
+for anything that is blocked by security policy, and all of the top level files
+in the src/ directory should be also included.
 
 This workflow calls committing_code.
 

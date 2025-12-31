@@ -56,14 +56,16 @@ impl ConsistencyDeps for RealDeps {
 
 pub async fn run(logger: &Logger, cli_args: CliArgs) -> Result<(), AppError> {
     let config = Config::load(&cli_args)?;
-    run_internal(logger, config, &RealDeps).await
+    let report = run_internal(logger, config, &RealDeps).await?;
+    println!("\n{report}");
+    Ok(())
 }
 
 async fn run_internal(
     logger: &Logger,
     config: Config,
     deps: &impl ConsistencyDeps,
-) -> Result<(), AppError> {
+) -> Result<String, AppError> {
     println!("Building codebase context for consistency check...");
     let next_agent_prompt = format!(
         "{}\n{}\n[supervisor query]\n{}",
@@ -90,9 +92,7 @@ async fn run_internal(
         )
         .await?;
 
-    println!("\n{report}");
-
-    Ok(())
+    Ok(report)
 }
 
 #[cfg(test)]

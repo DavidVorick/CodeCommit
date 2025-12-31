@@ -93,6 +93,8 @@ async fn test_run_internal_happy_path() {
     let result = run_internal(&logger, config, &deps).await;
     
     assert!(result.is_ok());
+    let report = result.unwrap();
+    assert_eq!(report, "mock report");
 
     // Verify build_context inputs
     let build_prompt = deps.captured_build_context_prompt.lock().unwrap().take().expect("build_context should be called");

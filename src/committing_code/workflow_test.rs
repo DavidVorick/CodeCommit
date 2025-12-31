@@ -431,3 +431,151 @@ async fn test_repair_prompt_accumulates_updates() {
     assert!(repair_2.contains("--- FILE REPLACEMENT src/file1.rs ---"));
     assert!(repair_2.contains("--- FILE REPLACEMENT src/file2.rs ---"));
 }
+
+#[tokio::test]
+async fn test_extra_code_query_ignores_existing_and_protected_files() {
+    let dir = tempdir().unwrap();
+    let logger = Logger::new_with_root(dir.path(), "test").unwrap();
+    let config = create_test_config();
+
+    // Setup files on disk
+    let src_dir = dir.path().join("src");
+    fs::create_dir_all(&src_dir).unwrap();
+
+    // src/main.rs - already in codebase
+    fs::write(src_dir.join("main.rs"), "fn main() {}").unwrap();
+
+    // src/other.rs - valid extra file
+    fs::write(src_dir.join("other.rs"), "fn other() {}").unwrap();
+
+    // secret.txt - protected by gitignore
+    fs::write(dir.path().join(".gitignore"), "secret.txt").unwrap();
+    fs::write(dir.path().join("secret.txt"), "secret").unwrap();
+
+    // Note: run_with_actions takes 'codebase' as string.
+    let codebase = "--- src/main.rs ---\nfn main() {}".to_string();
+
+    let caret_block = "^^^";
+    let end_block = "^^^end";
+    let pct_block = "%%%";
+
+    // 1. Initial response: fails build
+    let response_1 = format!("{caret_block}src/main.rs\nfn main() {{ error }}\n{end_block}");
+
+    // 2. Extra code response: requests existing file, protected file, and valid file
+    let response_extra =
+        format!("{pct_block}files\nsrc/main.rs\nsecret.txt\nsrc/other.rs\n{pct_block}end");
+
+    // 3. Repair response: success
+    let response_2 = format!("{caret_block}src/main.rs\nfn main() {{}}\n{end_block}");
+
+    let actions = MockAgentActions::new(
+        vec![Ok(response_1), Ok(response_extra), Ok(response_2)],
+        vec![
+            Err(BuildFailure {
+                output: "error".to_string(),
+            }),
+            Ok("EXIT CODE: 0".to_string()),
+        ],
+    );
+
+    let result = run_with_actions(&logger, &config, codebase, &actions, dir.path()).await;
+
+    assert!(result.is_ok());
+
+    let prompts = actions.get_captured_prompts();
+    // Prompt 0: Initial
+    // Prompt 1: Extra Code
+    // Prompt 2: Repair Query
+    assert!(prompts.len() >= 3);
+    let repair_prompt = &prompts[2];
+
+    // Check that src/other.rs was added
+    assert!(repair_prompt.contains("--- src/other.rs ---"));
+    assert!(repair_prompt.contains("fn other() {}"));
+
+    // Check that secret.txt was NOT added
+    assert!(!repair_prompt.contains("--- secret.txt ---"));
+    assert!(!repair_prompt.contains("secret"));
+
+    // Check that src/main.rs appears exactly twice:
+    // 1. In the base codebase section (--- src/main.rs ---)
+    // 2. In the file replacements section (--- FILE REPLACEMENT src/main.rs ---)
+    let matches: Vec<_> = repair_prompt.match_indices("--- src/main.rs ---").collect();
+    assert_eq!(
+        matches.len(),
+        1,
+        "Should contain '--- src/main.rs ---' exactly once (in codebase)"
+    );
+}
+
+#[tokio::test]
+async fn test_repair_prompt_latest_version_only() {
+    let dir = tempdir().unwrap();
+    let logger = Logger::new_with_root(dir.path(), "test").unwrap();
+    let config = create_test_config();
+    let codebase = "fn main() {}".to_string();
+
+    let caret_block = "^^^";
+    let end_block = "^^^end";
+
+    // Attempt 1: Updates foo.rs with "Version 1"
+    let response_1 = format!("{caret_block}src/foo.rs\nfn foo() {{ \"Version 1\" }}\n{end_block}");
+
+    // Extra 1: Empty
+    let extra_1 = "".to_string();
+
+    // Attempt 2: Updates foo.rs with "Version 2"
+    let response_2 = format!("{caret_block}src/foo.rs\nfn foo() {{ \"Version 2\" }}\n{end_block}");
+
+    // Extra 2: Empty
+    let extra_2 = "".to_string();
+
+    // Attempt 3: Success
+    let response_3 = format!("{caret_block}src/main.rs\nfn main() {{}}\n{end_block}");
+
+    let actions = MockAgentActions::new(
+        vec![
+            Ok(response_1),
+            Ok(extra_1),
+            Ok(response_2),
+            Ok(extra_2),
+            Ok(response_3),
+        ],
+        vec![
+            Err(BuildFailure {
+                output: "fail 1".to_string(),
+            }),
+            Err(BuildFailure {
+                output: "fail 2".to_string(),
+            }),
+            Ok("EXIT CODE: 0".to_string()),
+        ],
+    );
+
+    let result = run_with_actions(&logger, &config, codebase, &actions, dir.path()).await;
+    assert!(result.is_ok());
+
+    let prompts = actions.get_captured_prompts();
+    // Prompt 0: Initial
+    // Prompt 1: Extra
+    // Prompt 2: Repair 1 (contains Version 1)
+    // Prompt 3: Extra
+    // Prompt 4: Repair 2 (contains Version 2, should NOT contain Version 1)
+
+    assert!(prompts.len() >= 5);
+    let repair_prompt = &prompts[4];
+
+    // It should contain the latest replacement
+    assert!(repair_prompt.contains("--- FILE REPLACEMENT src/foo.rs ---"));
+    assert!(repair_prompt.contains("Version 2"));
+
+    // It should NOT contain the old replacement
+    assert!(!repair_prompt.contains("Version 1"));
+
+    // Verify no duplicate headers
+    let matches: Vec<_> = repair_prompt
+        .match_indices("--- FILE REPLACEMENT src/foo.rs ---")
+        .collect();
+    assert_eq!(matches.len(), 1);
+}

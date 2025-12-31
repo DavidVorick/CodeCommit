@@ -247,6 +247,52 @@ async fn test_happy_path_success_max_repairs() {
 }
 
 #[tokio::test]
+async fn test_fail_after_max_repairs() {
+    let dir = tempdir().unwrap();
+    let logger = Logger::new_with_root(dir.path(), "test").unwrap();
+    let config = create_test_config();
+    let codebase = "fn main() {}".to_string();
+
+    let caret_block = "^^^";
+    let end_block = "^^^end";
+
+    // 1 Initial + 3 Repairs = 4 total attempts.
+    // All fail.
+
+    let bad_resp = format!("{caret_block}src/main.rs\ncompile_error!(\"fail\");\n{end_block}");
+    let empty_extra = "".to_string();
+
+    let actions = MockAgentActions::new(
+        vec![
+            Ok(bad_resp.clone()),    // Initial
+            Ok(empty_extra.clone()), // Extra 1
+            Ok(bad_resp.clone()),    // Repair 1
+            Ok(empty_extra.clone()), // Extra 2
+            Ok(bad_resp.clone()),    // Repair 2
+            Ok(empty_extra.clone()), // Extra 3
+            Ok(bad_resp.clone()),    // Repair 3
+        ],
+        vec![
+            Err(BuildFailure {
+                output: "fail".to_string(),
+            }), // Build 1
+            Err(BuildFailure {
+                output: "fail".to_string(),
+            }), // Build 2
+            Err(BuildFailure {
+                output: "fail".to_string(),
+            }), // Build 3
+            Err(BuildFailure {
+                output: "fail".to_string(),
+            }), // Build 4
+        ],
+    );
+
+    let result = run_with_actions(&logger, &config, codebase, &actions, dir.path()).await;
+    assert!(matches!(result, Err(AppError::MaxAttemptsReached)));
+}
+
+#[tokio::test]
 async fn test_happy_path_file_deletion_and_creation() {
     let dir = tempdir().unwrap();
     let logger = Logger::new_with_root(dir.path(), "test").unwrap();
@@ -273,4 +319,115 @@ async fn test_happy_path_file_deletion_and_creation() {
 
     assert!(!delete_path.exists());
     assert!(dir.path().join("src/new_file.rs").exists());
+}
+
+#[tokio::test]
+async fn test_repair_propt_shows_deletion() {
+    let dir = tempdir().unwrap();
+    let logger = Logger::new_with_root(dir.path(), "test").unwrap();
+    let config = create_test_config();
+
+    let delete_path = dir.path().join("src/delete_me.rs");
+    fs::create_dir_all(delete_path.parent().unwrap()).unwrap();
+    fs::write(&delete_path, "fn old() {}").unwrap();
+
+    let codebase = "--- src/delete_me.rs ---\nfn old() {}".to_string();
+
+    let caret_block = "^^^";
+    let end_block = "^^^end";
+
+    // 1. Initial: delete file
+    let response_1 = format!("{caret_block}src/delete_me.rs\n{caret_block}delete");
+
+    // 2. Extra: empty
+    let empty_extra = "".to_string();
+
+    // 3. Repair: success (just to end it)
+    let response_2 = format!("{caret_block}src/main.rs\nfn main() {{}}\n{end_block}");
+
+    let actions = MockAgentActions::new(
+        vec![Ok(response_1), Ok(empty_extra), Ok(response_2)],
+        vec![
+            Err(BuildFailure {
+                output: "error".to_string(),
+            }), // Build 1 fails
+            Ok("EXIT CODE: 0".to_string()), // Build 2 succeeds
+        ],
+    );
+
+    let result = run_with_actions(&logger, &config, codebase, &actions, dir.path()).await;
+    assert!(result.is_ok());
+
+    let prompts = actions.get_captured_prompts();
+    // Prompt 0: Initial
+    // Prompt 1: Extra Code
+    // Prompt 2: Repair Query (Attempt 2)
+    assert!(prompts.len() >= 3);
+    let repair_prompt = &prompts[2];
+
+    assert!(repair_prompt.contains("--- FILE REMOVED src/delete_me.rs ---"));
+}
+
+#[tokio::test]
+async fn test_repair_prompt_accumulates_updates() {
+    let dir = tempdir().unwrap();
+    let logger = Logger::new_with_root(dir.path(), "test").unwrap();
+    let config = create_test_config();
+    let codebase = "fn main() {}".to_string();
+
+    let caret_block = "^^^";
+    let end_block = "^^^end";
+
+    // 1. Initial: update file1
+    let response_1 = format!("{caret_block}src/file1.rs\nfn f1() {{}}\n{end_block}");
+
+    // 2. Extra: empty
+    let empty_extra = "".to_string();
+
+    // 3. Repair 1: update file2
+    let response_2 = format!("{caret_block}src/file2.rs\nfn f2() {{}}\n{end_block}");
+
+    // 4. Extra: empty
+
+    // 5. Repair 2: success
+    let response_3 = format!("{caret_block}src/main.rs\nfn main() {{}}\n{end_block}");
+
+    let actions = MockAgentActions::new(
+        vec![
+            Ok(response_1),
+            Ok(empty_extra.clone()),
+            Ok(response_2),
+            Ok(empty_extra.clone()),
+            Ok(response_3),
+        ],
+        vec![
+            Err(BuildFailure {
+                output: "e1".to_string(),
+            }), // Build 1
+            Err(BuildFailure {
+                output: "e2".to_string(),
+            }), // Build 2
+            Ok("EXIT CODE: 0".to_string()), // Build 3
+        ],
+    );
+
+    let result = run_with_actions(&logger, &config, codebase, &actions, dir.path()).await;
+    assert!(result.is_ok());
+
+    let prompts = actions.get_captured_prompts();
+    // Prompt 0: Initial
+    // Prompt 1: Extra
+    // Prompt 2: Repair 1 (Attempt 2) - Should see file1
+    // Prompt 3: Extra
+    // Prompt 4: Repair 2 (Attempt 3) - Should see file1 AND file2
+
+    assert!(prompts.len() >= 5);
+
+    let repair_1 = &prompts[2];
+    assert!(repair_1.contains("--- FILE REPLACEMENT src/file1.rs ---"));
+    assert!(!repair_1.contains("src/file2.rs"));
+
+    let repair_2 = &prompts[4];
+    assert!(repair_2.contains("--- FILE REPLACEMENT src/file1.rs ---"));
+    assert!(repair_2.contains("--- FILE REPLACEMENT src/file2.rs ---"));
 }

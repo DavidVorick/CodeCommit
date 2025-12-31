@@ -77,13 +77,13 @@ fn build_implemented_prompt(
 }
 
 fn build_documented_prompt(
-    _root: &Path,
+    root: &Path,
     spec_path: &Path,
     spec_content: &str,
 ) -> Result<String, AppError> {
     // For documentation, we look at the module itself
     let module_dir = spec_path.parent().unwrap_or(Path::new("."));
-    let codebase = build_module_only_context(module_dir)?;
+    let codebase = build_module_only_context(root, module_dir)?;
 
     Ok(format!(
         "{}\n[response format instructions]\n{}\n[documented prompt]\n{}\n[target user specification]\n{}\n[codebase]\n{}",
@@ -175,7 +175,7 @@ pub(crate) fn build_codebase_context(
 
     let cargo_path = root.join("Cargo.toml");
     if cargo_path.exists() {
-        let cargo_content = fs::read_to_string(cargo_path)
+        let cargo_content = fs::read_to_string(&cargo_path)
             .map_err(|e| AppError::FileUpdate(format!("Failed to read Cargo.toml: {e}")))?;
         context.push_str("--- Cargo.toml ---\n");
         context.push_str(&cargo_content);
@@ -183,7 +183,7 @@ pub(crate) fn build_codebase_context(
     }
 
     // Include files in target module
-    context.push_str(&build_module_only_context(target_module_dir)?);
+    context.push_str(&build_module_only_context(root, target_module_dir)?);
 
     // Dependencies specs and signatures
     let dep_file = target_module_dir.join("ModuleDependencies.md");
@@ -213,8 +213,13 @@ pub(crate) fn build_codebase_context(
     Ok(context)
 }
 
-pub(crate) fn build_module_only_context(module_dir: &Path) -> Result<String, AppError> {
+pub(crate) fn build_module_only_context(
+    root: &Path,
+    module_dir: &Path,
+) -> Result<String, AppError> {
     let mut context = String::new();
+    let is_root = module_dir == root || module_dir == Path::new(".") || module_dir == Path::new("");
+
     let walker = WalkBuilder::new(module_dir)
         .hidden(false)
         .git_ignore(true)
@@ -225,6 +230,13 @@ pub(crate) fn build_module_only_context(module_dir: &Path) -> Result<String, App
         let entry = result.map_err(|e| AppError::Config(format!("Error walking module: {e}")))?;
         if entry.file_type().map(|ft| ft.is_file()).unwrap_or(false) {
             let path = entry.path();
+            let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+
+            // If root, skip UserSpecification.md and Cargo.toml to avoid duplication in build_codebase_context
+            if is_root && (file_name == "UserSpecification.md" || file_name == "Cargo.toml") {
+                continue;
+            }
+
             let content = match fs::read_to_string(path) {
                 Ok(c) => c,
                 Err(_) => continue,
@@ -232,5 +244,31 @@ pub(crate) fn build_module_only_context(module_dir: &Path) -> Result<String, App
             context.push_str(&format!("--- {} ---\n{}\n\n", path.display(), content));
         }
     }
+
+    // If root, also include files in src/ (non-recursively)
+    if is_root {
+        let src_dir = root.join("src");
+        if src_dir.exists() {
+            let walker_src = WalkBuilder::new(&src_dir)
+                .hidden(false)
+                .git_ignore(true)
+                .max_depth(Some(1))
+                .build();
+
+            for result in walker_src {
+                let entry =
+                    result.map_err(|e| AppError::Config(format!("Error walking src: {e}")))?;
+                if entry.file_type().map(|ft| ft.is_file()).unwrap_or(false) {
+                    let path = entry.path();
+                    let content = match fs::read_to_string(path) {
+                        Ok(c) => c,
+                        Err(_) => continue,
+                    };
+                    context.push_str(&format!("--- {} ---\n{}\n\n", path.display(), content));
+                }
+            }
+        }
+    }
+
     Ok(context)
 }

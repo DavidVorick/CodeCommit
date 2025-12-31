@@ -105,3 +105,40 @@ fn test_build_prompt_with_cache() {
     assert!(prompt.contains(cached_content));
     assert!(prompt.contains(spec_content));
 }
+
+#[test]
+fn test_build_prompt_root_module() {
+    let temp = TempDir::new().unwrap();
+    let root = temp.path();
+
+    // Root files
+    fs::write(root.join("UserSpecification.md"), "TOP_LEVEL_SPEC").unwrap();
+    fs::write(root.join("Cargo.toml"), "CARGO_TOML").unwrap();
+    fs::write(root.join("build.sh"), "BUILD_SCRIPT").unwrap();
+
+    // src files
+    let src_dir = root.join("src");
+    fs::create_dir_all(&src_dir).unwrap();
+    fs::write(src_dir.join("main.rs"), "fn main() {}").unwrap();
+
+    // Submodule (should not be included in root context)
+    let sub_dir = src_dir.join("sub");
+    fs::create_dir_all(&sub_dir).unwrap();
+    fs::write(sub_dir.join("lib.rs"), "fn sub() {}").unwrap();
+
+    let spec_path = root.join("UserSpecification.md");
+    let prompt =
+        prompt_builder::build_prompt(root, &spec_path, Stage::Implemented, "TOP_LEVEL_SPEC")
+            .unwrap();
+
+    // Should include root files
+    assert!(prompt.contains("TOP_LEVEL_SPEC"));
+    assert!(prompt.contains("CARGO_TOML"));
+    assert!(prompt.contains("BUILD_SCRIPT"));
+
+    // Should include src/main.rs
+    assert!(prompt.contains("fn main() {}"));
+
+    // Should NOT include submodule files (unless deps, but here no deps)
+    assert!(!prompt.contains("fn sub() {}"));
+}

@@ -1,9 +1,11 @@
 use crate::app_error::BuildFailure;
+use std::path::Path;
 use std::process::Command;
 
-pub(crate) fn run() -> Result<String, BuildFailure> {
+pub(crate) fn run(working_dir: &Path) -> Result<String, BuildFailure> {
     let output = Command::new("bash")
         .arg("build.sh")
+        .current_dir(working_dir)
         .output()
         .expect("Failed to execute build.sh. Is bash installed and is build.sh executable?");
 

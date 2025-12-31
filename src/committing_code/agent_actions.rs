@@ -4,6 +4,7 @@ use crate::cli::Model;
 use crate::llm;
 use crate::logger::Logger;
 use std::future::Future;
+use std::path::Path;
 use std::pin::Pin;
 
 pub(crate) trait AgentActions {
@@ -34,6 +35,6 @@ impl AgentActions for RealAgentActions {
     }
 
     fn run_build(&self) -> Result<String, BuildFailure> {
-        build_runner::run()
+        build_runner::run(Path::new("."))
     }
 }

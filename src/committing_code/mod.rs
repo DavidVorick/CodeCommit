@@ -5,6 +5,8 @@ mod git_status;
 mod response_parser;
 
 #[cfg(test)]
+mod build_runner_test;
+#[cfg(test)]
 mod file_updater_gitignore_tests;
 #[cfg(test)]
 mod file_updater_test;

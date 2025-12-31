@@ -138,7 +138,7 @@ Phase four has three steps:
 ## Prompt Construction
 
 When constructing the prompt, each section is labeled with the [label] format
-prior to the relevant information being provided. The prompt templaates have
+prior to the relevant information being provided. The prompt templates have
 already been created by the supervisor and exist within this module.
 
 In some cases, the LLM is called directly within the auto_workflow module. In
@@ -149,7 +149,7 @@ committing_code API call is parsed for the proper response.
 
 Please note that if the committing_code API call modified files on disk, and
 also indicated with a response that a task was successful, this is an error.
-You can see the src/comitting_code/UserSpecification.md file to understand the
+You can see the src/committing_code/UserSpecification.md file to understand the
 parsing rules for making file updates. If the committing_code API response
 contains any file updates at all, the only valid response is a 'changes
 attempted' response, anything else must produce an error.
@@ -178,7 +178,10 @@ This workflow calls an LLM directly.
 The codebase should include the top level UserSpecification.md, the Cargo.toml
 file, every single file in the target module, and every single
 UserSpecification.md and APISignatures.md file for every dependency. This list
-can be automatically assembled, without needing help from an LLM.
+can be automatically assembled, without needing help from an LLM. If the target
+module is the root module, all of the top level files should be included except
+for anything that is blocked by security policy, and all of the top level files
+in the src/ directory should be also included.
 
 This workflow calls committing_code.
 

@@ -117,9 +117,8 @@ async fn test_run_internal_happy_path() {
         .unwrap()
         .take()
         .expect("query_llm should be called");
-    let expected_query_prompt = format!(
-        "{expected_prompt_start}\n[codebase]\nmock codebase context"
-    );
+    let expected_query_prompt =
+        format!("{expected_prompt_start}\n[codebase]\nmock codebase context");
     assert_eq!(query_prompt, expected_query_prompt);
 
     let query_prefix = deps

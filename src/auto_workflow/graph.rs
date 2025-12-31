@@ -1,7 +1,7 @@
 use crate::app_error::AppError;
 use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 #[derive(Debug)]
 pub struct ModuleNode {
@@ -84,6 +84,17 @@ fn parse_dependencies(module_dir: &Path) -> Result<Vec<PathBuf>, AppError> {
         if trimmed.is_empty() || trimmed.starts_with('#') {
             continue;
         }
+
+        // Security check: No path traversal
+        let path = Path::new(trimmed);
+        if path.components().any(|c| matches!(c, Component::ParentDir)) {
+            return Err(AppError::Config(format!(
+                "Security Error: Module dependency '{}' in '{}' contains path traversal characters.",
+                trimmed,
+                module_dir.display()
+            )));
+        }
+
         deps.push(PathBuf::from(trimmed));
     }
     Ok(deps)

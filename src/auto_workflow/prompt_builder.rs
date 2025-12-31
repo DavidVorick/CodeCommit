@@ -9,57 +9,78 @@ use std::fs;
 use std::path::Path;
 
 pub fn build_prompt(
+    root: &Path,
     spec_path: &Path,
     stage: Stage,
     spec_content: &str,
 ) -> Result<String, AppError> {
     match stage {
-        Stage::SelfConsistent => build_self_consistent_prompt(spec_content),
-        Stage::Implemented => build_implemented_prompt(spec_path, spec_content),
-        Stage::Documented => build_documented_prompt(spec_path, spec_content),
-        Stage::HappyPathTested => build_happy_path_tested_prompt(spec_path, spec_content),
+        Stage::SelfConsistent => build_self_consistent_prompt(root, spec_path, spec_content),
+        Stage::Implemented => build_implemented_prompt(root, spec_path, spec_content),
+        Stage::Documented => build_documented_prompt(root, spec_path, spec_content),
+        Stage::HappyPathTested => build_happy_path_tested_prompt(root, spec_path, spec_content),
     }
 }
 
-fn build_self_consistent_prompt(spec_content: &str) -> Result<String, AppError> {
+fn build_self_consistent_prompt(
+    root: &Path,
+    spec_path: &Path,
+    spec_content: &str,
+) -> Result<String, AppError> {
+    let top_spec = get_top_level_spec(root)?;
+    let target_spec_section = if is_top_level_spec(spec_path) {
+        String::new()
+    } else {
+        format!("[target user specification]\n{spec_content}\n")
+    };
+
     Ok(format!(
-        "{}\n[response format instructions]\n{}\n[self consistent prompt]\n{}\n[top level UserSpecification.md]\n{}\n[target user specification]\n{}",
+        "{}\n[response format instructions]\n{}\n[self consistent prompt]\n{}\n[top level UserSpecification.md]\n{}\n{}",
         "1. self-consistent",
         RESPONSE_FORMAT_INSTRUCTIONS,
         SELF_CONSISTENT,
-        get_top_level_spec()?,
-        spec_content
+        top_spec,
+        target_spec_section
     ))
 }
 
-fn build_implemented_prompt(spec_path: &Path, spec_content: &str) -> Result<String, AppError> {
-    let cached_content = get_cached_spec(spec_path, Stage::Implemented)?;
-    let codebase = build_codebase_context(spec_path.parent().unwrap_or(Path::new(".")))?;
+fn build_implemented_prompt(
+    root: &Path,
+    spec_path: &Path,
+    spec_content: &str,
+) -> Result<String, AppError> {
+    let cached_content = get_cached_spec(root, spec_path, Stage::Implemented)?;
+    let codebase = build_codebase_context(root, spec_path.parent().unwrap_or(Path::new(".")))?;
+
+    let target_spec_section = format!("[target user specification]\n{spec_content}\n");
 
     if let Some(cached) = cached_content {
         Ok(format!(
-            "{}\n[response format instructions]\n{}\n[implementation-with-cache prompt]\n{}\n[cached target user specification]\n{}\n[target user specification]\n{}\n[top level UserSpecification.md]\n{}\n[codebase, including dependency files and top level UserSpecification]\n{}",
+            "{}\n[response format instructions]\n{}\n[implementation-with-cache prompt]\n{}\n[cached target user specification]\n{}\n{}[codebase, including dependency files and top level UserSpecification]\n{}",
             "2. implemented - cached UserSpecification",
             RESPONSE_FORMAT_INSTRUCTIONS,
             IMPLEMENTED_WITH_CACHE,
             cached,
-            spec_content,
-            get_top_level_spec()?,
+            target_spec_section,
             codebase
         ))
     } else {
         Ok(format!(
-            "{}\n[response format instructions]\n{}\n[implementation-no-cache prompt]\n{}\n[target user specification]\n{}\n[codebase, including dependency files and top level UserSpecification]\n{}",
+            "{}\n[response format instructions]\n{}\n[implementation-no-cache prompt]\n{}\n{}[codebase, including dependency files and top level UserSpecification]\n{}",
             "2. implemented - no cached UserSpecification",
             RESPONSE_FORMAT_INSTRUCTIONS,
             IMPLEMENTED_NO_CACHE,
-            spec_content,
+            target_spec_section,
             codebase
         ))
     }
 }
 
-fn build_documented_prompt(spec_path: &Path, spec_content: &str) -> Result<String, AppError> {
+fn build_documented_prompt(
+    _root: &Path,
+    spec_path: &Path,
+    spec_content: &str,
+) -> Result<String, AppError> {
     let module_dir = spec_path.parent().unwrap_or(Path::new("."));
     let codebase = build_module_only_context(module_dir)?;
 
@@ -74,21 +95,21 @@ fn build_documented_prompt(spec_path: &Path, spec_content: &str) -> Result<Strin
 }
 
 fn build_happy_path_tested_prompt(
+    root: &Path,
     spec_path: &Path,
     spec_content: &str,
 ) -> Result<String, AppError> {
-    let cached_content = get_cached_spec(spec_path, Stage::HappyPathTested)?;
-    let codebase = build_codebase_context(spec_path.parent().unwrap_or(Path::new(".")))?;
+    let cached_content = get_cached_spec(root, spec_path, Stage::HappyPathTested)?;
+    let codebase = build_codebase_context(root, spec_path.parent().unwrap_or(Path::new(".")))?;
 
     if let Some(cached) = cached_content {
         Ok(format!(
-            "{}\n[response format instructions]\n{}\n[happy-path-tested prompt]\n{}\n[cached target user specification]\n{}\n[target user specification]\n{}\n[top level UserSpecification.md]\n{}\n[codebase, including dependency files and top level UserSpecification]\n{}",
+            "{}\n[response format instructions]\n{}\n[happy-path-tested prompt]\n{}\n[cached target user specification]\n{}\n[target user specification]\n{}\n[codebase, including dependency files and top level UserSpecification]\n{}",
             "4. happy-path-tested - cached UserSpecification",
             RESPONSE_FORMAT_INSTRUCTIONS,
             HAPPY_PATH_TESTED_WITH_CACHE,
             cached,
             spec_content,
-            get_top_level_spec()?,
             codebase
         ))
     } else {
@@ -103,8 +124,11 @@ fn build_happy_path_tested_prompt(
     }
 }
 
-fn get_cached_spec(spec_path: &Path, stage: Stage) -> Result<Option<String>, AppError> {
-    let root = Path::new(".");
+fn get_cached_spec(
+    root: &Path,
+    spec_path: &Path,
+    stage: Stage,
+) -> Result<Option<String>, AppError> {
     let module_dir = spec_path.parent().unwrap_or(root);
     let relative_module_dir = module_dir.strip_prefix(root).unwrap_or(module_dir);
 
@@ -127,20 +151,27 @@ fn get_cached_spec(spec_path: &Path, stage: Stage) -> Result<Option<String>, App
     }
 }
 
-fn get_top_level_spec() -> Result<String, AppError> {
-    fs::read_to_string("UserSpecification.md").or_else(|_| Ok("".to_string()))
+fn get_top_level_spec(root: &Path) -> Result<String, AppError> {
+    fs::read_to_string(root.join("UserSpecification.md")).or_else(|_| Ok("".to_string()))
 }
 
-fn build_codebase_context(target_module_dir: &Path) -> Result<String, AppError> {
+fn is_top_level_spec(spec_path: &Path) -> bool {
+    // Check if the spec path points to the top level UserSpecification.md
+    // We assume the process runs from the root or relative path is clean.
+    spec_path == Path::new("UserSpecification.md")
+        || spec_path == Path::new("./UserSpecification.md")
+}
+
+fn build_codebase_context(root: &Path, target_module_dir: &Path) -> Result<String, AppError> {
     let mut context = String::new();
-    let top_spec = get_top_level_spec()?;
+    let top_spec = get_top_level_spec(root)?;
     if !top_spec.is_empty() {
         context.push_str("--- UserSpecification.md ---\n");
         context.push_str(&top_spec);
         context.push_str("\n\n");
     }
 
-    let cargo_path = Path::new("Cargo.toml");
+    let cargo_path = root.join("Cargo.toml");
     if cargo_path.exists() {
         let cargo_content = fs::read_to_string(cargo_path)
             .map_err(|e| AppError::FileUpdate(format!("Failed to read Cargo.toml: {e}")))?;
@@ -162,7 +193,7 @@ fn build_codebase_context(target_module_dir: &Path) -> Result<String, AppError> 
                 continue;
             }
 
-            let dep_dir = Path::new(dep_path);
+            let dep_dir = root.join(dep_path);
             let spec_path = dep_dir.join("UserSpecification.md");
             if spec_path.exists() {
                 let s = fs::read_to_string(&spec_path).unwrap_or_default();

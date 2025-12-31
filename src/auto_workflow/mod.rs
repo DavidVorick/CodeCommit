@@ -11,7 +11,13 @@ mod discovery_test;
 #[cfg(test)]
 mod enforcement_test;
 #[cfg(test)]
+mod executor_test;
+#[cfg(test)]
+mod graph_test;
+#[cfg(test)]
 mod phase1_test;
+#[cfg(test)]
+mod prompt_builder_test;
 
 use crate::app_error::AppError;
 use crate::cli::CliArgs;

@@ -36,7 +36,9 @@ pub async fn execute_task(
         ))
     })?;
 
-    let prompt = prompt_builder::build_prompt(&task.spec_path, task.stage, &spec_content)?;
+    // We assume current working directory is the root for execution
+    let root = Path::new(".");
+    let prompt = prompt_builder::build_prompt(root, &task.spec_path, task.stage, &spec_content)?;
 
     // To ensure unique logs for re-runs, we might want to append a timestamp or counter,
     // but the logger handles file naming collisions or we accept overwrite.
@@ -76,6 +78,8 @@ pub async fn execute_task(
         ));
     }
 
+    validate_response_format(&response)?;
+
     if response.contains("@@@@task-success@@@@") {
         extract_and_print_comment(&response);
         mark_stage_complete(&task.spec_path, task.stage, &spec_content)?;
@@ -92,6 +96,41 @@ pub async fn execute_task(
         let _ = logger.log_text(&format!("{log_name}_error.txt"), &response);
         Ok(ExecutionResult::Failure)
     }
+}
+
+pub(crate) fn validate_response_format(response: &str) -> Result<(), AppError> {
+    let success = response.contains("@@@@task-success@@@@");
+    let requested = response.contains("@@@@changes-requested@@@@");
+    let attempted = response.contains("@@@@changes-attempted@@@@");
+
+    let count = (success as u8) + (requested as u8) + (attempted as u8);
+    if count == 0 {
+        return Err(AppError::FileUpdate(
+            "Auto Workflow Error: No status tag found in response.".to_string(),
+        ));
+    }
+    if count > 1 {
+        return Err(AppError::FileUpdate(
+            "Auto Workflow Error: Multiple status tags found in response.".to_string(),
+        ));
+    }
+
+    let comment_start_count = response.matches("%%%%comment%%%%").count();
+    let comment_end_count = response.matches("%%%%end%%%%").count();
+
+    if comment_start_count > 1 || comment_end_count > 1 {
+        return Err(AppError::FileUpdate(
+            "Auto Workflow Error: Multiple comment sections found in response.".to_string(),
+        ));
+    }
+
+    if comment_start_count != comment_end_count {
+        return Err(AppError::FileUpdate(
+            "Auto Workflow Error: Mismatched comment tags.".to_string(),
+        ));
+    }
+
+    Ok(())
 }
 
 fn mark_stage_complete(spec_path: &Path, stage: Stage, content: &str) -> Result<(), AppError> {
@@ -126,10 +165,16 @@ fn mark_stage_complete(spec_path: &Path, stage: Stage, content: &str) -> Result<
 }
 
 fn extract_and_print_comment(response: &str) {
+    if let Some(comment) = extract_comment(response) {
+        println!("\n[Auto Workflow Comment]\n{}", comment.trim());
+    }
+}
+
+pub(crate) fn extract_comment(response: &str) -> Option<&str> {
     if let Some(start) = response.find("%%%%comment%%%%") {
         if let Some(end) = response.find("%%%%end%%%%") {
-            let comment = &response[start + 15..end];
-            println!("\n[Auto Workflow Comment]\n{}", comment.trim());
+            return Some(&response[start + 15..end]);
         }
     }
+    None
 }

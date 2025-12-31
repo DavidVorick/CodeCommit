@@ -35,9 +35,40 @@ modules are not allowed to import code from the top level of the repository -
 if a module needs code, it has to get that code from another module.
 
 The top level code is intended to have the high level overview of the codebase
-and its purpose, and each module is intended to be specific and focused.
+and its purpose, and each module is intended to be specific and focused. The
+modules create specific APIs that can be used by either other modules or by the
+top level code.
+
+Each module contains a ModuleDependencies.md file, which tracks what other
+modules get imported and help the automated workflow process the modules in the
+right order. And then the other documentation file is APISignatures.md, which
+gives quick definitions of each module's exports so LLMs know how to use their
+dependencies.
+
+Beyond that, the best way to know how to use the tool is to go read all of the
+UserSpecification documents in the code-commit codebase. If you, like me, are
+using code-commit to write professional code, you should have a good idea of
+what happens, in what order, and why. And the best way to learn all that is to
+just read the specifications. It'll also give you a good idea of what a
+best-practice code-commit codebase looks like.
 
 ## General Philosophy
+
+The general philosophy is that LLMs have a relatively limited context window,
+and LLMs also have a relatively limited ability to follow a large amount of
+instructions. code-commit therefore tries to enable large scale codebases that
+give a relatively small number of instructions and a relatively small amount of
+context to each LLM call.
+
+As LLMs get better, 'relatively' changes, but as of late 2025 it's my
+experience that if you want really high quality code from a frontier model, you
+need to keep your context under about 40,000 tokens and you need to keep your
+total instruction count (which is difficult to track) under 200.
+
+This means that high quality codebases need to scale in pieces, and the
+maximium size of a piece depends on the quality of the LLM. If a codebase has
+lots of specific intructions or best practices, those practices need to be
+enforced across multiple calls to LLMs rather than conducted all at once.
 
 ## Using code-commit
 

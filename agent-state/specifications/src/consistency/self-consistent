@@ -1,8 +1,3 @@
-dependencies:
-  src/context_builder
-  src/llm
-  src/system_prompts
-
 # Checking Consistency
 
 This is a specification for the implementation of an agentic coding workflow
